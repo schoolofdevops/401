@@ -1,0 +1,83 @@
+---
+id: module-05a-readme
+title: "Module 5a: Structured AI Coding"
+sidebar_label: "Overview"
+sidebar_position: 0
+---
+
+# Module 5a: Structured AI Coding
+
+**Duration:** 90 minutes
+**Day:** Day 2, Session 1
+
+## What This Module Is About
+
+You've been using AI tools in an ad-hoc way — type a question, get an answer, paste into your editor, repeat. That works for small tasks. It breaks down on real infrastructure work: a production Helm chart, a multi-stage CI/CD pipeline, or a Terraform module with five interdependencies.
+
+This module teaches a **5-phase structured workflow** that applies the same engineering discipline you use for infrastructure design to AI-assisted code generation. You'll learn to give AI agents the right context at the right phase — not just a big description and hope.
+
+The result: AI-generated infrastructure artifacts that are correct, well-reasoned, and production-ready the first time.
+
+## Choose Your Track
+
+**You pick ONE track based on your specialization.** Both tracks teach the same 5-phase workflow applied to different infrastructure artifacts.
+
+| Track | What You Build | Best For |
+|-------|---------------|----------|
+| **Track A: Helm Chart** | Production-quality Helm chart for the reference app — adds HPA, PDB, ServiceMonitor, resource limits, NOTES.txt | Kubernetes/platform engineers |
+| **Track B: CI/CD Pipeline** | Production-quality GitHub Actions pipeline — adds matrix testing, OIDC auth, staging/prod jobs, image tagging | DevOps/release engineers |
+
+Both tracks start from the existing reference app artifacts built in Phase 1 — you already know the system you're improving.
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. **Apply the 5-phase structured AI workflow** (Brainstorm, Design, Blueprint, Implement, Validate) to any infrastructure artifact — not just one-shot generation
+2. **Perform gap analysis** on an existing artifact — identify what's missing for production quality before asking AI to fill the gaps
+3. **Construct layered generation context** — give AI agents domain knowledge, system state, constraints, and procedure at each phase so output is precise rather than generic
+4. **Validate AI-generated infrastructure artifacts** — run linters, dry-run applies, and structural comparisons against solution files
+5. **Trace design decisions back to workflow phases** — understand why the structured workflow produces better results than a single "generate this for me" request
+
+## Prerequisites
+
+- Modules 1-4 completed
+- Claude Code or Crush installed and connected to an LLM
+- KIND cluster running with reference app deployed (from Phase 1 setup)
+- Helm 3.x installed (`helm version` should show v3.x)
+- For Track B: GitHub account (Actions runs on push)
+
+## The 5-Phase Workflow
+
+Every structured AI coding session follows the same sequence:
+
+```
+Phase 1: Brainstorm   → What are the requirements?
+Phase 2: Design       → What does the architecture look like?
+Phase 3: Blueprint    → What are the skeleton files?
+Phase 4: Implement    → What are the production details?
+Phase 5: Validate     → Does it actually work?
+```
+
+The key discipline: **you provide different context at each phase.** Early phases are exploratory (what should we build?). Later phases are specific (here are exact values and constraints). AI works best when the context matches the phase.
+
+## Module Contents
+
+| Section | Content | Time |
+|---------|---------|------|
+| Lab Track A | Helm Chart — HPA, PDB, ServiceMonitor, NOTES.txt | 60 min |
+| Lab Track B | CI/CD Pipeline — matrix, OIDC, staging/prod, metadata-action | 60 min |
+
+## Key Concept: Context Engineering at Each Phase
+
+The most common mistake with AI-assisted IaC: dump everything into one message and hope for the best. You get generic output that needs heavy editing.
+
+The structured workflow solves this by giving AI the right information at the right time:
+
+- **Brainstorm phase:** Give only the system description. Ask "what's missing?" — AI identifies gaps without bias from your assumptions.
+- **Design phase:** Give full 4-layer context (Task, Role, System, Procedure). AI produces a structured plan, not code.
+- **Blueprint phase:** Give the design. Ask only for skeletons — API versions, kinds, metadata. No implementation details yet.
+- **Implement phase:** Give the blueprint. Now provide exact values, thresholds, constraints. AI fills in production details.
+- **Validate phase:** Run linters and dry-runs. Compare against the solution. Evidence, not assumptions.
+
+Each phase builds on the previous one. The structured context guides AI through the same engineering process you'd follow manually — just much faster.
