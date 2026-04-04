@@ -132,72 +132,72 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | TBD | Pending |
-| FOUND-02 | TBD | Pending |
-| FOUND-03 | TBD | Pending |
-| FOUND-04 | TBD | Pending |
-| FOUND-05 | TBD | Pending |
-| FOUND-06 | TBD | Pending |
-| FOUND-07 | TBD | Pending |
-| FOUND-08 | TBD | Pending |
-| MOD1-01 | TBD | Pending |
-| MOD1-02 | TBD | Pending |
-| MOD1-03 | TBD | Pending |
-| MOD1-04 | TBD | Pending |
-| MOD1-05 | TBD | Pending |
-| MOD1-06 | TBD | Pending |
-| MOD1-07 | TBD | Pending |
-| MOD2-01 | TBD | Pending |
-| MOD2-02 | TBD | Pending |
-| MOD2-03 | TBD | Pending |
-| MOD2-04 | TBD | Pending |
-| MOD3-01 | TBD | Pending |
-| MOD3-02 | TBD | Pending |
-| MOD3-03 | TBD | Pending |
-| MOD4-01 | TBD | Pending |
-| MOD4-02 | TBD | Pending |
-| MOD4-03 | TBD | Pending |
-| MOD4-04 | TBD | Pending |
-| MOD4-05 | TBD | Pending |
-| MOD5-01 | TBD | Pending |
-| MOD5-02 | TBD | Pending |
-| MOD5-03 | TBD | Pending |
-| MOD5-04 | TBD | Pending |
-| MOD5-05 | TBD | Pending |
-| MOD5-06 | TBD | Pending |
-| MOD5-07 | TBD | Pending |
-| MOD5-08 | TBD | Pending |
-| MOD5-09 | TBD | Pending |
-| MOD5-10 | TBD | Pending |
-| MOD6-01 | TBD | Pending |
-| MOD6-02 | TBD | Pending |
-| MOD6-03 | TBD | Pending |
-| MOD6-04 | TBD | Pending |
-| MOD6-05 | TBD | Pending |
-| MOD6-06 | TBD | Pending |
-| MOD9-01 | TBD | Pending |
-| MOD9-02 | TBD | Pending |
-| MOD9-03 | TBD | Pending |
-| MOD14-01 | TBD | Pending |
-| MOD14-02 | TBD | Pending |
-| MOD14-03 | TBD | Pending |
-| CONTENT-01 | TBD | Pending |
-| CONTENT-02 | TBD | Pending |
-| CONTENT-03 | TBD | Pending |
-| CONTENT-04 | TBD | Pending |
-| CONTENT-05 | TBD | Pending |
-| CONTENT-06 | TBD | Pending |
-| FMT-01 | TBD | Pending |
-| FMT-02 | TBD | Pending |
-| FMT-03 | TBD | Pending |
-| FMT-04 | TBD | Pending |
-| FMT-05 | TBD | Pending |
+| FOUND-01 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Pending |
+| FOUND-03 | Phase 1 | Pending |
+| FOUND-04 | Phase 1 | Pending |
+| FOUND-05 | Phase 1 | Pending |
+| FOUND-06 | Phase 1 | Pending |
+| FOUND-07 | Phase 1 | Pending |
+| FOUND-08 | Phase 1 | Pending |
+| MOD1-01 | Phase 2 | Pending |
+| MOD1-02 | Phase 2 | Pending |
+| MOD1-03 | Phase 2 | Pending |
+| MOD1-04 | Phase 2 | Pending |
+| MOD1-05 | Phase 2 | Pending |
+| MOD1-06 | Phase 2 | Pending |
+| MOD1-07 | Phase 2 | Pending |
+| MOD2-01 | Phase 2 | Pending |
+| MOD2-02 | Phase 2 | Pending |
+| MOD2-03 | Phase 2 | Pending |
+| MOD2-04 | Phase 2 | Pending |
+| MOD3-01 | Phase 2 | Pending |
+| MOD3-02 | Phase 2 | Pending |
+| MOD3-03 | Phase 2 | Pending |
+| MOD4-01 | Phase 2 | Pending |
+| MOD4-02 | Phase 2 | Pending |
+| MOD4-03 | Phase 2 | Pending |
+| MOD4-04 | Phase 2 | Pending |
+| MOD4-05 | Phase 2 | Pending |
+| MOD5-01 | Phase 3 | Pending |
+| MOD5-02 | Phase 3 | Pending |
+| MOD5-03 | Phase 3 | Pending |
+| MOD5-04 | Phase 3 | Pending |
+| MOD5-05 | Phase 3 | Pending |
+| MOD5-06 | Phase 3 | Pending |
+| MOD5-07 | Phase 3 | Pending |
+| MOD5-08 | Phase 3 | Pending |
+| MOD5-09 | Phase 3 | Pending |
+| MOD5-10 | Phase 3 | Pending |
+| MOD6-01 | Phase 3 | Pending |
+| MOD6-02 | Phase 3 | Pending |
+| MOD6-03 | Phase 3 | Pending |
+| MOD6-04 | Phase 3 | Pending |
+| MOD6-05 | Phase 3 | Pending |
+| MOD6-06 | Phase 3 | Pending |
+| MOD9-01 | Phase 4 | Pending |
+| MOD9-02 | Phase 4 | Pending |
+| MOD9-03 | Phase 4 | Pending |
+| MOD14-01 | Phase 4 | Pending |
+| MOD14-02 | Phase 4 | Pending |
+| MOD14-03 | Phase 4 | Pending |
+| CONTENT-01 | Phase 4 | Pending |
+| CONTENT-02 | Phase 4 | Pending |
+| CONTENT-03 | Phase 4 | Pending |
+| CONTENT-04 | Phase 4 | Pending |
+| CONTENT-05 | Phase 4 | Pending |
+| CONTENT-06 | Phase 4 | Pending |
+| FMT-01 | Phase 4 | Pending |
+| FMT-02 | Phase 4 | Pending |
+| FMT-03 | Phase 4 | Pending |
+| FMT-04 | Phase 4 | Pending |
+| FMT-05 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 55 total
-- Mapped to phases: 0
-- Unmapped: 55 (pending roadmap creation)
+- Mapped to phases: 55
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-04*
-*Last updated: 2026-04-04 after initial definition*
+*Last updated: 2026-04-04 — traceability filled in after roadmap creation*
