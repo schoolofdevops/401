@@ -28,12 +28,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The reference microservices app (2-3 services + PostgreSQL) deploys to KIND with a single command and services respond to health checks
   3. Shared mock data files exist for CloudWatch, Cost Explorer, RDS Performance Insights, and kubectl output — each matching current AWS CLI output format with a source-and-date comment
   4. Multi-provider setup instructions cover Claude Code, Crush (Groq/Gemini backends), and OpenRouter — each with rate limits and the January 2026 Anthropic OAuth block documented
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 01-01: Reference microservices app (KIND deployment, Helm chart, CI/CD pipeline, ArgoCD GitOps)
-- [ ] 01-02: Participant setup guide (SETUP.md, verify.sh, multi-provider LLM config)
-- [ ] 01-03: Shared mock data (cloudwatch-alarm.json, cost-explorer.json, rds-perf.json, kubectl fixtures, real-AWS fallback instructions)
+- [ ] 01-01-PLAN.md — Rust backend services (api-gateway, catalog, worker) with Cargo workspace, Dockerfiles, PostgreSQL migrations
+- [ ] 01-02-PLAN.md — CloudWatch alarm mock data (clean + anomaly scenarios) and mock-aws wrapper update
+- [ ] 01-03-PLAN.md — Svelte health dashboard, Helm chart, KIND config, Prometheus values, Makefile, GitHub Actions CI/CD
+- [ ] 01-04-PLAN.md — Participant setup guide (SETUP.md), course verify.sh, LLM access docs (Claude Code + OpenCode)
 
 ### Phase 2: Day 1 Modules
 **Goal**: A participant completing Day 1 can explain context engineering using infrastructure analogies, has hands-on experience with AWS platform AI features, understands the gap between platform AI and custom agents, and can score their own operational tasks for automation potential
@@ -95,7 +96,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Not started | - |
+| 1. Foundation | 0/4 | Planning complete | - |
 | 2. Day 1 Modules | 0/3 | Not started | - |
 | 3. Day 2 Modules | 0/3 | Not started | - |
 | 4. Remaining Content | 0/3 | Not started | - |
