@@ -1,0 +1,624 @@
+---
+id: module-05b-lab
+title: "Lab: AI Workflow Tools"
+sidebar_label: "Lab"
+sidebar_position: 1
+description: "GSD workflow, context engineering, memory systems, and plan modes — the meta-skills for using AI tools effectively in DevOps"
+---
+
+# Lab: AI Workflow Tools
+
+**Duration:** 75 minutes
+**Deliverable:** A monitoring stack (Prometheus alerting rules + Grafana dashboard config) built via the GSD structured workflow, a project CLAUDE.md, a configured memory system, and a plan mode comparison
+
+## What You Need
+
+- **Claude Code** (primary) — open with `claude` in your terminal
+- **Crush** (alternative) — open with `crush` if you're using a different LLM
+- KIND cluster running with Prometheus and Grafana deployed (from Module 5a setup)
+- The reference app deployed: api-gateway, catalog, worker services
+
+> **Both tools are equally valid.** Sections 2 and 3 have parallel paths — Claude Code path and Crush path. Follow the path matching your tool.
+
+---
+
+## Section 1: GSD Workflow Lab
+
+**Time:** 30 minutes
+**Deliverable:** `monitoring/alerting-rules.yaml` (PrometheusRule CRD with 3 rules) and `monitoring/grafana-dashboard.json` (Grafana provisioning JSON)
+
+This is the centerpiece of Module 5b. You will run the complete GSD cycle — new-project, discuss, plan, execute, verify — on a well-scoped infrastructure task. By the end, you'll have production monitoring artifacts built by an AI that understood your system constraints.
+
+The deliverable is intentionally scoped: 2 files, 3 alerting rules, 1 dashboard. Small enough to complete in 30 minutes. Realistic enough to put in production.
+
+:::info What is GSD?
+
+GSD (Get Shit Done) is a context engineering harness for Claude Code. It enforces a structured workflow — requirements gathering, context locking, planning, atomic execution — so that AI-generated IaC is traceable, reviewable, and repeatable.
+
+It's not a "prompting framework." It's a workflow that structures what the AI sees at each step.
+
+:::
+
+---
+
+### Step 1: Initialize the GSD project
+
+Open Claude Code in a new working directory (or a `monitoring/` subdirectory of your course repo).
+
+Run the GSD new-project command:
+
+```
+/gsd:new-project
+```
+
+When GSD asks you to describe the project, paste this description:
+
+```
+Add Prometheus alerting rules and a Grafana dashboard for our reference app.
+The app has three services:
+- api-gateway (port 8080, endpoints: /health/live, /health/ready, /api/status)
+- catalog (port 8081, endpoints: /health/live, /health/ready, /items)
+- worker (port 8082, endpoints: /health/live, /health/ready, /events)
+
+Prometheus with kube-prometheus-stack is deployed in the monitoring namespace.
+Grafana is available at NodePort 30090.
+Prometheus is at NodePort 30091.
+
+Deliverable: two files — monitoring/alerting-rules.yaml and monitoring/grafana-dashboard.json
+```
+
+**Expected result:** GSD creates a `.planning/` directory with `PROJECT.md`. You'll see GSD acknowledge the project scope and confirm the deliverable.
+
+---
+
+### Step 2: Discuss the phase
+
+Run the discuss command for phase 1:
+
+```
+/gsd:discuss-phase 1
+```
+
+GSD will ask you questions to lock requirements. When prompted, provide these answers:
+
+**Alerting rules (3 rules):**
+- `ApiGatewayDegraded` — readiness probe failing for more than 1 minute, severity: warning
+- `CatalogServiceDown` — readiness probe failing for more than 2 minutes, severity: critical
+- `WorkerHeartbeatMissing` — no database activity for more than 3 minutes, severity: warning
+
+**Dashboard requirements:**
+- 3 panels: service health status, request latency (placeholder), pod restart count
+- Use blackbox exporter / health probe approach — do not add `/metrics` endpoints to the reference app source code
+
+**Key constraint to state:** "Do not modify reference-app/ source code"
+
+**Expected result:** GSD produces a `CONTEXT.md` with these decisions locked. The context file is what the planner and executor agents will see — this is your system context layer.
+
+---
+
+### Step 3: Plan the phase
+
+Run the plan command:
+
+```
+/gsd:plan-phase 1
+```
+
+GSD runs a research + planning cycle. It will:
+1. Read your `PROJECT.md` and `CONTEXT.md`
+2. Research the Prometheus Operator CRD schema and blackbox exporter probe format
+3. Generate one or two `PLAN.md` files with specific tasks
+
+Review the generated plan. It should target `alerting-rules.yaml` and `grafana-dashboard.json` specifically. If the plan includes tasks to modify reference-app source code, that contradicts your constraint — add a note and re-plan.
+
+**Expected result:** A `PLAN.md` with tasks targeting exactly the two deliverable files. Each task should have a clear done criterion.
+
+---
+
+### Step 4: Execute the phase
+
+Run the execute command:
+
+```
+/gsd:execute-phase 1
+```
+
+Claude Code reads the plan and generates the files. Each task commits atomically — you'll see individual commits as GSD works through the plan.
+
+**Expected result:** Two files generated:
+- `monitoring/alerting-rules.yaml` — PrometheusRule CRD with 3 alerting rules
+- `monitoring/grafana-dashboard.json` — Grafana JSON model with 3 panels
+
+<details>
+<summary>Expected alerting-rules.yaml — click to expand and compare</summary>
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: reference-app-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: prometheus
+spec:
+  groups:
+  - name: reference-app.health
+    interval: 30s
+    rules:
+    # Alert when api-gateway readiness probe fails
+    - alert: ApiGatewayDegraded
+      expr: |
+        probe_success{job="blackbox-http",
+                      instance=~".*api-gateway.*health.*ready.*"} == 0
+      for: 1m
+      labels:
+        severity: warning
+        team: platform
+      annotations:
+        summary: "API Gateway readiness probe failing"
+        description: "api-gateway /health/ready returning non-200 for > 1 minute"
+
+    # Alert when catalog service is down
+    - alert: CatalogServiceDown
+      expr: |
+        probe_success{job="blackbox-http",
+                      instance=~".*catalog.*health.*ready.*"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        team: platform
+      annotations:
+        summary: "Catalog service unavailable"
+        description: "catalog /health/ready has been failing for > 2 minutes"
+
+    # Alert when worker heartbeat stops
+    # Note: WorkerHeartbeatMissing requires postgres-exporter sidecar.
+    # This rule is a placeholder — see the Exploratory section for the full implementation.
+    - alert: WorkerHeartbeatMissing
+      expr: |
+        time() - pg_stat_activity_count{datname="refapp"} > 180
+      for: 0m
+      labels:
+        severity: warning
+        team: platform
+      annotations:
+        summary: "Worker heartbeat may have stopped"
+        description: "No DB activity in refapp database for > 3 minutes. Requires postgres-exporter."
+```
+
+**Note on WorkerHeartbeatMissing:** The api-gateway and catalog alerts use the blackbox exporter (already deployed with kube-prometheus-stack). The worker alert uses pg_stat_activity, which requires a postgres-exporter sidecar. For the lab, the first two alerts are functional; the worker alert teaches the pattern and requires a stretch exercise to make it operational.
+
+</details>
+
+<details>
+<summary>Expected grafana-dashboard.json structure — click to expand and compare</summary>
+
+```json
+{
+  "__inputs": [],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Reference App — Service Health Dashboard",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {"options": {"0": {"text": "DOWN"}}, "type": "value"},
+            {"options": {"1": {"text": "UP"}}, "type": "value"}
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "green", "value": 1}
+            ]
+          }
+        }
+      },
+      "id": 1,
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Service Health Status",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "id": 2,
+      "title": "Request Latency (placeholder — requires /metrics endpoint)",
+      "description": "Add axum-prometheus middleware to reference-app services to populate this panel",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "id": 3,
+      "title": "Pod Restart Count",
+      "targets": [
+        {
+          "expr": "kube_pod_container_status_restarts_total{namespace=\"app\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "type": "timeseries"
+    }
+  ],
+  "schemaVersion": 38,
+  "tags": ["reference-app", "platform", "health"],
+  "title": "Reference App — Service Health",
+  "uid": "reference-app-health",
+  "version": 1
+}
+```
+
+</details>
+
+---
+
+### Step 5: Verify the work
+
+Apply the alerting rules to your KIND cluster:
+
+```bash
+kubectl apply -f monitoring/alerting-rules.yaml
+```
+
+Check the PrometheusRule resource was created:
+
+```bash
+kubectl get prometheusrule -n monitoring
+```
+
+**Expected result:**
+
+```
+NAME                    AGE
+reference-app-alerts    10s
+```
+
+If Grafana is running, import the dashboard:
+
+1. Open Grafana at `http://localhost:30090` (admin / admin)
+2. Navigate to **Dashboards** → **Import**
+3. Upload `monitoring/grafana-dashboard.json`
+4. Select your Prometheus datasource
+
+**Expected result:** Grafana imports the dashboard without errors. The "Service Health Status" and "Pod Restart Count" panels load with data. The "Request Latency" panel shows as empty (expected — it requires the `/metrics` endpoint).
+
+:::info Reflection
+
+You just used a structured AI workflow to build production monitoring. Every decision is traceable to a workflow step:
+
+- Which alerting rules? Locked in CONTEXT.md (Step 2)
+- Why blackbox exporter? Constraint decision: no source code changes
+- Which CRD version? Discovered during GSD's research phase (Step 3)
+
+This traceability is what separates GSD from one-shot AI generation. The artifact is reproducible because the context that produced it is persisted.
+
+:::
+
+---
+
+## Section 2: Context Engineering Practical
+
+**Time:** 20 minutes
+**Deliverable:** A CLAUDE.md file that transforms AI output from generic to system-specific
+
+You just experienced GSD's structured context management in Section 1. Now you'll learn the underlying mechanism — and apply it directly.
+
+---
+
+### Step 1: Create a project CLAUDE.md
+
+CLAUDE.md is system context. It tells the AI tool what exists in your environment, what matters, and what constraints apply — permanently, across every interaction in the session.
+
+Create a `CLAUDE.md` file in your monitoring project directory:
+
+```markdown
+# Monitoring Stack for Reference App
+
+## System State
+- KIND cluster: context "kind-lab"
+- Services: api-gateway (8080), catalog (8081), worker (8082)
+- Namespace: app (reference app), monitoring (Prometheus + Grafana)
+- Prometheus: NodePort 30091, Grafana: NodePort 30090
+
+## Constraints
+- No paid services — all resources local or free-tier
+- Kubernetes 1.32, Helm 3.18, Prometheus Operator CRD v1
+- Do not modify reference-app/ source code
+
+## Vocabulary
+- "alerting rules" = PrometheusRule CRD in monitoring namespace
+- "dashboard" = Grafana JSON provisioning file in configmap
+```
+
+**Expected result:** `CLAUDE.md` file exists in your project directory. Claude Code automatically reads it when the session starts.
+
+---
+
+### Step 2: Before/After comparison
+
+This is the experiment. You need two separate Claude Code sessions.
+
+**WITHOUT CLAUDE.md** — open a fresh Claude Code session in a directory with no CLAUDE.md:
+
+```
+Create a Prometheus alerting rule for high CPU usage on my application pods.
+```
+
+Observe the output. Note: Which namespace? Which CRD version? Which label selectors?
+
+**WITH CLAUDE.md** — open Claude Code in the directory where you just created CLAUDE.md:
+
+```
+Create a Prometheus alerting rule for high CPU usage on my application pods.
+```
+
+**Expected result:** With CLAUDE.md, Claude Code produces output that:
+- Targets the `monitoring` namespace (not `default` or `kube-system`)
+- Uses `monitoring.coreos.com/v1` CRD version (not deprecated `v1alpha1`)
+- Includes `release: prometheus` label (required for PrometheusRule discovery)
+- Respects the "do not modify reference-app/ source code" constraint
+
+The AI's capabilities didn't change. The context did.
+
+---
+
+### Step 3: Context window management
+
+Three patterns to know for working with AI on real infrastructure:
+
+**Pattern 1: Selective injection**
+
+Instead of `@entire-repo`, inject only what the task needs:
+
+```
+@CLAUDE.md Add a PrometheusRule for disk usage on the monitoring namespace nodes
+```
+
+vs.
+
+```
+@. Add a PrometheusRule for disk usage...
+```
+
+Check the token count with `/cost` after each. Selective injection typically uses 10-50x fewer tokens with equivalent output quality for focused tasks.
+
+**Expected result:** You can articulate when `@CLAUDE.md` is sufficient vs when `@entire-repo` is worth the cost.
+
+**Pattern 2: YOLO mode vs ask mode**
+
+Claude Code runs in YOLO mode by default (proceeds without approval). For production infrastructure work:
+
+```
+/config set mode ask
+```
+
+Now Claude Code asks for approval before applying changes. For local lab work where mistakes are cheap, YOLO is fine. For anything touching production, switch to ask mode.
+
+**Expected result:** You understand when to use each mode based on the risk of the operation.
+
+**Pattern 3: Session handoff**
+
+GSD's `STATE.md` is your cross-session anchor. When you start a new Claude Code session on a GSD project:
+
+```
+@.planning/STATE.md Where did we leave off?
+```
+
+Claude Code reads the state file and resumes with full context of what was built, what decisions were made, and what's next.
+
+**Expected result:** You can pick up a GSD project in a new session without re-explaining the entire context.
+
+---
+
+## Section 3: Memory Systems
+
+**Time:** 15 minutes
+**Deliverable:** Cross-session memory configured and demonstrated
+
+---
+
+### Claude Code path: claude-mem
+
+claude-mem is a Claude Code plugin that automatically captures decisions, patterns, and observations across sessions. It uses SQLite and vector search to surface relevant past context when you start a new session.
+
+**Setup check:**
+
+```bash
+# Verify claude-mem is running
+curl -s http://localhost:37777/health
+```
+
+**Expected result:** `{"status":"ok"}` — the claude-mem worker is running.
+
+**Demo — capture a decision:**
+
+In Claude Code, make a decision that should persist:
+
+```
+We chose the blackbox exporter approach for Prometheus probes because
+the reference app services don't expose /metrics endpoints. We'll add
+axum-prometheus middleware in a future module.
+```
+
+claude-mem's PostToolUse hook captures this as a memory entry automatically.
+
+End your Claude Code session.
+
+**Demo — retrieve the decision:**
+
+Start a new Claude Code session in the same directory:
+
+```
+What monitoring approach did we choose for the reference app?
+```
+
+**Expected result:** Claude Code retrieves the blackbox exporter decision from memory and includes it in the response without you re-explaining it. The decision carries across sessions.
+
+**View the memory web UI:**
+
+```bash
+open http://localhost:37777
+```
+
+**Expected result:** The web UI shows your captured memories, searchable by keyword or semantic similarity. You can see the full capture history for the session.
+
+---
+
+### Crush path: MCP memory server
+
+Crush uses the MCP protocol for tool integration, including memory. Configure the memory server in your project or global config:
+
+**Project-level** (`.crush.json` in project root):
+
+```json
+{
+  "mcp": {
+    "memory": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "timeout": 120
+    }
+  }
+}
+```
+
+**Global** (`~/.config/crush/crush.json`):
+
+Same structure — use global config to have memory available in all projects.
+
+**Expected result:** Crush starts the MCP memory server on next launch. The memory tool appears in Crush's tool list.
+
+**Demo:**
+
+In Crush, store a decision explicitly:
+
+```
+Remember: we chose blackbox exporter for Prometheus probes because
+reference-app services don't expose /metrics. Do not suggest adding
+/metrics endpoints to the source code.
+```
+
+Start a new Crush session:
+
+```
+What monitoring approach did we choose?
+```
+
+**Expected result:** Crush retrieves the stored memory and includes it in context.
+
+---
+
+### Comparison
+
+| Aspect | claude-mem (Claude Code) | MCP memory (Crush) |
+|--------|--------------------------|---------------------|
+| Capture | Automatic (hooks) | Explicit store command |
+| Search | Semantic + keyword (ChromaDB) | Keyword (MCP standard) |
+| UI | Web UI at localhost:37777 | None (CLI only) |
+| Setup | Plugin installed with Claude Code | Requires npm/npx |
+| Works with | Claude Code only | Any MCP-compatible tool |
+
+**When to use claude-mem:** You want automatic capture with richer search. Decisions happen naturally in conversation.
+
+**When to use MCP memory:** You need memory to work across multiple MCP-compatible tools, or you prefer explicit store/retrieve control.
+
+---
+
+## Section 4: Plan Modes
+
+**Time:** 10 minutes
+**Deliverable:** Understanding of when to use each plan mode
+
+---
+
+### Claude Code /plan
+
+For a single-file, quick IaC task, use Claude Code's built-in plan mode.
+
+In Claude Code interactive mode, run:
+
+```
+/plan Add a HorizontalPodAutoscaler for the api-gateway service. Target CPU utilization 70%, min replicas 2, max replicas 5.
+```
+
+Claude Code produces a structured markdown plan showing exactly what it intends to do before it does anything.
+
+**Expected result:** Plan output visible in chat — no files written yet. You can review the approach, ask for modifications, or approve execution.
+
+This mode works well for:
+- Single file changes
+- Quick additions to existing configs
+- Tasks where the scope is clear and limited
+
+---
+
+### GSD /gsd:plan-phase
+
+You already used this in Section 1. That was the production-grade version.
+
+GSD's plan-phase runs a full research cycle, generates wave-structured plans, and produces versioned PLAN.md files. It's appropriate when:
+- Multiple files need to change together
+- Decisions need to be locked before execution (CONTEXT.md)
+- Work spans multiple sessions
+- You need full traceability (who decided what, when, based on what context)
+
+---
+
+### Comparison
+
+| Mode | When to use | Output | Example |
+|------|-------------|--------|---------|
+| Claude Code `/plan` | Quick, single task | Plan in chat | "Add HPA to Helm chart" |
+| GSD `/gsd:plan-phase` | Multi-file, production work | PLAN.md with waves | "Build monitoring stack" |
+
+**Decision rule:** If the task touches 1-2 files and you can hold the full scope in your head, use `/plan`. If the task involves multiple files, locked requirements, or needs to survive a session boundary, use GSD.
+
+**Expected result:** You can articulate the decision rule and apply it to your next infrastructure task.
+
+:::info The meta-skill
+
+These four sections taught one underlying idea: **structured context produces expert output**.
+
+- GSD structures context for entire projects (requirements, decisions, plans)
+- CLAUDE.md structures context for every session (system state, constraints, vocabulary)
+- Memory systems carry context across sessions (decisions that shouldn't need re-explaining)
+- Plan modes choose the right level of structure for the task size
+
+The AI's capabilities are constant. What you control is the context it sees.
+
+:::
+
+---
+
+## Lab Complete
+
+**What you built:**
+
+- A production monitoring stack (alerting-rules.yaml + grafana-dashboard.json) via the full GSD workflow
+- A CLAUDE.md that makes AI output system-specific and constraint-aware
+- A configured memory system (claude-mem or MCP memory) that persists decisions across sessions
+- A practiced decision rule for choosing between quick plan mode and structured GSD workflow
+
+**What comes next:**
+
+- Module 5b Exploratory: Superpowers — TDD, systematic debugging, code review with AI assistance (optional, for participants who want to go deeper)
+- Module 6: AI-Assisted IaC — Terraform (Track A) or ArgoCD GitOps (Track B)
+
+The monitoring artifacts you built in Section 1 will be running on your KIND cluster through Module 6.

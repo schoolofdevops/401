@@ -1,0 +1,57 @@
+---
+id: module-05b-readme
+title: "Module 5b: AI Workflow Tools"
+sidebar_label: "Overview"
+sidebar_position: 0
+---
+
+# Module 5b: AI Workflow Tools
+
+**Duration:** 90 minutes
+**Day:** Day 2, Session 2
+
+## What This Module Is About
+
+You've been using AI tools as a smarter autocomplete. This module changes that. You'll work with structured AI workflows — tools that enforce discipline, track decisions, and produce production-grade artifacts instead of one-off suggestions.
+
+The central skill is **context engineering**: not writing better questions, but structuring the right context so that AI tools consistently produce expert-level output for your specific infrastructure.
+
+You'll also set up cross-session memory, so the context you build in one session automatically carries into the next — and learn how to choose between quick AI-assisted tasks and full structured workflows.
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. **Apply the GSD structured workflow** for multi-file IaC tasks — from requirements gathering through execution and verification
+2. **Create and use a CLAUDE.md** as system context for your project — the artifact that makes every AI interaction namespace-aware, version-specific, and constraint-respecting
+3. **Configure cross-session memory** using claude-mem (Claude Code) or MCP memory server (Crush), so past decisions surface automatically in new sessions
+4. **Select the right plan mode** for the task at hand — Claude Code `/plan` for quick single tasks, GSD `plan-phase` for multi-file production work
+5. **Extend AI tools with disciplined workflows** — understand how TDD, systematic debugging, and code review become more powerful with AI assistance
+
+## Prerequisites
+
+- Modules 1–4 completed
+- Claude Code or Crush installed and connected to an LLM
+- KIND cluster with Prometheus and Grafana deployed (from Module 5a setup)
+- Familiarity with the reference app (api-gateway, catalog, worker services)
+
+## Module Contents
+
+| Section | Content | Time |
+|---------|---------|------|
+| Lab — Section 1 | GSD Workflow: Build a Monitoring Stack | 30 min |
+| Lab — Section 2 | Context Engineering Practical | 20 min |
+| Lab — Section 3 | Memory Systems | 15 min |
+| Lab — Section 4 | Plan Modes | 10 min |
+| Exploratory | Superpowers: TDD, Debugging, Code Review | Optional |
+
+## Key Concept: Context Engineering at Scale
+
+Module 1 showed you what happens when you give an AI agent structured context for a CloudWatch alarm. This module scales that concept:
+
+- **CLAUDE.md** encodes system context once and injects it on every interaction
+- **GSD workflow** structures the context for entire projects — requirements, decisions, and plans
+- **Cross-session memory** carries context forward across sessions — the AI doesn't forget what you built last week
+- **Plan modes** let you choose how much structure the task needs
+
+The pattern repeats throughout the course: structured context produces expert output. This module teaches the tools that make context engineering repeatable.
