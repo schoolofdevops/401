@@ -1,0 +1,225 @@
+---
+id: module-03-lab
+title: "Lab: From Platform AI to Custom Agents"
+sidebar_label: "Lab"
+sidebar_position: 1
+description: "See a custom agent in action, then run one yourself"
+---
+
+# Lab: From Platform AI to Custom Agents
+
+**Duration:** ~35 minutes total (Part 1: 12-minute demo, Part 2: 20-minute hands-on)
+
+**For Udemy / self-paced learners:** You are both facilitator and participant. Read through Part 1 to understand what the demo shows, then complete Part 2 hands-on on your own machine.
+
+---
+
+## Part 1: Facilitator Demo Script (~12 minutes)
+
+> **Facilitator Note:** This is a live demo. Participants observe and ask questions. They do the hands-on work in Part 2.
+>
+> **Pre-demo setup (complete before the session):**
+> ```bash
+> # Install Hermes — requires Python 3.11+ (installed automatically via uv)
+> curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+> source ~/.zshrc  # or source ~/.bashrc
+> hermes model     # select a provider (OpenRouter or Nous Portal)
+> ```
+>
+> **Important:** Installation downloads Python 3.11 via uv (~100-200 MB). Do this on reliable internet BEFORE the demo. Verify Hermes works: `hermes --version`
+
+---
+
+### Demo Step 1: Show Hermes Startup [2 minutes]
+
+Start the agent and show its initialization:
+
+```bash
+hermes
+```
+
+**What to point out to participants:**
+- The model name shown (which LLM is backing it)
+- The available tools (terminal, web access, file operations)
+- Any loaded skills (context files that encode domain knowledge)
+
+**Talking point:** "This is an agent. It has three things that a plain chatbot doesn't: a model it runs on, tools it can use to take action, and optionally skills that encode domain knowledge. When I ask it a question, it doesn't just generate text — it can run commands and read results."
+
+---
+
+### Demo Step 2: Tool Use — Simple Task [3 minutes]
+
+Give hermes a task that requires using the terminal tool:
+
+```
+List the files in /tmp and tell me which is the largest.
+```
+
+**What to point out:**
+- The agent reasons about the task ("I need to list files and check sizes")
+- It calls the terminal tool with a specific command (`ls -la /tmp` or `du -sh /tmp/*`)
+- It reads the output and incorporates it into the response
+- The final answer is based on actual data, not a guess
+
+**Talking point:** "Notice what just happened — it didn't guess. It ran a command, got real output, and used that output to answer. This is the fundamental difference from a chatbot: the agent can act on the world and read back the results."
+
+---
+
+### Demo Step 3: Connect to Module 1 Data [4 minutes]
+
+Now show the agent working with the same alarm data participants used in Module 1.
+
+First, show it WITHOUT domain context:
+
+```
+Read the file at infrastructure/mock-data/cloudwatch/describe-alarms-anomaly.json
+and tell me what's wrong and what I should check first.
+```
+
+**Observation cues for participants:**
+- The agent reads the file (tool use — observe)
+- The agent reasons about the alarm (think)
+- The agent produces recommendations (act)
+- The output is more structured than a plain chatbot response, but still generic
+
+**Now compare to the Module 1 Layer 4 result:**
+
+Ask participants: "How does this compare to what you got with the runbook context in Module 1 Layer 4?"
+
+The agent without skills is like Module 1 Layer 1: it has the data but lacks your domain context.
+
+---
+
+### Demo Step 4: Point to What's Missing [3 minutes]
+
+Ask hermes:
+
+```
+What would you need to know about this infrastructure to give a better diagnosis?
+```
+
+**Expected output:** The agent articulates that it needs deployment history, related service metrics, your runbook procedures, escalation contacts, SLOs.
+
+**Talking point:** "This is exactly what Module 7 solves. A SKILL.md file is a machine-readable runbook — structured domain context that the agent carries in every interaction. The agent right now is like a brilliant SRE who just joined the team today. Modules 7-8 give it the institutional knowledge of a two-year veteran."
+
+---
+
+### Facilitator Talking Points Summary
+
+| What You Showed | The Lesson |
+|----------------|------------|
+| `hermes` startup (tools, model, skills) | Agents = Model + Tools + Domain Context |
+| File listing task | Agents act on the world — they don't just generate text |
+| CloudWatch alarm analysis | Same data, better structured output — but still generic without skills |
+| "What would you need?" question | The gap between platform AI and a fully-equipped custom agent |
+
+---
+
+## Part 2: Participant Hands-On (~20 minutes)
+
+Now install and run Hermes on your own machine.
+
+### Step 1: Install Hermes
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+source ~/.zshrc  # or source ~/.bashrc
+```
+
+**Expected result:** The `hermes` command is available. Verify with:
+
+```bash
+hermes --version
+```
+
+**Offline fallback:** If you can't install Hermes (corporate firewall, no internet), read through the rest of Part 2 to understand what the tasks show. The key concepts (tool use, agent loop, domain context gap) are the takeaway, not the specific tool output.
+
+---
+
+### Step 2: Configure a Model Provider
+
+```bash
+hermes model
+```
+
+Select a provider. If you don't have one configured, the recommended options for this course are:
+
+- **OpenRouter** (free credits available) — see `setup/llm-access.md` for details
+- **Google AI Studio** — Gemini 2.5 Flash free tier (500 req/day)
+- **Claude Pro subscription** — if you have one, this is the best option
+
+**Expected result:** Hermes connects to your chosen model and shows confirmation.
+
+---
+
+### Step 3: Run Your First Tasks
+
+**Task A — Basic tool use:**
+
+```
+List the files in your current directory and tell me which one is the largest.
+```
+
+**Expected result:** The agent runs `ls -la` (or similar), reads the output, and tells you the largest file. Watch the tool call happen in real time.
+
+---
+
+**Task B — Alarm analysis (same as the demo):**
+
+Open a new terminal window and navigate to the course repo. Then ask hermes:
+
+```
+Read the file at infrastructure/mock-data/cloudwatch/describe-alarms-anomaly.json
+and give me a structured diagnosis: what alarms are firing, what's the likely cause,
+and what should I check first?
+```
+
+**Expected result:** The agent reads the JSON file, parses the alarm data (HighCPUUtilization, HighMemoryPressure), and produces recommendations. Compare this to your Layer 1 result from Module 1 — then compare to your Layer 4 result. The agent without skills sits between them.
+
+---
+
+**Task C (stretch) — Create a simple automation:**
+
+```
+Write a bash script called check-high-cpu.sh that:
+1. Lists all EC2 instances using the AWS CLI
+2. For each instance, gets the last 5 minutes of CPU utilization
+3. Prints a warning if any instance is above 80%
+Include error handling for the case where AWS CLI is not configured.
+```
+
+**Expected result:** The agent writes a working bash script, explains what each section does, and notes the AWS CLI prerequisite. It may iterate if there are errors.
+
+---
+
+### Step 4: Reflection
+
+After completing Tasks A-C, write brief answers to these questions in your course notes:
+
+1. **What could this agent do if it had access to your production monitoring tools?**
+2. **What runbook knowledge would you want it to carry?**
+3. **Which of your operational tasks from Module 4 would benefit most from an agent like this?**
+
+These answers are the foundation for your capstone project on Day 3.
+
+---
+
+## What You Just Saw: The Agent Loop
+
+Whether you watched the demo or ran it yourself, the same pattern played out every time:
+
+```
+Observe (read file / run command)
+    ↓
+Think (analyze the output, form a plan)
+    ↓
+Act (write response / run next command)
+    ↓
+Observe (check results, refine if needed)
+```
+
+This is the ReAct pattern (Reasoning + Acting). It's not a chatbot giving a static answer — it's a feedback loop that continues until the task is done.
+
+The difference from Module 2's platform AI: those services broke after "Observe." The agent loop continues through Think and Act. And with SKILL.md context loaded, the "Think" step incorporates your domain knowledge.
+
+That's Module 7. You've seen the gap. Day 2 starts filling it.

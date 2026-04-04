@@ -1,0 +1,101 @@
+---
+id: module-03-quiz
+title: "Module 3 Quiz: Platform to Custom"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of custom agent capabilities and what differentiates them from platform AI"
+---
+
+# Module 3 Quiz: Platform to Custom
+
+Five questions covering the key differentiators of custom agents versus platform AI.
+
+---
+
+**Question 1**
+
+What is the key architectural difference between platform AI (like CloudWatch Anomaly Detection) and a custom agent like Hermes?
+
+<details>
+<summary>Answer</summary>
+
+**Platform AI** is stateless and scoped to a single service. It detects patterns and fires alerts. It cannot cross service boundaries, use tools outside its own service, or carry your domain context.
+
+**Custom agents** have three things platform AI lacks:
+1. **Tools** — they can execute commands, call APIs, read/write files
+2. **Domain context** — they carry your runbooks, topology, and decision procedures via SKILL.md files
+3. **Autonomy** — they can complete multi-step tasks without waiting for human input at each step
+
+The practical result: platform AI stops at observation. Custom agents can investigate and act.
+
+</details>
+
+---
+
+**Question 2**
+
+In the Hermes demo, the agent ran a command, received output, and incorporated that output into its response. What term describes this capability — and what is the DevOps analogy for it?
+
+<details>
+<summary>Answer</summary>
+
+This is **tool use** (also called function calling or tool calling).
+
+**DevOps analogy:** Tool calling is like an API gateway. The LLM decides which "endpoint" (tool) to call and with what parameters. The result flows back to the model, which uses it in the next reasoning step. Just as your application calls downstream services to get data, the agent calls tools to get real-world state.
+
+</details>
+
+---
+
+**Question 3**
+
+In the Hermes demo, the agent analyzed the CloudWatch alarm from `describe-alarms-anomaly.json`. The output was useful but not as detailed as your Module 1 Layer 4 result. Why?
+
+<details>
+<summary>Answer</summary>
+
+The agent in the demo had **no domain context** — no SKILL.md files loaded that encode your infrastructure topology, runbooks, or escalation procedures.
+
+Your Module 1 Layer 4 result was better because you provided that context manually in the system prompt (SRE role + infrastructure topology + runbook). The agent loop (reading the file) helped structure the output, but it couldn't reason about your specific deployment history, related services, or team decision criteria.
+
+This is the exact gap SKILL.md files fill in Module 7.
+
+</details>
+
+---
+
+**Question 4**
+
+The reading describes the agent loop as: Observe → Think → Act → Observe. A DevOps monitoring system also follows a similar pattern. What is the DevOps analogy, and where does today's monitoring fall short compared to a custom agent?
+
+<details>
+<summary>Answer</summary>
+
+**DevOps analogy:** Monitoring feedback loop — detect anomaly (Observe), analyze root cause (Think), execute remediation (Act), verify fix (Observe again).
+
+**Where monitoring falls short:** Today's monitoring handles Observe reliably — metrics are collected, anomalies are detected, alerts fire. The gap is in **Think and Act**:
+- Think: monitoring fires an alert, but diagnosis is manual. A custom agent with domain context can reason about the alarm against your runbook.
+- Act: monitoring can trigger simple automations (Lambda, EventBridge), but multi-step remediation with conditional logic and verification requires an agent loop.
+
+</details>
+
+---
+
+**Question 5**
+
+What would you need to add to the Hermes agent from the demo to make it as effective as your Module 1 Layer 4 context engineering result?
+
+<details>
+<summary>Answer</summary>
+
+You would need to add **SKILL.md files** that encode the same domain context you manually included in Layer 4:
+
+1. **Infrastructure topology context:** Which services talk to which, where the bottlenecks are, what the normal operating ranges look like
+2. **Runbook context:** The step-by-step procedures your team follows for common failure modes
+3. **Escalation procedures:** Who to page, when to escalate to SEV-1 vs SEV-2, what communication templates to use
+
+With those loaded, the agent's "Think" step would reason against your specific environment and procedures — producing output equivalent to, or better than, Layer 4.
+
+This is exactly what Module 7 teaches you to build.
+
+</details>
