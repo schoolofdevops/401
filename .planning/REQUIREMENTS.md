@@ -12,7 +12,7 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 - [x] **FOUND-01**: Reference microservices application (2-3 services + PostgreSQL) deployable on KIND — serves as the course backbone for all labs
 - [x] **FOUND-02**: Helm chart packaging for the reference app (used in Module 5 lab and Module 6 Track B)
 - [x] **FOUND-03**: CI/CD pipeline (GitHub Actions) for the reference app — build, test, deploy to KIND
-- [x] **FOUND-04**: ArgoCD GitOps setup on KIND for the reference app — real GitOps, not simulated
+- [x] **FOUND-04**: ~~ArgoCD GitOps setup on KIND~~ → Descoped per D-06: ArgoCD too heavy for local lab setup. GitOps concepts taught conceptually via Helm + CI/CD pipeline. Makefile provides `make deploy` one-command workflow.
 - [x] **FOUND-05**: Participant setup guide covering Claude Code install, Crush/OpenCode install, KIND + Docker, AWS CLI, multi-provider LLM config (Claude subscription, Gemini 2.5 Flash, OpenRouter, Grok, Groq)
 - [x] **FOUND-06**: Environment verification script (verify.sh) that validates all prerequisites
 - [x] **FOUND-07**: Real AWS connections first (Cost Explorer, CloudWatch, RDS Performance Insights) when participants have AWS accounts. Mock data as clearly-labeled fallback only — realistic format matching current AWS CLI output, with instructions to swap in real credentials

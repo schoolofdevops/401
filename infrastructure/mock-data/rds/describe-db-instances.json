@@ -1,4 +1,11 @@
 {
+  "_metadata": {
+    "source": "aws rds describe-db-instances",
+    "format_date": "2026-04-04",
+    "sdk_version": "AWS CLI v2",
+    "scenario": "production-db",
+    "description": "MOCK DATA — RDS PostgreSQL instance metadata. Replace with real RDS output when AWS account is available."
+  },
   "DBInstances": [
     {
       "DBInstanceIdentifier": "prod-db-01",

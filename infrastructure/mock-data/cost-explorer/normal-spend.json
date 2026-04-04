@@ -1,4 +1,11 @@
 {
+  "_metadata": {
+    "source": "aws ce get-cost-and-usage",
+    "format_date": "2026-04-04",
+    "sdk_version": "AWS CLI v2",
+    "scenario": "normal-spend",
+    "description": "MOCK DATA — 7-day normal spending pattern. Replace with real Cost Explorer output when AWS account is available."
+  },
   "ResultsByTime": [
     {
       "TimePeriod": {"Start": "2026-03-28", "End": "2026-03-29"},

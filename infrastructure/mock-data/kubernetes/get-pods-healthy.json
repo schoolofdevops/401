@@ -1,4 +1,10 @@
 {
+  "_metadata": {
+    "source": "kubectl get pods -o json",
+    "format_date": "2026-04-04",
+    "scenario": "healthy-pods",
+    "description": "MOCK DATA — Healthy pod listing. In labs, use real kubectl output from KIND cluster instead."
+  },
   "apiVersion": "v1",
   "kind": "PodList",
   "metadata": {
