@@ -1,0 +1,342 @@
+{
+  "apiVersion": "v1",
+  "kind": "PodList",
+  "metadata": {
+    "resourceVersion": "19872"
+  },
+  "items": [
+    {
+      "metadata": {
+        "name": "webapp-deployment-abc123",
+        "namespace": "default",
+        "labels": {
+          "app": "webapp",
+          "version": "v1.2.3"
+        },
+        "creationTimestamp": "2026-04-04T08:00:00Z"
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "webapp",
+            "image": "webapp:v1.2.3",
+            "resources": {
+              "requests": {
+                "memory": "128Mi",
+                "cpu": "100m"
+              },
+              "limits": {
+                "memory": "256Mi",
+                "cpu": "500m"
+              }
+            },
+            "ports": [
+              {
+                "containerPort": 8080,
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ],
+        "restartPolicy": "Always"
+      },
+      "status": {
+        "phase": "Running",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:05Z"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T11:42:00Z"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T11:42:00Z"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:00Z"
+          }
+        ],
+        "hostIP": "10.0.0.1",
+        "podIP": "10.0.1.10",
+        "startTime": "2026-04-04T08:00:00Z",
+        "containerStatuses": [
+          {
+            "name": "webapp",
+            "state": {
+              "running": {
+                "startedAt": "2026-04-04T11:42:00Z"
+              }
+            },
+            "ready": true,
+            "restartCount": 12,
+            "image": "webapp:v1.2.3",
+            "imageID": "docker://sha256:abc123def456",
+            "lastState": {
+              "terminated": {
+                "exitCode": 137,
+                "reason": "OOMKilled",
+                "startedAt": "2026-04-04T11:30:00Z",
+                "finishedAt": "2026-04-04T11:41:52Z"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "name": "api-deployment-def456",
+        "namespace": "default",
+        "labels": {
+          "app": "api",
+          "version": "v2.1.0"
+        },
+        "creationTimestamp": "2026-04-04T08:00:00Z",
+        "annotations": {
+          "kubectl.kubernetes.io/last-applied-configuration": "{\"image\":\"api:v2.1.0\"}"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "api",
+            "image": "api:v2.1.0",
+            "resources": {
+              "requests": {
+                "memory": "128Mi",
+                "cpu": "100m"
+              },
+              "limits": {
+                "memory": "256Mi",
+                "cpu": "500m"
+              }
+            },
+            "ports": [
+              {
+                "containerPort": 8081,
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ],
+        "restartPolicy": "Always"
+      },
+      "status": {
+        "phase": "Running",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:05Z"
+          },
+          {
+            "type": "Ready",
+            "status": "False",
+            "lastTransitionTime": "2026-04-04T12:05:00Z",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [api]"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "False",
+            "lastTransitionTime": "2026-04-04T12:05:00Z",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [api]"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:00Z"
+          }
+        ],
+        "hostIP": "10.0.0.1",
+        "podIP": "10.0.1.11",
+        "startTime": "2026-04-04T08:00:00Z",
+        "containerStatuses": [
+          {
+            "name": "api",
+            "state": {
+              "waiting": {
+                "reason": "CrashLoopBackOff",
+                "message": "back-off 5m0s restarting failed container=api pod=api-deployment-def456_default"
+              }
+            },
+            "ready": false,
+            "restartCount": 8,
+            "image": "api:v2.1.0",
+            "imageID": "docker://sha256:def456ghi789new",
+            "lastState": {
+              "terminated": {
+                "exitCode": 137,
+                "reason": "OOMKilled",
+                "startedAt": "2026-04-04T12:00:00Z",
+                "finishedAt": "2026-04-04T12:04:55Z",
+                "containerID": "docker://sha256:def456ghi789new"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "name": "memory-hog-mno345",
+        "namespace": "default",
+        "labels": {
+          "app": "memory-hog",
+          "version": "v1.0.0"
+        },
+        "creationTimestamp": "2026-04-04T10:00:00Z"
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "memory-hog",
+            "image": "memory-hog:v1.0.0",
+            "resources": {
+              "requests": {
+                "memory": "128Mi",
+                "cpu": "50m"
+              }
+            },
+            "ports": [
+              {
+                "containerPort": 9090,
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ],
+        "restartPolicy": "Always"
+      },
+      "status": {
+        "phase": "Running",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T10:00:05Z"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T10:00:20Z"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T10:00:20Z"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T10:00:00Z"
+          }
+        ],
+        "hostIP": "10.0.0.1",
+        "podIP": "10.0.1.14",
+        "startTime": "2026-04-04T10:00:00Z",
+        "containerStatuses": [
+          {
+            "name": "memory-hog",
+            "state": {
+              "running": {
+                "startedAt": "2026-04-04T10:00:15Z"
+              }
+            },
+            "ready": true,
+            "restartCount": 0,
+            "image": "memory-hog:v1.0.0",
+            "imageID": "docker://sha256:mno345pqr678"
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "name": "db-proxy-ghi789",
+        "namespace": "default",
+        "labels": {
+          "app": "db-proxy",
+          "version": "v1.0.5"
+        },
+        "creationTimestamp": "2026-04-04T08:00:00Z"
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "db-proxy",
+            "image": "db-proxy:v1.0.5",
+            "resources": {
+              "requests": {
+                "memory": "64Mi",
+                "cpu": "50m"
+              },
+              "limits": {
+                "memory": "128Mi",
+                "cpu": "200m"
+              }
+            },
+            "ports": [
+              {
+                "containerPort": 5432,
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ],
+        "restartPolicy": "Always"
+      },
+      "status": {
+        "phase": "Running",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:05Z"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:18Z"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:18Z"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:00Z"
+          }
+        ],
+        "hostIP": "10.0.0.1",
+        "podIP": "10.0.1.12",
+        "startTime": "2026-04-04T08:00:00Z",
+        "containerStatuses": [
+          {
+            "name": "db-proxy",
+            "state": {
+              "running": {
+                "startedAt": "2026-04-04T08:00:12Z"
+              }
+            },
+            "ready": true,
+            "restartCount": 0,
+            "image": "db-proxy:v1.0.5",
+            "imageID": "docker://sha256:ghi789jkl012"
+          }
+        ]
+      }
+    }
+  ]
+}

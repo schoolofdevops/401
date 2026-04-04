@@ -1,0 +1,329 @@
+{
+  "apiVersion": "v1",
+  "kind": "PodList",
+  "metadata": {
+    "resourceVersion": "12345"
+  },
+  "items": [
+    {
+      "metadata": {
+        "name": "webapp-deployment-abc123",
+        "namespace": "default",
+        "labels": {
+          "app": "webapp",
+          "version": "v1.2.3"
+        },
+        "creationTimestamp": "2026-04-04T08:00:00Z"
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "webapp",
+            "image": "webapp:v1.2.3",
+            "resources": {
+              "requests": {
+                "memory": "128Mi",
+                "cpu": "100m"
+              },
+              "limits": {
+                "memory": "256Mi",
+                "cpu": "500m"
+              }
+            },
+            "ports": [
+              {
+                "containerPort": 8080,
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ],
+        "restartPolicy": "Always"
+      },
+      "status": {
+        "phase": "Running",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:05Z"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:15Z"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:15Z"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:00Z"
+          }
+        ],
+        "hostIP": "10.0.0.1",
+        "podIP": "10.0.1.10",
+        "startTime": "2026-04-04T08:00:00Z",
+        "containerStatuses": [
+          {
+            "name": "webapp",
+            "state": {
+              "running": {
+                "startedAt": "2026-04-04T08:00:10Z"
+              }
+            },
+            "ready": true,
+            "restartCount": 0,
+            "image": "webapp:v1.2.3",
+            "imageID": "docker://sha256:abc123def456"
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "name": "api-deployment-def456",
+        "namespace": "default",
+        "labels": {
+          "app": "api",
+          "version": "v2.0.1"
+        },
+        "creationTimestamp": "2026-04-04T08:00:00Z"
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "api",
+            "image": "api:v2.0.1",
+            "resources": {
+              "requests": {
+                "memory": "128Mi",
+                "cpu": "100m"
+              },
+              "limits": {
+                "memory": "256Mi",
+                "cpu": "500m"
+              }
+            },
+            "ports": [
+              {
+                "containerPort": 8081,
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ],
+        "restartPolicy": "Always"
+      },
+      "status": {
+        "phase": "Running",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:05Z"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:20Z"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:20Z"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:00Z"
+          }
+        ],
+        "hostIP": "10.0.0.1",
+        "podIP": "10.0.1.11",
+        "startTime": "2026-04-04T08:00:00Z",
+        "containerStatuses": [
+          {
+            "name": "api",
+            "state": {
+              "running": {
+                "startedAt": "2026-04-04T08:00:15Z"
+              }
+            },
+            "ready": true,
+            "restartCount": 0,
+            "image": "api:v2.0.1",
+            "imageID": "docker://sha256:def456ghi789"
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "name": "db-proxy-ghi789",
+        "namespace": "default",
+        "labels": {
+          "app": "db-proxy",
+          "version": "v1.0.5"
+        },
+        "creationTimestamp": "2026-04-04T08:00:00Z"
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "db-proxy",
+            "image": "db-proxy:v1.0.5",
+            "resources": {
+              "requests": {
+                "memory": "64Mi",
+                "cpu": "50m"
+              },
+              "limits": {
+                "memory": "128Mi",
+                "cpu": "200m"
+              }
+            },
+            "ports": [
+              {
+                "containerPort": 5432,
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ],
+        "restartPolicy": "Always"
+      },
+      "status": {
+        "phase": "Running",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:05Z"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:18Z"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:18Z"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastTransitionTime": "2026-04-04T08:00:00Z"
+          }
+        ],
+        "hostIP": "10.0.0.1",
+        "podIP": "10.0.1.12",
+        "startTime": "2026-04-04T08:00:00Z",
+        "containerStatuses": [
+          {
+            "name": "db-proxy",
+            "state": {
+              "running": {
+                "startedAt": "2026-04-04T08:00:12Z"
+              }
+            },
+            "ready": true,
+            "restartCount": 0,
+            "image": "db-proxy:v1.0.5",
+            "imageID": "docker://sha256:ghi789jkl012"
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "name": "redis-cache-jkl012",
+        "namespace": "default",
+        "labels": {
+          "app": "redis-cache",
+          "version": "v7.2.0"
+        },
+        "creationTimestamp": "2026-04-03T20:00:00Z"
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "redis-cache",
+            "image": "redis:7.2.0",
+            "resources": {
+              "requests": {
+                "memory": "64Mi",
+                "cpu": "50m"
+              },
+              "limits": {
+                "memory": "128Mi",
+                "cpu": "200m"
+              }
+            },
+            "ports": [
+              {
+                "containerPort": 6379,
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ],
+        "restartPolicy": "Always"
+      },
+      "status": {
+        "phase": "Running",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastTransitionTime": "2026-04-03T20:00:05Z"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "lastTransitionTime": "2026-04-03T20:00:25Z"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "True",
+            "lastTransitionTime": "2026-04-03T20:00:25Z"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastTransitionTime": "2026-04-03T20:00:00Z"
+          }
+        ],
+        "hostIP": "10.0.0.1",
+        "podIP": "10.0.1.13",
+        "startTime": "2026-04-03T20:00:00Z",
+        "containerStatuses": [
+          {
+            "name": "redis-cache",
+            "state": {
+              "running": {
+                "startedAt": "2026-04-03T20:00:20Z"
+              }
+            },
+            "ready": true,
+            "restartCount": 2,
+            "image": "redis:7.2.0",
+            "imageID": "docker://sha256:jkl012mno345",
+            "lastState": {
+              "terminated": {
+                "exitCode": 1,
+                "reason": "Error",
+                "startedAt": "2026-04-03T18:10:00Z",
+                "finishedAt": "2026-04-03T18:15:32Z"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
