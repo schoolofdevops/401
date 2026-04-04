@@ -21,6 +21,7 @@ PASS=0
 FAIL=0
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 COURSE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+export COURSE_ROOT
 
 # ── Check helper ────────────────────────────────────────────────────────────
 # Usage: check "description" command [args...]
@@ -41,7 +42,7 @@ printf '=== Hermes Lab Environment Verification ===\n'
 printf '\n'
 
 # ── Section 1: Required CLI Tools ───────────────────────────────────────────
-printf '--- Tool Versions ---\n'
+printf '%s\n' '--- Tool Versions ---'
 
 check "Docker daemon running" \
   docker info
@@ -67,7 +68,7 @@ check "hermes installed" \
 printf '\n'
 
 # ── Section 2: Hermes Configuration ─────────────────────────────────────────
-printf '--- Hermes Configuration ---\n'
+printf '%s\n' '--- Hermes Configuration ---'
 
 check "Hermes home directory exists (~/.hermes)" \
   test -d "$HOME/.hermes"
@@ -83,7 +84,7 @@ check "LLM connectivity (hermes responds to prompt)" \
 printf '\n'
 
 # ── Section 3: KIND Cluster ──────────────────────────────────────────────────
-printf '--- KIND Cluster ---\n'
+printf '%s\n' '--- KIND Cluster ---'
 
 check "KIND cluster 'lab' exists" \
   bash -c 'kind get clusters 2>/dev/null | grep -q "^lab$"'
@@ -97,7 +98,7 @@ check "kubectl can reach KIND cluster (nodes ready)" \
 printf '\n'
 
 # ── Section 4: Mock Data Files ───────────────────────────────────────────────
-printf '--- Mock Data Files ---\n'
+printf '%s\n' '--- Mock Data Files ---'
 
 check "Mock data directory exists" \
   test -d "$COURSE_ROOT/infrastructure/mock-data"
@@ -126,7 +127,7 @@ check "mock-data/kubernetes/get-pods-crashloop.json" \
 printf '\n'
 
 # ── Section 5: Mock Wrapper Scripts ─────────────────────────────────────────
-printf '--- Mock Wrappers ---\n'
+printf '%s\n' '--- Mock Wrappers ---'
 
 check "mock-aws wrapper exists and is executable" \
   test -x "$COURSE_ROOT/infrastructure/wrappers/mock-aws"
@@ -142,7 +143,7 @@ printf '\n'
 # ── Section 6: Mock Mode Smoke Tests ────────────────────────────────────────
 # Verify the mock wrappers actually return data. These tests use HERMES_LAB_MODE=mock
 # so they work even without AWS credentials or a running cluster.
-printf '--- Mock Mode Smoke Tests ---\n'
+printf '%s\n' '--- Mock Mode Smoke Tests ---'
 
 check "mock-aws serves RDS instance data (DBInstances key present)" \
   bash -c 'HERMES_LAB_MODE=mock MOCK_DATA_DIR="$COURSE_ROOT/infrastructure/mock-data" "$COURSE_ROOT/infrastructure/wrappers/mock-aws" rds describe-db-instances 2>/dev/null | grep -q "DBInstances"'
@@ -153,7 +154,7 @@ check "mock-kubectl serves pod list (items key present)" \
 printf '\n'
 
 # ── Section 7: Skill Files ───────────────────────────────────────────────────
-printf '--- Skills ---\n'
+printf '%s\n' '--- Skills ---'
 
 check "sre-ec2-health-check/SKILL.md exists" \
   test -f "$COURSE_ROOT/skills/sre-ec2-health-check/SKILL.md"
