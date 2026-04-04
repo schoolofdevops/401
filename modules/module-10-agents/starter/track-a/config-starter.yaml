@@ -1,0 +1,36 @@
+# Module 10 Lab — Track A config.yaml starter
+# This file goes at: ~/.hermes/profiles/track-a/config.yaml
+# Fill in every [placeholder]. See course/agents/track-a-database/config.yaml for a completed example.
+# Track A reference: course/agents/track-a-database/config.yaml
+
+model:
+  # [your-model] # recommended: anthropic/claude-haiku-4
+  # Other options: "google/gemini-2.5-flash" (Google AI Studio free tier)
+  default: "[your-model] # recommended: anthropic/claude-haiku-4"
+  provider: "auto"
+
+platform_toolsets:
+  # [terminal, file, web, skills] = L2 Advisory (can run commands, read files, load skills)
+  # Correct value for Track A: [terminal, file, web, skills]
+  cli: [terminal, file, web, skills]
+
+approvals:
+  # [manual|auto] # L2 Advisory: use manual
+  # manual = every dangerous command requires your explicit approval
+  # smart  = auxiliary LLM reviews flagged commands, auto-approves low-risk (L3 Proposal)
+  mode: "[manual|auto] # L2 Advisory: use manual"
+
+  # [seconds] # recommended: 300
+  # Default is 60. For lab flows with multiple approval steps, use 300 (5 minutes).
+  timeout: "[seconds] # recommended: 300"
+
+# command_allowlist: leave empty for L2 Advisory (Track A default)
+# L4 only: add description-key strings from tools/approval.py DANGEROUS_PATTERNS
+command_allowlist: []
+
+agent:
+  # max_turns: 30 is sufficient for lab scenarios
+  max_turns: 30
+  verbose: false
+
+# Quality gate: grep -c '\[' ~/.hermes/profiles/track-a/config.yaml must return 0 when complete
