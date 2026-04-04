@@ -1,0 +1,71 @@
+# Reference App Helm values
+# CI/CD pipelines update image tags via --set apiGateway.image.tag=<sha>
+# Participants see the version change in the dashboard (D-04 proof-of-life)
+
+global:
+  postgresql:
+    host: postgresql.db.svc.cluster.local
+    port: "5432"
+    database: refapp
+    username: refapp
+    password: refapp-lab-password
+
+apiGateway:
+  replicaCount: 1
+  image:
+    repository: reference-app/api-gateway
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  env:
+    catalogUrl: http://catalog:8081
+    workerUrl: http://worker:8082
+
+catalog:
+  replicaCount: 1
+  image:
+    repository: reference-app/catalog
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8081
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+worker:
+  replicaCount: 1
+  image:
+    repository: reference-app/worker
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8082
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+dashboard:
+  replicaCount: 1
+  image:
+    repository: reference-app/dashboard
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: NodePort
+    port: 3000
+    nodePort: 30080
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi

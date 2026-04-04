@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "reference-app.fullname" . }}-catalog
+  labels:
+    {{- include "reference-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: catalog
+spec:
+  replicas: {{ .Values.catalog.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "reference-app.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: catalog
+  template:
+    metadata:
+      labels:
+        {{- include "reference-app.labels" . | nindent 8 }}
+        app.kubernetes.io/component: catalog
+    spec:
+      initContainers:
+        - name: migrate
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              psql -f /migrations/001_init.sql
+              echo "Migration complete"
+          env:
+            - name: PGHOST
+              value: {{ .Values.global.postgresql.host | quote }}
+            - name: PGPORT
+              value: {{ .Values.global.postgresql.port | quote }}
+            - name: PGDATABASE
+              value: {{ .Values.global.postgresql.database | quote }}
+            - name: PGUSER
+              value: {{ .Values.global.postgresql.username | quote }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reference-app.fullname" . }}-db
+                  key: password
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+      containers:
+        - name: catalog
+          image: "{{ .Values.catalog.image.repository }}:{{ .Values.catalog.image.tag }}"
+          imagePullPolicy: {{ .Values.catalog.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "reference-app.fullname" . }}-db
+                  key: database-url
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 2
+          resources:
+            {{- toYaml .Values.catalog.resources | nindent 12 }}
+      volumes:
+        - name: migrations
+          configMap:
+            name: {{ include "reference-app.fullname" . }}-migrations

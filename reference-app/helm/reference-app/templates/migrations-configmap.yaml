@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "reference-app.fullname" . }}-migrations
+  labels:
+    {{- include "reference-app.labels" . | nindent 4 }}
+data:
+  001_init.sql: |
+    -- Reference app schema for Agentic DevOps course labs
+    -- Used by: catalog (reads), worker (writes), database agents (Module 10)
+
+    CREATE TABLE IF NOT EXISTS items (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        status VARCHAR(50) NOT NULL DEFAULT 'active',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS events (
+        id SERIAL PRIMARY KEY,
+        source VARCHAR(100) NOT NULL,
+        event_type VARCHAR(100) NOT NULL,
+        payload JSONB NOT NULL DEFAULT '{}',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Seed data for labs (agents query this)
+    INSERT INTO items (name, description, status) VALUES
+        ('web-frontend', 'Svelte dashboard serving user interface', 'active'),
+        ('api-gateway', 'Request router and aggregator', 'active'),
+        ('payment-processor', 'Handles payment transactions', 'active'),
+        ('notification-service', 'Email and SMS notifications', 'degraded'),
+        ('data-pipeline', 'ETL pipeline for analytics', 'active')
+    ON CONFLICT DO NOTHING;

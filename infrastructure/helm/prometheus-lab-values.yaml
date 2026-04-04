@@ -1,0 +1,36 @@
+# Prometheus + Grafana lab values — optimized for developer laptops
+# Reduces resource requests so KIND doesn't OOM on 8GB machines
+# Disables alertmanager (not needed for observability labs)
+
+alertmanager:
+  enabled: false
+
+nodeExporter:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+
+prometheus:
+  prometheusSpec:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    # Allow ServiceMonitors from all namespaces (for reference-app metrics)
+    serviceMonitorSelectorNilUsesHelmValues: false
+  service:
+    type: NodePort
+    nodePort: 30091
+
+grafana:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  service:
+    type: NodePort
+    nodePort: 30090
+  # Default admin credentials for lab use (not production)
+  adminPassword: admin
+  adminUser: admin
