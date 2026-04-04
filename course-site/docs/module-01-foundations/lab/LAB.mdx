@@ -1,0 +1,359 @@
+---
+id: module-01-lab
+title: "Lab: Context Engineering with CloudWatch Data"
+sidebar_label: "Lab"
+sidebar_position: 1
+description: "Progressive context engineering — feel the quality difference between bare prompts and structured domain context"
+---
+
+# Lab: Context Engineering with CloudWatch Data
+
+**Duration:** 60 minutes
+**Deliverable:** A context template that produces expert-level CloudWatch alarm analysis
+
+## What You Need
+
+- **Claude Code** (primary) — open it in your terminal with `claude`
+- **Crush** (alternative) — open it with `crush` if you're using a different LLM provider
+- The alarm data below (inline fallback) or the file at `infrastructure/mock-data/cloudwatch/describe-alarms-anomaly.json` from the repo root
+
+> **If you have real CloudWatch alarms:** Use your own data instead of the mock data below. The context engineering technique is the same — your real data will make the output even more meaningful.
+
+---
+
+## Alarm Data (Inline Fallback)
+
+<details>
+<summary>describe-alarms-anomaly.json — click to expand (use this if you don't have real CloudWatch data)</summary>
+
+```json
+{
+  "_metadata": {
+    "source": "aws cloudwatch describe-alarms",
+    "format_date": "2026-04-04",
+    "aws_cli_version": "2.x",
+    "note": "MOCK DATA — Set HERMES_LAB_MODE=live for real AWS"
+  },
+  "MetricAlarms": [
+    {
+      "AlarmName": "HighCPUUtilization",
+      "AlarmDescription": "Triggers when EC2 instance CPU utilization exceeds 85% for 3 consecutive 5-minute periods.",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:HighCPUUtilization",
+      "ActionsEnabled": true,
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "StateValue": "ALARM",
+      "StateReason": "Threshold Crossed: 3 out of the last 3 datapoints [92.1 (04/04/26 09:45:00), 89.7 (04/04/26 09:40:00), 87.3 (04/04/26 09:35:00)] were greater than the threshold (85.0).",
+      "StateUpdatedTimestamp": "2026-04-04T09:50:00.000Z",
+      "MetricName": "CPUUtilization",
+      "Namespace": "AWS/EC2",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "InstanceId",
+          "Value": "i-0abc123def456001"
+        }
+      ],
+      "Period": 300,
+      "EvaluationPeriods": 3,
+      "Threshold": 85.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "DatabaseConnections",
+      "AlarmDescription": "Monitors active database connection count. Alert fires when connections exceed 80 for 2 consecutive 5-minute periods. Max connections for db.t3.medium is 100.",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:DatabaseConnections",
+      "ActionsEnabled": true,
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "StateValue": "ALARM",
+      "StateReason": "Threshold Crossed: 2 out of the last 2 datapoints [127.0 (04/04/26 09:45:00), 94.0 (04/04/26 09:40:00)] were greater than the threshold (80.0).",
+      "StateUpdatedTimestamp": "2026-04-04T09:50:00.000Z",
+      "MetricName": "DatabaseConnections",
+      "Namespace": "AWS/RDS",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "DBInstanceIdentifier",
+          "Value": "prod-db-01"
+        }
+      ],
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "Threshold": 80.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    }
+  ],
+  "CompositeAlarms": []
+}
+```
+
+</details>
+
+---
+
+## Part 1: Progressive Context Engineering
+
+**Time:** 35 minutes
+**Learning objectives:** MOD1-01 (progressive context layers), MOD1-02 (context architecture)
+
+You are going to send the same CloudWatch alarm data to an AI agent **four times**. Each time, you add one more layer of context. The alarm data never changes — only what the model knows about your environment does.
+
+Take notes after each layer. You'll fill in the comparison table at the end.
+
+---
+
+### Layer 1 — Bare Prompt
+
+Open Claude Code or Crush. Start a fresh conversation.
+
+Copy the alarm JSON from the collapsible block above (or use your own alarm data). Then ask:
+
+```
+Analyze this CloudWatch alarm:
+
+[paste the alarm JSON here]
+```
+
+Send it. Read the output carefully.
+
+**What you'll likely see:** Generic analysis. The model identifies the alarm state, the metric name, and the threshold. It may suggest "check CloudWatch metrics" or "investigate CPU usage." Technically correct. Operationally useless.
+
+**Why:** The model has never worked on your system. It doesn't know the instance role, what a normal CPU looks like, who gets paged, or what you do when this fires. It's working from alarm metadata alone.
+
+**Note the specific output.** You'll compare it to Layer 4 at the end.
+
+---
+
+### Layer 2 — Add SRE Role Context
+
+Start a new conversation. Add this context **before** the alarm JSON:
+
+```
+You are an experienced SRE on a production e-commerce platform.
+Your job is to diagnose CloudWatch alarms and recommend immediate actions.
+Think in terms of: incident severity, customer impact, MTTR.
+
+Analyze this alarm:
+
+[paste the alarm JSON here]
+```
+
+**What changes:**
+
+- The model adopts SRE vocabulary: incident severity, customer impact, time to recover
+- The diagnosis has better framing — it's thinking like an operator, not a general assistant
+- But it's still guessing about your specific infrastructure
+
+**Reflection prompt:** What did the model add that wasn't in Layer 1? What is it still missing?
+
+---
+
+### Layer 3 — Add Infrastructure Topology
+
+Start a new conversation. Add the infrastructure context block after the SRE role:
+
+```
+You are an experienced SRE on a production e-commerce platform.
+Your job is to diagnose CloudWatch alarms and recommend immediate actions.
+Think in terms of: incident severity, customer impact, MTTR.
+
+Infrastructure context:
+- i-0abc123def456001 is the catalog-api EC2 instance (t3.large)
+- It serves the product catalog for 50K daily active users
+- CPU typically runs at 60-65% during peak hours (09:00-21:00 UTC)
+- It communicates with RDS PostgreSQL (db.t3.medium, max 100 connections)
+- SNS alerts go to ops-alerts → PagerDuty → on-call rotation
+
+Analyze this alarm:
+
+[paste the alarm JSON here]
+```
+
+**What changes:**
+
+- The model now knows the instance by name: catalog-api
+- It can calculate the deviation: CPU at 92% is 27-32 points above the normal 60-65% baseline
+- It may flag the DatabaseConnections alarm as correlated — both alarms firing suggests upstream pressure from catalog-api onto the RDS connection pool
+- Specific to YOUR system, not generic EC2 advice
+
+**Reflection prompt:** The model spotted that 92% CPU is much more alarming given a 60-65% baseline. How did knowing the normal baseline change the quality of the diagnosis?
+
+---
+
+### Layer 4 — Add Runbook Context
+
+Start a new conversation. Add the full context:
+
+```
+You are an experienced SRE on a production e-commerce platform.
+Your job is to diagnose CloudWatch alarms and recommend immediate actions.
+Think in terms of: incident severity, customer impact, MTTR.
+
+Infrastructure context:
+- i-0abc123def456001 is the catalog-api EC2 instance (t3.large)
+- It serves the product catalog for 50K daily active users
+- CPU typically runs at 60-65% during peak hours (09:00-21:00 UTC)
+- It communicates with RDS PostgreSQL (db.t3.medium, max 100 connections)
+- SNS alerts go to ops-alerts → PagerDuty → on-call rotation
+
+SRE runbook — HighCPUUtilization response:
+1. Check: Is this a known traffic spike? (check ALB request count)
+2. Check: Is there a runaway process? (aws ssm send-command -- ps aux)
+3. Check: Was there a recent deployment? (check CodeDeploy deployment history)
+4. If traffic spike: scale out (aws autoscaling set-desired-capacity)
+5. If runaway process: isolate and restart (aws ec2 reboot-instances after snapshotting logs)
+6. Escalate if: CPU > 90% for > 10 minutes with no identified cause
+7. Document: all findings in incident ticket before closing
+
+Decision tree threshold: If StateValue=ALARM AND duration > 15 min, wake on-call.
+
+Analyze this alarm:
+
+[paste the alarm JSON here]
+```
+
+**What you'll see:**
+
+- Structured incident response that follows YOUR runbook steps in order
+- CPU is at 92.1% — that's above the "escalate if > 90%" threshold
+- Duration check: first alarm fired at 09:35, current time is 09:50 — 15 minutes, which means escalation is due
+- The correlated DatabaseConnections alarm (127 connections vs 100 max) is flagged as critical — connection pool exhausted means requests will start failing
+- Specific CLI commands to run, in runbook order
+- A clear "wake on-call" recommendation with documented reasoning
+
+**This is context engineering.** The model's intelligence didn't change. The context did. You gave the AI the same information an experienced SRE carries in their head on every on-call shift.
+
+---
+
+### Side-by-Side Comparison
+
+Fill in this table based on your observations from all 4 layers:
+
+| Aspect | Layer 1 (Bare) | Layer 2 (Role) | Layer 3 (Topology) | Layer 4 (Runbook) |
+|--------|---------------|----------------|--------------------|--------------------|
+| Severity assessment | | | | |
+| Specific to your infra? | | | | |
+| Mentions the 60-65% baseline? | | | | |
+| Actionable next steps? | | | | |
+| Correlation between the two alarms? | | | | |
+| Would you trust this at 3am? | | | | |
+
+:::info Discussion
+
+**This is context engineering.** You didn't write a cleverer question. You gave the AI the same context an experienced SRE carries in their head during every on-call handoff. The AI's reasoning capability didn't change — the context did.
+
+A senior SRE walking into an incident doesn't just describe the symptom. They bring: the system topology, the normal baselines, the runbook, the recent change history. Their diagnosis is better not because they ask smarter questions — it's because they carry richer context.
+
+Context engineering is applying that discipline to AI interactions.
+
+:::
+
+---
+
+## Part 2: Context Architecture Exercise
+
+**Time:** 10 minutes
+
+You just built a context template for CPU alarm triage. Now design one for a different scenario.
+
+**Scenario:** Imagine you receive a Cost Explorer anomaly alert — your AWS bill for the last 24 hours is 3x your daily average.
+
+Using the 4-layer structure you just practiced, **draft the context you would add at each layer** for cost anomaly analysis. You don't need to run it — just design the context architecture:
+
+1. **Layer 1:** What's in the raw data? (Hint: look at `infrastructure/mock-data/cost-explorer/anomaly-spike.json`)
+2. **Layer 2:** What role context would help? (What kind of expert analyzes cloud costs?)
+3. **Layer 3:** What infrastructure topology matters for cost analysis? (Which services, which environments, what's normal?)
+4. **Layer 4:** What runbook or decision tree would you add? (When to escalate, what to check first, what actions to take)
+
+**Group discussion prompt (live workshop):** Share your Layer 3 context design with the group. What did you include that others didn't? What did you leave out?
+
+**Solo version (Udemy):** Write your 4 layers in a text file. Then try Layer 4 against the anomaly-spike.json data using Claude Code or Crush.
+
+---
+
+## Part 3: Token Economics
+
+**Time:** 15 minutes
+**Learning objective:** MOD1-03 (token costs, quality-vs-cost tradeoff)
+
+### Why Token Costs Matter
+
+Every token you send to an AI API costs money. But token costs have dropped dramatically — by about 80% since 2025. The economics now favor quality context over bare-bones prompts.
+
+### Cost Estimation Table
+
+| Layer | Context Added | Approx Tokens | Claude Sonnet 4.6 Cost* | Quality |
+|-------|--------------|---------------|------------------------|---------|
+| 1 — Bare prompt | Alarm JSON only | ~150 | $0.00045 | Generic |
+| 2 — SRE role | + Role + instructions | ~350 | $0.00105 | Focused |
+| 3 — Topology | + Instance/service context | ~600 | $0.00180 | Specific |
+| 4 — Runbook | + Decision tree | ~1,000 | $0.00300 | Expert |
+
+*At $3/M input tokens (Claude Sonnet 4.6, 2026 pricing). Output tokens add cost — use $15/M for output.
+
+### Exercise: Calculate Your Daily Triage Cost
+
+Work through these calculations:
+
+**Scenario:** Your team processes 500 CloudWatch alarms per day at Layer 4 context depth.
+
+```
+Daily cost = $0.003 × 500 alarms = $1.50/day
+Monthly cost = $1.50 × 30 = $45/month
+```
+
+**Compare to the alternative:**
+
+```
+Manual triage time = 5 minutes per alarm × 500 alarms = 2,500 minutes per day
+That's 41.7 hours/day — physically impossible for one person
+A team of 5 would each spend 8+ hours/day just on alarm triage
+```
+
+**Discussion questions:**
+
+1. When is Layer 4 worth 7x the cost of Layer 1? (Answer: almost always — $0.003 vs. 5 minutes of SRE time)
+2. When would you use Layer 2 instead of Layer 4? (Lower-priority alarms, development environments)
+3. How does this change your view of "AI is expensive"?
+
+### Free Tier Option
+
+> **Gemini 2.5 Flash free tier** gives you 500 requests/day at zero cost. Layer 4 on all 500 alarms per day = $0 on Gemini free tier.
+>
+> Token economics increasingly favor quality. The cost of expert-level context engineering is approaching zero.
+
+### Context Window Reality Check
+
+The Layer 4 context for this lab is approximately 1,000 tokens.
+
+Claude's context window: **200,000 tokens**
+
+You have room for:
+- Your entire runbook library (~50 runbooks × 500 tokens each = 25,000 tokens)
+- Full service catalog with topology for all services (~5,000 tokens)
+- Last 30 days of incident history (~30,000 tokens)
+- Still have 140,000 tokens left
+
+**The practical limit on context engineering is not the context window — it's your time to write the context.** As you build SKILL.md files (Modules 7-8), you'll encode this context once and reuse it across thousands of interactions.
+
+---
+
+## Lab Complete
+
+You've demonstrated the core skill of this course: structured context engineering on real infrastructure data.
+
+**What you built:**
+- A 4-layer context template for CloudWatch alarm triage
+- A side-by-side comparison of bare vs. structured context
+- An understanding of the cost-quality tradeoff at 2026 pricing
+- The beginning of a context architecture for a second alarm scenario
+
+**What comes next:**
+- Module 1 Reading: LLM theory — tokenization, inference pipeline, context windows
+- Module 2: Platform AI — what AWS built-in features give you without custom context
+- Module 7 (Day 2): SKILL.md — encoding your context architecture into a reusable agent skill file
+
+The starter files in `course-site/docs/module-01-foundations/lab/starter/` contain copy-paste versions of each context layer. Use them in your own work after the course.
