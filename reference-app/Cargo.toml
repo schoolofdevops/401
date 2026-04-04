@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = [
+  "services/shared",
+  "services/api-gateway",
+  "services/catalog",
+  "services/worker",
+]
