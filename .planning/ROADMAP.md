@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [ ] 01-01-PLAN.md — Rust backend services (api-gateway, catalog, worker) with Cargo workspace, Dockerfiles, PostgreSQL migrations
-- [ ] 01-02-PLAN.md — CloudWatch alarm mock data (clean + anomaly scenarios) and mock-aws wrapper update
+- [x] 01-02-PLAN.md — CloudWatch alarm mock data (clean + anomaly scenarios) and mock-aws wrapper update
 - [ ] 01-03-PLAN.md — Svelte health dashboard, Helm chart, KIND config, Prometheus values, Makefile, GitHub Actions CI/CD
 - [ ] 01-04-PLAN.md — Participant setup guide (SETUP.md), course verify.sh, LLM access docs (Claude Code + OpenCode)
 
@@ -96,7 +96,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/4 | Planning complete | - |
+| 1. Foundation | 1/4 | In Progress|  |
 | 2. Day 1 Modules | 0/3 | Not started | - |
 | 3. Day 2 Modules | 0/3 | Not started | - |
 | 4. Remaining Content | 0/3 | Not started | - |
