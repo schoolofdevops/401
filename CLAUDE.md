@@ -6,6 +6,14 @@ Course content repository for "Agentic DevOps: Building Agentic Skills for Infra
 
 **DevOps scope is BROAD:** Infrastructure automation, containerization (Docker/K8s), CI/CD pipelines, GitOps, observability/monitoring, SRE practices, cloud (AWS), IaC (Terraform/Ansible), and everything in between. Labs and examples should draw from the full DevOps spectrum, not just one slice.
 
+## Distribution
+
+**Dual format:**
+1. **Live 3-day workshop** — instructor-led, hands-on, team exercises
+2. **Udemy course** — self-paced online version, targeting top-selling Agentic DevOps course
+
+Content must work for BOTH: structured enough for self-paced Udemy learners, rich enough for live delivery. Labs must be completable solo (no team exercise dependencies for online version).
+
 ## Build Strategy
 
 **Labs/projects FIRST, then explainers/concepts derived from the hands-on content.**
@@ -13,6 +21,7 @@ Course content repository for "Agentic DevOps: Building Agentic Skills for Infra
 1. Build hands-on labs and projects for each module
 2. Use Claude Cowork to generate conceptual explainers and reading materials based on the lab content
 3. Create quizzes derived from both
+4. Record video lessons for Udemy using explainers + live lab walkthroughs
 
 ## Learner Profile
 
