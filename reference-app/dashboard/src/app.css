@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* Status indicator dots */
+.status-dot {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	margin-right: 6px;
+	flex-shrink: 0;
+}
+
+.status-dot-healthy {
+	background-color: #22c55e; /* green-500 */
+	box-shadow: 0 0 4px #22c55e;
+}
+
+.status-dot-degraded {
+	background-color: #f59e0b; /* amber-500 */
+	box-shadow: 0 0 4px #f59e0b;
+}
+
+.status-dot-unknown {
+	background-color: #9ca3af; /* gray-400 */
+}
+
+.status-dot-error {
+	background-color: #ef4444; /* red-500 */
+	box-shadow: 0 0 4px #ef4444;
+}
+
+/* Pulse animation for connecting state */
+@keyframes pulse-slow {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.4; }
+}
+
+.animate-pulse-slow {
+	animation: pulse-slow 2s ease-in-out infinite;
+}
