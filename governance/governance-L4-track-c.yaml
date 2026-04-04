@@ -1,0 +1,19 @@
+# governance-L4-track-c.yaml — Semi-autonomous (Track C: Kubernetes)
+# Track C note: kubectl delete, kubectl drain, kubectl cordon are NOT in
+# Hermes DANGEROUS_PATTERNS. Safety is enforced via SOUL.md NEVER rules.
+# The command_allowlist has no effect on these commands.
+# L4 Track C: smart approval for any DANGEROUS_PATTERNS matches.
+#
+# How to apply: copy these keys into your profile's config.yaml
+# How to diff:  diff governance-L3.yaml governance-L4-track-c.yaml
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: smart
+  timeout: 300
+
+command_allowlist: []
+# Note: Track C dangerous commands (kubectl delete, kubectl drain, kubectl cordon)
+# are not in DANGEROUS_PATTERNS. SOUL.md NEVER rules are the enforcement mechanism.

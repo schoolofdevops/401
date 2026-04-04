@@ -1,0 +1,25 @@
+# governance-L4-track-a.yaml — Semi-autonomous (Track A: Database)
+# The agent autonomously executes pre-approved patterns. Novel or high-risk
+# commands still require smart-approval escalation.
+#
+# Track A pre-approved: read-only SQL (SELECT, EXPLAIN, SHOW) are not in
+# Hermes DANGEROUS_PATTERNS — they never trigger an approval gate regardless.
+# The command_allowlist is empty here because there are no safe mutation
+# patterns to pre-approve for database work at the course level.
+# In a real L4 promotion, you would add description-key strings that match
+# DANGEROUS_PATTERNS entries (e.g., to pre-approve a specific known-safe DDL).
+#
+# How to apply: copy these keys into your profile's config.yaml
+# How to diff:  diff governance-L3.yaml governance-L4-track-a.yaml
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: smart
+  timeout: 300
+
+command_allowlist: []
+# Format: description-key strings from tools/approval.py DANGEROUS_PATTERNS
+# Track A: no mutations pre-approved at course level
+# Example (DO NOT add without security review): "SQL DROP" would pre-approve DROP TABLE/DATABASE

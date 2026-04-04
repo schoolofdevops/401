@@ -1,0 +1,22 @@
+# governance-L4-track-b.yaml — Semi-autonomous (Track B: FinOps)
+# Track B note: aws ec2 terminate-instances and modify-instance-attribute are NOT
+# in Hermes DANGEROUS_PATTERNS. Safety for these commands is enforced via
+# SOUL.md NEVER rules (behavioral), not the approval gate (mechanical).
+# The command_allowlist has no effect on these commands.
+# L4 Track B: smart approval for any DANGEROUS_PATTERNS matches; SOUL.md
+# behavioral rules continue to govern aws ec2 terminate/modify.
+#
+# How to apply: copy these keys into your profile's config.yaml
+# How to diff:  diff governance-L3.yaml governance-L4-track-b.yaml
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: smart
+  timeout: 300
+
+command_allowlist: []
+# Note: Track B dangerous commands (aws ec2 terminate-instances,
+# modify-instance-attribute) are not in DANGEROUS_PATTERNS. SOUL.md NEVER
+# rules are the enforcement mechanism. The allowlist cannot affect them.

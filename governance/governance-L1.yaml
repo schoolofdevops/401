@@ -1,0 +1,15 @@
+# governance-L1.yaml — Assistive
+# The agent cannot run any commands. It reads web resources and available skills,
+# then proposes actions as text. The human reviews and executes every step manually.
+#
+# How to apply: copy these keys into your profile's config.yaml
+# How to diff:  diff governance-L1.yaml governance-L2.yaml
+
+platform_toolsets:
+  cli: [web, skills]      # No terminal: agent cannot execute commands
+
+approvals:
+  mode: manual            # Every flagged command would require approval (none can run anyway)
+  timeout: 300
+
+command_allowlist: []     # Nothing pre-approved
