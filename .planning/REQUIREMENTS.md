@@ -51,8 +51,8 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 
 ### Module 5 — Structured AI Coding + AI Workflows
 
-- [ ] **MOD5-01**: Lab Track A — Build production Helm chart for reference app via structured AI workflow (Brainstorm → Design → Blueprint → Implement → Validate)
-- [ ] **MOD5-02**: Lab Track B — Build CI/CD pipeline (GitHub Actions) for reference app via structured AI workflow
+- [x] **MOD5-01**: Lab Track A — Build production Helm chart for reference app via structured AI workflow (Brainstorm → Design → Blueprint → Implement → Validate)
+- [x] **MOD5-02**: Lab Track B — Build CI/CD pipeline (GitHub Actions) for reference app via structured AI workflow
 - [x] **MOD5-03**: GSD Workflow lab — Full /gsd:new-project → discuss → plan → execute → verify cycle applied to a real IaC deliverable, demonstrating structured AI harness for multi-file infrastructure work
 - [x] **MOD5-04**: Context engineering practical — CLAUDE.md files, context window management, selective injection, managing what the LLM sees across sessions
 - [x] **MOD5-05**: Memory systems lab — Cross-session persistence: claude-mem for Claude Code, MCP-based memory for OpenCode/Crush. When to use memory vs context vs plans
@@ -159,8 +159,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOD4-03 | Phase 2 | Complete |
 | MOD4-04 | Phase 2 | Complete |
 | MOD4-05 | Phase 2 | Complete |
-| MOD5-01 | Phase 3 | Pending |
-| MOD5-02 | Phase 3 | Pending |
+| MOD5-01 | Phase 3 | Complete |
+| MOD5-02 | Phase 3 | Complete |
 | MOD5-03 | Phase 3 | Complete |
 | MOD5-04 | Phase 3 | Complete |
 | MOD5-05 | Phase 3 | Complete |

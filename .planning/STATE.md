@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 03-day-2-modules 03-02-PLAN.md
-last_updated: "2026-04-04T20:17:37.422Z"
+stopped_at: Completed 03-day-2-modules 03-01-PLAN.md
+last_updated: "2026-04-04T20:34:52.896Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 03 (day-2-modules) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Plan: 2 of 5
 | Phase 02-day-1-modules P02 | 7min | 2 tasks | 4 files |
 | Phase 02-day-1-modules P03 | 13 | 3 tasks | 16 files |
 | Phase 03-day-2-modules P02 | 20min | 2 tasks | 6 files |
+| Phase 03-day-2-modules P01 | 20min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 03-day-2-modules]: Module 5b composite lab: single LAB.mdx with 4 timed sections chosen over separate files — GSD workflow is the centerpiece (30 min Section 1)
 - [Phase 03-day-2-modules]: WorkerHeartbeatMissing alert documented as postgres-exporter stretch — not functional in base install, teaches the pattern honestly
 - [Phase 03-day-2-modules]: claude-mem and Crush MCP memory as parallel paths in Section 3 — participants follow one based on tool choice
+- [Phase 03-day-2-modules]: Track A/B labs use gap analysis (Step 0) before AI — establishes baseline understanding before guided generation
+- [Phase 03-day-2-modules]: 5-phase structured workflow pattern (Brainstorm/Design/Blueprint/Implement/Validate) established for all Module 5a IaC lab content
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T20:17:37.419Z
-Stopped at: Completed 03-day-2-modules 03-02-PLAN.md
+Last session: 2026-04-04T20:34:52.894Z
+Stopped at: Completed 03-day-2-modules 03-01-PLAN.md
 Resume file: None
