@@ -23,31 +23,31 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 - [x] **MOD1-01**: Lab Part 1 — Progressive context engineering with real CloudWatch-style alarm data (raw dump → system prompt → structured output → few-shot)
 - [x] **MOD1-02**: Lab Part 2 — Context engineering deep-dive: same alarm with progressive context layers (alarm only → infrastructure topology → incident history → runbook context)
 - [x] **MOD1-03**: Lab Part 3 — Token economics: cost estimation, context size vs quality tradeoff, free tier management
-- [ ] **MOD1-04**: Reading — Tokenization, context windows, inference pipeline (prefill/decode), temperature, Top-P/K — all with DevOps analogies
-- [ ] **MOD1-05**: Reading — AI spectrum (Chat → Copilot → Agent → Squad) with operational maturity analogy
-- [ ] **MOD1-06**: Reading — Context engineering philosophy: why context > prompts, domain expertise as context
-- [ ] **MOD1-07**: Quiz (5-8 questions) covering LLM fundamentals, context engineering concepts
+- [x] **MOD1-04**: Reading — Tokenization, context windows, inference pipeline (prefill/decode), temperature, Top-P/K — all with DevOps analogies
+- [x] **MOD1-05**: Reading — AI spectrum (Chat → Copilot → Agent → Squad) with operational maturity analogy
+- [x] **MOD1-06**: Reading — Context engineering philosophy: why context > prompts, domain expertise as context
+- [x] **MOD1-07**: Quiz (5-8 questions) covering LLM fundamentals, context engineering concepts
 
 ### Module 2 — Platform AI
 
-- [ ] **MOD2-01**: Lab — Explore AWS AI features on free tier: CloudWatch anomaly detection setup, Cost Explorer analysis, Q Developer for query explanation
-- [ ] **MOD2-02**: Reading — AWS AI services landscape and capabilities/limitations matrix
-- [ ] **MOD2-03**: Assessment template — "Platform AI capabilities and gaps for your environment"
-- [ ] **MOD2-04**: Quiz covering platform AI features, vendor lock-in concepts
+- [x] **MOD2-01**: Lab — Explore AWS AI features on free tier: CloudWatch anomaly detection setup, Cost Explorer analysis, Q Developer for query explanation
+- [x] **MOD2-02**: Reading — AWS AI services landscape and capabilities/limitations matrix
+- [x] **MOD2-03**: Assessment template — "Platform AI capabilities and gaps for your environment"
+- [x] **MOD2-04**: Quiz covering platform AI features, vendor lock-in concepts
 
 ### Module 3 — Bridge Content (Platform AI → Custom Agents)
 
-- [ ] **MOD3-01**: Demo script — Hermes first-run agent walkthrough (minimal setup, live demo)
-- [ ] **MOD3-02**: Reading — What custom agents add that platform AI can't, the gap analysis
-- [ ] **MOD3-03**: Quiz covering platform vs custom agent tradeoffs
+- [x] **MOD3-01**: Demo script — Hermes first-run agent walkthrough (minimal setup, live demo)
+- [x] **MOD3-02**: Reading — What custom agents add that platform AI can't, the gap analysis
+- [x] **MOD3-03**: Quiz covering platform vs custom agent tradeoffs
 
 ### Module 4 — Impact Assessment
 
-- [ ] **MOD4-01**: Automation Quadrant template (frequency × complexity scoring matrix)
-- [ ] **MOD4-02**: Scoring sheet for top 10 operational tasks with evaluation criteria (frequency, time, error risk, tool count)
-- [ ] **MOD4-03**: Selection criteria for Day 3 capstone project
-- [ ] **MOD4-04**: Solo-completable version (no team dependency for Udemy learners)
-- [ ] **MOD4-05**: Quiz covering automation candidate evaluation
+- [x] **MOD4-01**: Automation Quadrant template (frequency × complexity scoring matrix)
+- [x] **MOD4-02**: Scoring sheet for top 10 operational tasks with evaluation criteria (frequency, time, error risk, tool count)
+- [x] **MOD4-03**: Selection criteria for Day 3 capstone project
+- [x] **MOD4-04**: Solo-completable version (no team dependency for Udemy learners)
+- [x] **MOD4-05**: Quiz covering automation candidate evaluation
 
 ### Module 5 — Structured AI Coding + AI Workflows
 
@@ -143,22 +143,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOD1-01 | Phase 2 | Complete |
 | MOD1-02 | Phase 2 | Complete |
 | MOD1-03 | Phase 2 | Complete |
-| MOD1-04 | Phase 2 | Pending |
-| MOD1-05 | Phase 2 | Pending |
-| MOD1-06 | Phase 2 | Pending |
-| MOD1-07 | Phase 2 | Pending |
-| MOD2-01 | Phase 2 | Pending |
-| MOD2-02 | Phase 2 | Pending |
-| MOD2-03 | Phase 2 | Pending |
-| MOD2-04 | Phase 2 | Pending |
-| MOD3-01 | Phase 2 | Pending |
-| MOD3-02 | Phase 2 | Pending |
-| MOD3-03 | Phase 2 | Pending |
-| MOD4-01 | Phase 2 | Pending |
-| MOD4-02 | Phase 2 | Pending |
-| MOD4-03 | Phase 2 | Pending |
-| MOD4-04 | Phase 2 | Pending |
-| MOD4-05 | Phase 2 | Pending |
+| MOD1-04 | Phase 2 | Complete |
+| MOD1-05 | Phase 2 | Complete |
+| MOD1-06 | Phase 2 | Complete |
+| MOD1-07 | Phase 2 | Complete |
+| MOD2-01 | Phase 2 | Complete |
+| MOD2-02 | Phase 2 | Complete |
+| MOD2-03 | Phase 2 | Complete |
+| MOD2-04 | Phase 2 | Complete |
+| MOD3-01 | Phase 2 | Complete |
+| MOD3-02 | Phase 2 | Complete |
+| MOD3-03 | Phase 2 | Complete |
+| MOD4-01 | Phase 2 | Complete |
+| MOD4-02 | Phase 2 | Complete |
+| MOD4-03 | Phase 2 | Complete |
+| MOD4-04 | Phase 2 | Complete |
+| MOD4-05 | Phase 2 | Complete |
 | MOD5-01 | Phase 3 | Pending |
 | MOD5-02 | Phase 3 | Pending |
 | MOD5-03 | Phase 3 | Pending |
