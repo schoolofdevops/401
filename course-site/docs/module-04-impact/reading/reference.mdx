@@ -1,0 +1,104 @@
+---
+id: module-04-reference
+title: "Impact Assessment Reference"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "Scoring criteria, quadrant interpretation, and pre-scored example tasks for calibration"
+---
+
+# Impact Assessment Reference
+
+## Scoring Criteria — Detailed Definitions
+
+### Frequency (1-5)
+
+How often does this task occur per person (not per team)?
+
+| Score | Description | Example |
+|-------|-------------|---------|
+| 1 | Monthly or less | Quarterly compliance review |
+| 2 | Weekly | Weekly cost review meeting prep |
+| 3 | 2-3 times per week | Pre-deployment readiness check |
+| 4 | Daily | Morning dashboard review |
+| 5 | Multiple times per day | Alert triage (on-call rotation) |
+
+### Time per Instance (1-5)
+
+How long does one instance of this task take from start to finish?
+
+| Score | Description | Example |
+|-------|-------------|---------|
+| 1 | Under 5 minutes | Single CLI query, quick check |
+| 2 | 5-15 minutes | Review output, take simple action |
+| 3 | 15-30 minutes | Multi-step investigation, draft response |
+| 4 | 30-60 minutes | Deep diagnosis, cross-system correlation |
+| 5 | Over 60 minutes | Full incident response, complex analysis |
+
+### Error Risk (1-5)
+
+How likely is a human to make a mistake on this task, especially under pressure?
+
+| Score | Description | Example |
+|-------|-------------|---------|
+| 1 | Almost never — routine, hard to get wrong | Run a read-only report |
+| 2 | Rare — occasional minor slip | Copy-paste a wrong value |
+| 3 | Occasional — a few mistakes per month | Miss a step in a checklist |
+| 4 | Frequent under pressure | Skip a rollback step during an incident |
+| 5 | High risk — incidents happen here | Manual database migration with no dry run |
+
+### Tool Count (1-5)
+
+How many distinct systems, dashboards, or CLI tools does the task require?
+
+| Score | Description | Example |
+|-------|-------------|---------|
+| 1 | Single tool | One AWS CLI command |
+| 2 | Two tools | CloudWatch + Jira |
+| 3 | Three tools | CloudWatch + Jira + Slack |
+| 4 | Four tools | CloudWatch + Jira + Slack + PagerDuty |
+| 5 | Five or more tools | Full incident response spanning 6+ systems |
+
+---
+
+## Quadrant Interpretation Guide
+
+| Quadrant | Frequency | Complexity | ROI | Strategy | Day 3 Capstone? |
+|---------|-----------|-----------|-----|---------|----------------|
+| PRIME CANDIDATES | High (3-5) | High (6-10) | Highest | Automate first | Yes |
+| QUICK WINS | High (3-5) | Low (2-5) | Good | Script first, then agent if needed | Possible |
+| ASSIST MODE | Low (1-2) | High (6-10) | Good | AI-assisted tool for when it occurs | Possible (harder to test) |
+| SKIP | Low (1-2) | Low (2-5) | Low | Keep manual | No |
+
+**Complexity score** = Error Risk + Tool Count (range: 2-10). The midpoint for "high complexity" is around 6.
+
+---
+
+## Pre-Scored Examples for Calibration
+
+Use these to calibrate your own scoring before you apply it to your tasks.
+
+| Task | Freq | Time | Error Risk | Tools | Total | Quadrant |
+|------|------|------|-----------|-------|-------|---------|
+| Morning CloudWatch alert review | 5 | 3 | 3 | 4 | 15 | PRIME |
+| Pre-deploy readiness checklist | 3 | 4 | 4 | 5 | 16 | PRIME |
+| Monthly EC2 right-sizing review | 1 | 5 | 2 | 3 | 11 | ASSIST |
+| Certificate expiry check | 4 | 1 | 1 | 1 | 7 | QUICK WIN |
+| Weekly cost review prep | 2 | 4 | 2 | 2 | 10 | QUICK WIN/ASSIST |
+| Password reset | 2 | 1 | 1 | 1 | 5 | SKIP |
+| DNS record update | 1 | 1 | 2 | 1 | 5 | SKIP |
+
+---
+
+## Day 3 Module Reference
+
+Your capstone candidate connects to these Day 3 modules:
+
+| Module | What You Build |
+|--------|---------------|
+| Module 10: Domain Agents | Choose a track: SRE alert triage, cost analysis, or deployment validation — or bring your own |
+| Module 11: Agent Fleet | Scale your single agent to handle multiple concurrent tasks |
+| Module 12: Event Triggers | Wire your agent to fire on alarm events, not just on-demand |
+| Module 13: Governance | Add approval gates and audit logging to your agent |
+| Module 14: Capstone | Present your finished agent, 30-day adoption roadmap |
+
+The better your problem statement from this module, the faster Module 10 goes.
