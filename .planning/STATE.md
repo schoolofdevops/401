@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-04-04T16:31:54.991Z"
+stopped_at: Completed 01-foundation/01-01-PLAN.md
+last_updated: "2026-04-04T16:39:15.806Z"
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 01 (foundation) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Plan: 2 of 4
 
 *Updated after each plan completion*
 | Phase 01 P02 | 3 | 2 tasks | 5 files |
+| Phase 01-foundation P01 | 11 | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,9 @@ Recent decisions affecting current work:
 - [Phase 01]: _metadata pattern established for mock JSON files: source, format_date, aws_cli_version, note fields required
 - [Phase 01]: Banner output moved to stderr in mock-aws — diagnostic output belongs on stderr so stdout JSON is pipeable
 - [Phase 01]: EC2 mock data given own ec2/ directory instead of cost-explorer/ for service-based organization
+- [Phase 01-foundation]: Runtime sqlx::query (not macros) chosen to avoid DATABASE_URL at compile time — lower setup friction for course
+- [Phase 01-foundation]: axum 0.8 path syntax is {id} not :id — updated in catalog route
+- [Phase 01-foundation]: PgPool::connect_lazy for unit test fake pools — services testable without live database
 
 ### Pending Todos
 
@@ -75,6 +79,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T16:31:54.989Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-04-04T16:39:15.804Z
+Stopped at: Completed 01-foundation/01-01-PLAN.md
 Resume file: None

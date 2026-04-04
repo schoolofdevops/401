@@ -9,7 +9,7 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 
 ### Foundation Infrastructure
 
-- [ ] **FOUND-01**: Reference microservices application (2-3 services + PostgreSQL) deployable on KIND — serves as the course backbone for all labs
+- [x] **FOUND-01**: Reference microservices application (2-3 services + PostgreSQL) deployable on KIND — serves as the course backbone for all labs
 - [ ] **FOUND-02**: Helm chart packaging for the reference app (used in Module 5 lab and Module 6 Track B)
 - [ ] **FOUND-03**: CI/CD pipeline (GitHub Actions) for the reference app — build, test, deploy to KIND
 - [ ] **FOUND-04**: ArgoCD GitOps setup on KIND for the reference app — real GitOps, not simulated
@@ -132,7 +132,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 | Pending |
+| FOUND-01 | Phase 1 | Complete |
 | FOUND-02 | Phase 1 | Pending |
 | FOUND-03 | Phase 1 | Pending |
 | FOUND-04 | Phase 1 | Pending |
