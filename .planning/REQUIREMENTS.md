@@ -20,9 +20,9 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 
 ### Module 1 — AI Foundations
 
-- [ ] **MOD1-01**: Lab Part 1 — Progressive context engineering with real CloudWatch-style alarm data (raw dump → system prompt → structured output → few-shot)
-- [ ] **MOD1-02**: Lab Part 2 — Context engineering deep-dive: same alarm with progressive context layers (alarm only → infrastructure topology → incident history → runbook context)
-- [ ] **MOD1-03**: Lab Part 3 — Token economics: cost estimation, context size vs quality tradeoff, free tier management
+- [x] **MOD1-01**: Lab Part 1 — Progressive context engineering with real CloudWatch-style alarm data (raw dump → system prompt → structured output → few-shot)
+- [x] **MOD1-02**: Lab Part 2 — Context engineering deep-dive: same alarm with progressive context layers (alarm only → infrastructure topology → incident history → runbook context)
+- [x] **MOD1-03**: Lab Part 3 — Token economics: cost estimation, context size vs quality tradeoff, free tier management
 - [ ] **MOD1-04**: Reading — Tokenization, context windows, inference pipeline (prefill/decode), temperature, Top-P/K — all with DevOps analogies
 - [ ] **MOD1-05**: Reading — AI spectrum (Chat → Copilot → Agent → Squad) with operational maturity analogy
 - [ ] **MOD1-06**: Reading — Context engineering philosophy: why context > prompts, domain expertise as context
@@ -140,9 +140,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOUND-06 | Phase 1 | Complete |
 | FOUND-07 | Phase 1 | Complete |
 | FOUND-08 | Phase 1 | Complete |
-| MOD1-01 | Phase 2 | Pending |
-| MOD1-02 | Phase 2 | Pending |
-| MOD1-03 | Phase 2 | Pending |
+| MOD1-01 | Phase 2 | Complete |
+| MOD1-02 | Phase 2 | Complete |
+| MOD1-03 | Phase 2 | Complete |
 | MOD1-04 | Phase 2 | Pending |
 | MOD1-05 | Phase 2 | Pending |
 | MOD1-06 | Phase 2 | Pending |

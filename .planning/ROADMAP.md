@@ -49,7 +49,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Docusaurus site init + Module 1 lab (progressive context engineering with CloudWatch data, token economics)
+- [x] 02-01-PLAN.md — Docusaurus site init + Module 1 lab (progressive context engineering with CloudWatch data, token economics)
 - [ ] 02-02-PLAN.md — Module 1 reading materials and quiz (tokenization, context windows, AI spectrum, context engineering philosophy)
 - [ ] 02-03-PLAN.md — Modules 2-4 labs, reading, quiz (platform AI, bridge content, impact assessment)
 
