@@ -1,0 +1,57 @@
+---
+id: module-01-readme
+title: "Module 1: AI Foundations for Operations"
+sidebar_label: "Overview"
+sidebar_position: 0
+---
+
+# Module 1: AI Foundations for Operations
+
+**Duration:** 90 minutes
+**Day:** Day 1, Session 1
+
+## What This Module Is About
+
+You've been managing infrastructure for years. You know what a CPU spike looks like, what an on-call page at 3am feels like, and what good runbook documentation looks like. This module connects that expertise to how AI language models actually work — and why your domain knowledge is the most valuable input you can give them.
+
+This is not a theory lecture. You will interact directly with an AI agent on real infrastructure data and feel the difference that structured context makes.
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. **Explain tokenization and context windows** using an operational analogy that sticks — you'll never confuse "context window" and "memory" again
+2. **Demonstrate progressive context engineering** — take the same CloudWatch alarm from generic analysis to expert-level incident response by layering structured domain knowledge
+3. **Describe the AI inference pipeline** (prefill, decode, attention) at a conceptual level — enough to reason about latency, token limits, and cost
+4. **Estimate token costs** for different context sizes and evaluate the quality-vs-cost tradeoff for your operational use cases
+5. **Articulate why context engineering is the core skill** — not prompt writing tricks, but structuring what the model sees
+
+## The "Aha Moment" of Day 1
+
+The Module 1 lab produces a visceral experience: you send the same CloudWatch alarm to an AI agent four times, each time adding more structured context. By Layer 4, the output matches what an expert SRE would write. By Layer 1, it's generic noise.
+
+That delta is context engineering. The AI's intelligence didn't change. The context did.
+
+## Prerequisites
+
+- Setup complete per [setup/SETUP.md](pathname:///setup/SETUP.md)
+- Claude Code or Crush installed and connected to an LLM
+- Basic AWS familiarity (you know what CloudWatch alarms are)
+
+## Module Contents
+
+| Section | Content | Time |
+|---------|---------|------|
+| Lab | [Progressive Context Engineering with CloudWatch Data](lab/LAB) | 60 min |
+| Reading | LLM Fundamentals for Operations (coming soon) | 20 min |
+| Quiz | Module 1 Assessment (coming soon) | 10 min |
+
+## Key Concept: Context Engineering vs. Prompt Engineering
+
+Prompt engineering asks: "How do I write a better question?"
+
+Context engineering asks: "What does the model need to know to give me an expert answer?"
+
+A seasoned SRE walking into an on-call handoff doesn't just ask a good question. They bring context: the current incident, the system topology, the runbooks, the recent deployment history. The quality of their diagnosis depends on the context they carry — not the cleverness of their question.
+
+Context engineering is applying that same discipline to AI interactions.
