@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Reference app, shared mock data, setup guide, environment verification (completed 2026-04-04)
 - [ ] **Phase 2: Day 1 Modules** - Modules 1-4 labs, reading, quiz — context engineering mental model
-- [ ] **Phase 3: Day 2 Modules** - Modules 5-6 labs with dual/triple tracks — structured coding and AI-assisted IaC
+- [ ] **Phase 3: Day 2 Modules** - Modules 5-6 labs with dual tracks — structured coding and AI-assisted IaC
 - [ ] **Phase 4: Remaining Content** - Modules 9 and 14, all-module reading/quiz/explainers, format overlays
 
 ## Phase Details
@@ -54,23 +54,25 @@ Plans:
 - [ ] 02-03-PLAN.md — Modules 2-4 labs, reading, quiz (platform AI, bridge content, impact assessment)
 
 ### Phase 3: Day 2 Modules
-**Goal**: A participant completing Day 2 has built real infrastructure artifacts (Helm chart or CI/CD pipeline) using a structured AI workflow and has working IaC in at least one track (Terraform, K8s+GitOps, or CI/CD with Argo Workflows)
+**Goal**: A participant completing Day 2 has built real infrastructure artifacts (Helm chart or CI/CD pipeline) using a structured AI workflow and has working IaC in at least one track (Terraform or K8s+GitOps)
 **Depends on**: Phase 2
 **Requirements**: MOD5-01, MOD5-02, MOD5-03, MOD5-04, MOD5-05, MOD5-06, MOD5-07, MOD5-08, MOD5-09, MOD5-10, MOD6-01, MOD6-02, MOD6-03, MOD6-04, MOD6-05, MOD6-06
 **Success Criteria** (what must be TRUE):
-  1. Module 5 Track A produces a working Helm chart for the reference app (deployable to KIND) via the GSD structured workflow — participant can trace every decision back to a workflow step
-  2. Module 5 Track B produces a working GitHub Actions CI/CD pipeline for the reference app via the structured AI workflow
-  3. Module 6 Track A Terraform lab connects to real AWS free-tier resources (EC2/RDS with CloudWatch alarms) with a documented mock fallback; starter and solution files exist
-  4. Module 6 Track B K8s+Helm+ArgoCD lab deploys the reference app to KIND via GitOps — participant can push a change and watch ArgoCD sync it
-  5. Module 6 Track C Argo Workflows + GitHub Actions lab runs a real CI/CD pipeline for the reference app
-  6. Every Module 5 and 6 lab step includes an "Expected result:" block so participants know immediately if they succeeded
-**Plans**: TBD
-**UI hint**: no
+  1. Module 5a Track A produces a working Helm chart for the reference app (deployable to KIND) via the 5-phase structured AI workflow — participant can trace every decision back to a workflow step
+  2. Module 5a Track B produces a working GitHub Actions CI/CD pipeline for the reference app via the structured AI workflow
+  3. Module 5b GSD lab produces a monitoring stack (Prometheus alerting rules + Grafana dashboard config) for the reference app via the full GSD cycle
+  4. Module 6 Track A Terraform lab connects to real AWS free-tier resources (EC2 with CloudWatch alarms + SNS) with a documented mock fallback; starter and solution files exist
+  5. Module 6 Track B K8s+Helm+ArgoCD lab deploys the reference app to KIND via GitOps — participant can push a change and watch ArgoCD sync it
+  6. ~~Module 6 Track C~~ Descoped per D-41 (Argo Workflows dropped)
+  7. Every Module 5 and 6 lab step includes an "Expected result:" block so participants know immediately if they succeeded
+**Plans**: 5 plans
 
 Plans:
-- [ ] 03-01: Module 5 labs (Track A Helm, Track B CI/CD, GSD workflow lab, context engineering, memory, plan modes, superpowers exploratory)
-- [ ] 03-02: Module 5 reading materials and quiz
-- [ ] 03-03: Module 6 labs — all three tracks (Terraform, K8s+GitOps, Argo Workflows), each with starter/solution/expected outputs
+- [ ] 03-01-PLAN.md — Module 5a labs (Track A Helm chart, Track B CI/CD pipeline) with 5-phase structured AI workflow
+- [ ] 03-02-PLAN.md — Module 5b lab (GSD workflow, context engineering practical, memory systems, plan modes) + superpowers exploratory
+- [ ] 03-03-PLAN.md — Module 5a and 5b reading materials and quizzes
+- [ ] 03-04-PLAN.md — Module 6 labs (Track A Terraform + Track B ArgoCD GitOps) with starter and solution files
+- [ ] 03-05-PLAN.md — Module 6 reading materials, quiz, and exploratory projects
 
 ### Phase 4: Remaining Content
 **Goal**: Every module in the course has complete reading material, quiz, and explainer; Modules 9 and 14 have their specific artifacts; instructors have facilitator guides; Udemy has a section outline
@@ -98,5 +100,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete   | 2026-04-04 |
 | 2. Day 1 Modules | 1/3 | In Progress|  |
-| 3. Day 2 Modules | 0/3 | Not started | - |
+| 3. Day 2 Modules | 0/5 | Not started | - |
 | 4. Remaining Content | 0/3 | Not started | - |
