@@ -1,0 +1,37 @@
+# Module 10 Lab — Track C config.yaml starter
+# This file goes at: ~/.hermes/profiles/track-c/config.yaml
+# See course/agents/track-c-kubernetes/config.yaml for a completed example.
+#
+# Track C note: HERMES_LAB_MODE=mock uses mock-kubectl wrapper (PATH must include
+# course/infrastructure/wrappers/). HERMES_LAB_MODE=live connects to a real KIND cluster.
+# Both modes use the same SOUL.md identity and config — only kubectl routing differs.
+
+model:
+  # [your-model] # recommended: anthropic/claude-haiku-4 (lowest cost for lab sessions)
+  # Other options: "google/gemini-2.5-flash" (Google AI Studio free tier)
+  default: "[your-model] # recommended: anthropic/claude-haiku-4"
+  provider: "auto"
+
+platform_toolsets:
+  # [terminal, file, web, skills] = L2 Advisory (can run kubectl + read files + load skills)
+  # [web, skills] = L1 Assistive (read-only, cannot run commands)
+  cli: [terminal, file, web, skills]
+
+approvals:
+  # [manual|auto] # L2 Advisory: use manual
+  # manual = every dangerous command requires your explicit approval
+  # smart  = auxiliary LLM reviews flagged commands, auto-approves low-risk (L3 Proposal)
+  mode: "[manual|auto] # L2 Advisory: use manual"
+
+  # [seconds] # recommended: 300
+  # 300 = 5 minutes; required for lab flows with multiple kubectl investigation steps
+  timeout: "[seconds] # recommended: 300"
+
+# Track C safety note: kubectl delete, kubectl drain, kubectl cordon are NOT in
+# Hermes DANGEROUS_PATTERNS. SOUL.md NEVER rules enforce the behavioral boundary.
+# L1-L3: leave command_allowlist empty.
+command_allowlist: []
+
+agent:
+  max_turns: 30
+  verbose: false
