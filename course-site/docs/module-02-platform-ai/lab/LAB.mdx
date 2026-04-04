@@ -1,0 +1,217 @@
+---
+id: module-02-lab
+title: "Lab: Exploring AWS Platform AI Features"
+sidebar_label: "Lab"
+sidebar_position: 1
+description: "Hands-on exploration of AWS AI features on free tier — what your cloud already offers"
+---
+
+# Lab: Exploring AWS Platform AI Features
+
+**Duration:** 60 minutes
+**Deliverable:** A completed Platform AI Assessment for your environment (`starter/platform-ai-assessment.md`)
+**Prerequisites:** AWS account with free tier (OR use the mock data fallback — all core exercises have offline options), AWS CLI installed
+
+---
+
+## Overview
+
+Before building custom agents, understand what the platform already gives you. AWS has embedded AI features across its console. This lab explores four of them — and maps exactly where they stop so you know where custom agents begin.
+
+**Free tier vs demo split (Decision D-27):**
+| Service | Lab Type | Why |
+|---------|----------|-----|
+| CloudWatch basic metrics | LAB (do it) | Always free |
+| CloudWatch Anomaly Detection | DEMO (observe) | $0.30/alarm/month beyond free tier |
+| Cost Explorer web UI | LAB (do it) | Free |
+| Q Developer | LAB (do it) | Free via Builder ID |
+| DevOps Guru | DEMO (observe) | 3-month free trial, expires |
+
+---
+
+## Section 1: CloudWatch Metrics Exploration (15 min)
+
+### Step 1.1 — List available metrics
+
+**If you have an AWS account:**
+
+```bash
+aws cloudwatch list-metrics \
+  --namespace AWS/EC2 \
+  --region us-east-1
+```
+
+**If you don't have an AWS account (mock data fallback):**
+
+```bash
+# Clone the course repo if you haven't already
+# Then examine the mock alarm data
+cat infrastructure/mock-data/cloudwatch/describe-alarms-clean.json
+cat infrastructure/mock-data/cloudwatch/describe-alarms-anomaly.json
+```
+
+**Expected result:** You see a list of metrics (or mock alarm objects). Each alarm has a `MetricName`, `Namespace`, `Threshold`, `ComparisonOperator`, and current `StateValue`. Notice `StateValue: "ALARM"` vs `StateValue: "OK"`.
+
+---
+
+### Step 1.2 — Identify patterns manually
+
+Open `describe-alarms-anomaly.json` and answer these questions:
+
+1. Which alarms are currently in `ALARM` state?
+2. What metric triggered them — CPU? Memory? Request count?
+3. For each alarm in ALARM state, what information is missing that you'd need to diagnose the issue?
+
+Write your answers in the assessment template (Section 5 below).
+
+**Expected result:** You can identify 1-3 alarms in ALARM state and articulate what's missing — typically: "I don't know which service version was deployed 30 minutes ago" or "I don't know if this happened before."
+
+---
+
+### Step 1.3 — CloudWatch Anomaly Detection (DEMO — don't create)
+
+CloudWatch Anomaly Detection learns metric baselines over 2 weeks and alerts on deviations. It's useful for catching unusual patterns without manually setting thresholds.
+
+**Why this is a demo:** It costs $0.30/alarm/month beyond the free tier limit of 10 anomaly detection alarms. We'll show it without creating it.
+
+In the AWS Console: Alarms > Create Alarm > Select metric > Additional configuration > "Anomaly detection band."
+
+**Key observation:** The system learns what "normal" looks like and alerts when it deviates. What it CANNOT do:
+- Cross-reference with your deployment pipeline
+- Check whether the anomaly matches a known failure pattern
+- Follow your runbook to investigate root cause
+- Create a Jira ticket with structured context
+
+**Expected result:** You understand what CloudWatch Anomaly Detection does and its ceiling. The gap between "alert fires" and "incident resolved" is still manual.
+
+---
+
+## Section 2: Cost Explorer Analysis (15 min)
+
+### Step 2.1 — View cost trends
+
+**If you have an AWS account (free web UI):**
+
+1. Navigate to AWS Console > Cost Explorer
+2. Set date range: "Last 6 months"
+3. Group by: "Service"
+4. Look for services with increasing month-over-month cost
+
+**If you don't have an AWS account (mock data fallback):**
+
+```bash
+cat infrastructure/mock-data/cost-explorer/normal-spend.json
+cat infrastructure/mock-data/cost-explorer/anomaly-spike.json
+```
+
+**Expected result:** You see costs broken down by service. The `anomaly-spike.json` file shows a month with an unexpected spike in one service's cost.
+
+---
+
+### Step 2.2 — Identify the top 3 cost drivers
+
+Using either the console or the mock data, identify:
+1. Top 3 services by total spend
+2. Which service has the steepest month-over-month increase
+3. What would you need to know to explain that increase?
+
+**Expected result:** You can name the top services and articulate what's missing — typically: "I don't know which team launched new resources" or "I can't correlate this with deployment activity."
+
+---
+
+### Step 2.3 — The context engineering connection
+
+Connect this to Module 1. To give an AI agent useful cost analysis capability, you'd need to provide:
+
+- Historical baseline: "Our normal EC2 spend is $X/month"
+- Architecture context: "We have 3 environments (prod/staging/dev) — prod runs 24/7, staging spins up during business hours"
+- Change context: "Deployments happen Tuesday/Thursday — cost spikes on those days are expected"
+
+This is context engineering applied to cost data. Without this context, an AI can only tell you what's already obvious in the graph.
+
+**Expected result:** You can articulate at least 2 context layers that would improve an AI cost analysis.
+
+---
+
+## Section 3: Q Developer (15 min)
+
+### Step 3.1 — Install Amazon Q
+
+> **Important:** Q Developer's free tier uses your **AWS Builder ID** — not an AWS account. An AWS Builder ID is free to create at https://profile.aws.amazon.com and requires no billing setup, no credit card, and no existing AWS account.
+
+1. Open VS Code (or JetBrains IDE)
+2. Install the "AWS Toolkit" extension (includes Amazon Q)
+3. Click "Connect to AWS" > Choose "Use a personal email" > Sign in with AWS Builder ID
+
+**Expected result:** The Q Developer chat panel opens in your IDE and shows your free tier quota (50 agentic requests/month).
+
+---
+
+### Step 3.2 — Give Q a DevOps task
+
+Open any Terraform, Ansible, or Kubernetes file from your environment (or use a file from the course repo starter files). Ask Q:
+
+```
+Explain this configuration. What security improvements would you recommend?
+```
+
+Then ask a follow-up:
+
+```
+What would happen if the instance_type was changed to t2.nano in a production environment?
+```
+
+**Expected result:** Q provides an explanation and security suggestions. Note what it can and cannot tell you — it understands the code syntax and common patterns, but it doesn't know your specific deployment context, network topology, or team's risk tolerance.
+
+---
+
+### Step 3.3 — Test Q's context limits
+
+Ask Q:
+
+```
+Based on this configuration, what alerts should I set up in CloudWatch for this infrastructure?
+```
+
+**Expected result:** Q gives generic CloudWatch alarm recommendations. It doesn't know your SLAs, error budget, or historical baselines. Compare this to what YOU would recommend for your own environment — the gap between Q's output and your answer is exactly what SKILL.md files will fill in Module 7.
+
+---
+
+## Section 4: DevOps Guru (5 min — DEMO ONLY)
+
+DevOps Guru analyzes CloudWatch, CloudTrail, and Config data to detect operational issues before they become incidents. It uses ML to identify resource relationships and anomalies across services.
+
+**Why this is demo-only:** DevOps Guru has a 3-month free tier. After it expires, costs can be significant depending on your resource footprint. We are NOT creating DevOps Guru resources in this lab.
+
+**What it can do:**
+- Detect multi-service anomalies (e.g., "Lambda errors correlate with RDS connection exhaustion")
+- Identify unexpected changes in operational metrics
+- Surface insights from across your AWS account automatically
+
+**What it cannot do:**
+- Execute remediation steps
+- Follow your team's escalation procedures
+- Access your runbooks or knowledge base
+- Integrate with non-AWS observability tools
+
+**Key takeaway:** Platform AI can detect patterns in your metrics, but it can't follow YOUR runbook, check YOUR topology, or apply YOUR team's decision criteria. Detection is solved. The gap is investigation and action.
+
+---
+
+## Section 5: Complete the Platform AI Assessment (10 min)
+
+Open `starter/platform-ai-assessment.md` and fill it in based on what you observed in Sections 1-4.
+
+**Expected result:** A completed assessment showing which services are available in your account, whether the free tier applies, what capability you gained, and — critically — what that service CANNOT do. This gap analysis is the foundation for understanding where custom agents add value.
+
+---
+
+## Wrap-Up
+
+After completing this lab, you should be able to answer:
+
+1. Which AWS AI features are available to you right now at zero cost?
+2. What is the "capability ceiling" of each — where does it stop?
+3. What would you need a custom agent to do that platform AI cannot?
+
+Bring your completed assessment to Module 3, where a custom agent (Hermes) will demonstrate what's possible beyond that ceiling.

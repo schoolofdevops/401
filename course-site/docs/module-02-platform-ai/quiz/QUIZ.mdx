@@ -1,0 +1,116 @@
+---
+id: module-02-quiz
+title: "Module 2 Quiz: Platform AI"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of AWS platform AI features and their limitations"
+---
+
+# Module 2 Quiz: Platform AI
+
+Five questions covering AWS AI services, their capabilities, and the gap custom agents fill.
+
+---
+
+**Question 1**
+
+Which AWS AI service is free to use in the web console for cost analysis — with no per-request charges?
+
+<details>
+<summary>Answer</summary>
+
+**Cost Explorer** — the web console is free. The Cost Explorer API charges $0.01 per request, but browsing and analyzing costs through the AWS Console interface incurs no charges.
+
+</details>
+
+---
+
+**Question 2**
+
+What is the main limitation of CloudWatch Anomaly Detection compared to a custom agent analyzing the same alarm?
+
+<details>
+<summary>Answer</summary>
+
+CloudWatch Anomaly Detection detects that a metric deviated from baseline. It fires an alert. It **cannot**:
+- Cross-reference the anomaly with your deployment pipeline
+- Check whether this pattern matches a known failure mode in your runbook
+- Execute investigation steps (query related metrics, check recent changes)
+- Produce a structured diagnosis
+
+A custom agent with domain context (runbook, topology, deployment history) can do all of these — detection is just the first step.
+
+</details>
+
+---
+
+**Question 3**
+
+Amazon Q Developer's free tier requires what type of login — and why is the distinction important?
+
+<details>
+<summary>Answer</summary>
+
+Q Developer's free tier uses an **AWS Builder ID** — a personal identity that is free to create and requires no AWS account, no credit card, and no billing setup.
+
+The distinction matters because participants who don't have an AWS account (or don't want to use theirs) can still complete the Q Developer lab. AWS Builder ID is separate from IAM credentials and incurs no charges.
+
+</details>
+
+---
+
+**Question 4**
+
+What is vendor lock-in in the context of platform AI features, and why does it matter for DevOps teams?
+
+<details>
+<summary>Answer</summary>
+
+Vendor lock-in means your operational AI intelligence is embedded in one cloud provider's tooling. If you use CloudWatch Anomaly Detection, DevOps Guru, and Cost Explorer, that intelligence only covers your AWS workloads.
+
+It matters because:
+- Multi-cloud and hybrid teams can't get a unified view
+- If you migrate providers, you lose your anomaly detection history and configuration
+- You have no leverage to bring your operational knowledge to a different platform
+
+Custom agents built on a provider-agnostic framework (Hermes) encode operational knowledge in portable SKILL.md files that work regardless of which cloud or tools you use.
+
+</details>
+
+---
+
+**Question 5**
+
+A team has CloudWatch Anomaly Detection alerting on their API Gateway latency. The alert fires. What will platform AI handle, and what will still be manual (or require a custom agent)?
+
+<details>
+<summary>Answer</summary>
+
+**Platform AI handles:** Detecting the anomaly and sending the alert.
+
+**Still manual (or requires a custom agent):**
+- Querying related metrics (Lambda duration, downstream service latency, DynamoDB read capacity)
+- Checking the deployment pipeline for recent changes
+- Correlating the pattern with previous incidents
+- Following the runbook to narrow down root cause
+- Deciding whether to roll back, scale out, or escalate
+- Creating a structured incident ticket with the diagnosis
+
+The alert tells you something is wrong. Everything after that is investigation — and investigation requires context that platform AI doesn't have.
+
+</details>
+
+---
+
+**Question 6**
+
+True or False: AWS DevOps Guru can execute remediation actions when it detects an operational issue.
+
+<details>
+<summary>Answer</summary>
+
+**False.** DevOps Guru detects and surfaces operational anomalies across your AWS services. It creates OpsItems in Systems Manager OpsCenter, but it does NOT take remediation action.
+
+Remediation still requires either a human engineer or a custom agent with the appropriate tools and governance controls. Detection ≠ action.
+
+</details>

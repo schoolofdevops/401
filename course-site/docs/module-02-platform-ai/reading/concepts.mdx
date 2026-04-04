@@ -1,0 +1,118 @@
+---
+id: module-02-concepts
+title: "Platform AI: What Your Cloud Already Offers"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "AWS AI services relevant to DevOps — capabilities, limitations, and the gap custom agents fill"
+---
+
+# Platform AI: What Your Cloud Already Offers
+
+## The Platform AI Premise
+
+Cloud providers have embedded AI capabilities directly into their services. AWS has done this across CloudWatch, Cost Explorer, CodeGuru, DevOps Guru, and Q Developer. These are not integrations you build — they're features you enable.
+
+The premise is compelling: AI that already understands your cloud infrastructure, trained on millions of AWS deployments, available at a click.
+
+The reality is more nuanced.
+
+---
+
+## AWS AI Services Relevant to DevOps Operations
+
+### CloudWatch Anomaly Detection
+
+CloudWatch can learn what "normal" looks like for a metric — CPU utilization, request latency, error rates — and alert when the observed value deviates significantly from the expected band.
+
+**What it does well:**
+- Eliminates static threshold management (no more "alert if CPU > 80%")
+- Adapts to weekly and daily patterns automatically
+- Works across any CloudWatch metric with enough history (2 weeks minimum)
+
+**The ceiling:**
+- It detects the anomaly. It does not investigate why.
+- It cannot cross-reference with your deployment timeline.
+- It fires an SNS notification. What happens next is entirely manual.
+
+### Cost Explorer
+
+Cost Explorer provides AI-assisted cost analysis: anomaly detection on spending patterns, rightsizing recommendations for EC2 instances, and a natural language query interface.
+
+**What it does well:**
+- Identifies unexpected cost spikes by service and account
+- Generates monthly cost forecasts
+- Provides instance rightsizing recommendations
+
+**The ceiling:**
+- Recommendations are generic — it doesn't know your team's SLAs, traffic patterns, or capacity planning constraints.
+- It can't correlate cost spikes with specific deployments or code changes.
+- It doesn't know that your staging environment runs 24/7 because of a configuration drift issue from three months ago.
+
+### Amazon Q Developer
+
+Q Developer is an AI code assistant with deep AWS service knowledge. It can explain, generate, and review IaC code (Terraform, CloudFormation, CDK), and perform security vulnerability scans.
+
+**What it does well:**
+- Explains complex Terraform or CDK configurations clearly
+- Identifies common security misconfigurations (e.g., overly permissive IAM, missing encryption)
+- Generates boilerplate from natural language descriptions
+
+**The ceiling:**
+- It knows AWS services broadly but not your specific architecture.
+- It cannot query your live infrastructure state.
+- It doesn't know your team's naming conventions, tagging strategies, or approved AMI list.
+
+### DevOps Guru
+
+DevOps Guru ingests CloudWatch metrics, CloudTrail events, and Config change history to identify cross-service operational anomalies that individual service alarms might miss.
+
+**What it does well:**
+- Surfaces relationships between issues across services (e.g., "Lambda errors correlate with DynamoDB throttling")
+- Detects anomalies before they escalate to incidents
+- Integrates with Systems Manager OpsCenter for ticket creation
+
+**The ceiling:**
+- AWS-only — cannot incorporate on-prem, GCP, or third-party observability data.
+- Cannot execute remediation actions.
+- Does not know your runbooks, escalation procedures, or SLOs.
+
+---
+
+## The Capabilities Matrix
+
+| Feature | Detects | Investigates | Executes | Knows Your Context |
+|---------|---------|-------------|---------|-------------------|
+| CloudWatch Anomaly | Yes | No | No | No |
+| Cost Explorer | Yes | Partial | No | No |
+| Q Developer | N/A (code) | Yes (code) | No | No |
+| DevOps Guru | Yes | Partial | No | No |
+| Custom Agent | Yes | Yes | Yes | Yes (if you build it) |
+
+The pattern is clear: platform AI is excellent at **detection** and weak at **investigation and action**.
+
+---
+
+## The Vendor Lock-In Consideration
+
+Platform AI ties your operational intelligence to a single cloud provider's view of your infrastructure.
+
+If your organization runs workloads on AWS and GCP, your CloudWatch anomaly detection is blind to GCP metrics. If you migrate to Azure, your Cost Explorer history doesn't come with you. If you adopt on-prem Kubernetes, DevOps Guru doesn't help.
+
+Custom agents built with a provider-agnostic framework (like Hermes) can span cloud providers, on-prem systems, and third-party services. The intelligence lives in your domain skills, not in the platform.
+
+---
+
+## Key Insight: The Gap
+
+Platform AI is pre-trained and general-purpose. It was trained on the broad patterns of AWS usage across all customers.
+
+It does not know:
+- YOUR infrastructure topology
+- YOUR runbooks and escalation procedures
+- YOUR team's risk tolerance and decision criteria
+- YOUR deployment pipeline and change velocity
+- YOUR SLOs and error budgets
+
+This is the gap that custom agents fill. A custom agent carries your context — encoded in SKILL.md files — and uses it every time it analyzes an alarm, reviews a cost report, or investigates a deployment failure.
+
+The capability difference isn't about AI sophistication. It's about context. Platform AI has none of yours. Your agent can have all of it.
