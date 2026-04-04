@@ -1,0 +1,21 @@
+# Track A: Database Health & Tuning Agent
+# Governance Level: L2 Advisory
+# Install: cp -r course/agents/track-a-database/ ~/.hermes/profiles/track-a/
+# Launch:  hermes -p track-a chat
+
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: manual       # L2: all flagged dangerous commands require human approval
+  timeout: 300       # 5 min — required for lab flows with multiple approval steps
+
+command_allowlist: []  # L2: nothing pre-approved; L4 would add "SELECT", "EXPLAIN", "SHOW"
+
+agent:
+  max_turns: 30
+  verbose: false
