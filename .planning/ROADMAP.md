@@ -69,7 +69,7 @@ Plans:
 
 Plans:
 - [ ] 03-01-PLAN.md — Module 5a labs (Track A Helm chart, Track B CI/CD pipeline) with 5-phase structured AI workflow
-- [ ] 03-02-PLAN.md — Module 5b lab (GSD workflow, context engineering practical, memory systems, plan modes) + superpowers exploratory
+- [x] 03-02-PLAN.md — Module 5b lab (GSD workflow, context engineering practical, memory systems, plan modes) + superpowers exploratory
 - [ ] 03-03-PLAN.md — Module 5a and 5b reading materials and quizzes
 - [ ] 03-04-PLAN.md — Module 6 labs (Track A Terraform + Track B ArgoCD GitOps) with starter and solution files
 - [ ] 03-05-PLAN.md — Module 6 reading materials, quiz, and exploratory projects
@@ -100,5 +100,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete   | 2026-04-04 |
 | 2. Day 1 Modules | 1/3 | In Progress|  |
-| 3. Day 2 Modules | 0/5 | Not started | - |
+| 3. Day 2 Modules | 1/5 | In Progress|  |
 | 4. Remaining Content | 0/3 | Not started | - |

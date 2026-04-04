@@ -53,11 +53,11 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 
 - [ ] **MOD5-01**: Lab Track A — Build production Helm chart for reference app via structured AI workflow (Brainstorm → Design → Blueprint → Implement → Validate)
 - [ ] **MOD5-02**: Lab Track B — Build CI/CD pipeline (GitHub Actions) for reference app via structured AI workflow
-- [ ] **MOD5-03**: GSD Workflow lab — Full /gsd:new-project → discuss → plan → execute → verify cycle applied to a real IaC deliverable, demonstrating structured AI harness for multi-file infrastructure work
-- [ ] **MOD5-04**: Context engineering practical — CLAUDE.md files, context window management, selective injection, managing what the LLM sees across sessions
-- [ ] **MOD5-05**: Memory systems lab — Cross-session persistence: claude-mem for Claude Code, MCP-based memory for OpenCode/Crush. When to use memory vs context vs plans
-- [ ] **MOD5-06**: Plan modes lab — Structured reasoning before execution: Claude Code plan mode, GSD plan-phase. When to plan vs when to just execute, reviewing and approving plans
-- [ ] **MOD5-07**: Superpowers workflow (exploratory) — TDD, systematic debugging, code review, brainstorming skills as examples of extending Claude Code with disciplined workflows
+- [x] **MOD5-03**: GSD Workflow lab — Full /gsd:new-project → discuss → plan → execute → verify cycle applied to a real IaC deliverable, demonstrating structured AI harness for multi-file infrastructure work
+- [x] **MOD5-04**: Context engineering practical — CLAUDE.md files, context window management, selective injection, managing what the LLM sees across sessions
+- [x] **MOD5-05**: Memory systems lab — Cross-session persistence: claude-mem for Claude Code, MCP-based memory for OpenCode/Crush. When to use memory vs context vs plans
+- [x] **MOD5-06**: Plan modes lab — Structured reasoning before execution: Claude Code plan mode, GSD plan-phase. When to plan vs when to just execute, reviewing and approving plans
+- [x] **MOD5-07**: Superpowers workflow (exploratory) — TDD, systematic debugging, code review, brainstorming skills as examples of extending Claude Code with disciplined workflows
 - [ ] **MOD5-08**: Reading — Why unstructured prompting fails for production infrastructure
 - [ ] **MOD5-09**: Reading — GSD workflow reference, plan modes, memory systems, context engineering techniques
 - [ ] **MOD5-10**: Quiz covering structured coding concepts, context engineering, AI workflow patterns
@@ -161,11 +161,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOD4-05 | Phase 2 | Complete |
 | MOD5-01 | Phase 3 | Pending |
 | MOD5-02 | Phase 3 | Pending |
-| MOD5-03 | Phase 3 | Pending |
-| MOD5-04 | Phase 3 | Pending |
-| MOD5-05 | Phase 3 | Pending |
-| MOD5-06 | Phase 3 | Pending |
-| MOD5-07 | Phase 3 | Pending |
+| MOD5-03 | Phase 3 | Complete |
+| MOD5-04 | Phase 3 | Complete |
+| MOD5-05 | Phase 3 | Complete |
+| MOD5-06 | Phase 3 | Complete |
+| MOD5-07 | Phase 3 | Complete |
 | MOD5-08 | Phase 3 | Pending |
 | MOD5-09 | Phase 3 | Pending |
 | MOD5-10 | Phase 3 | Pending |

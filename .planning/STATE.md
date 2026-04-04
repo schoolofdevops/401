@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 3 context gathered
-last_updated: "2026-04-04T19:27:22.110Z"
+status: Ready to execute
+stopped_at: Completed 03-day-2-modules 03-02-PLAN.md
+last_updated: "2026-04-04T20:17:37.422Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 12
+  completed_plans: 8
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** DevOps practitioners learn to build AI agents that encode their operational expertise — context engineering is THE skill that makes agents useful.
-**Current focus:** Phase 02 — day-1-modules
+**Current focus:** Phase 03 — day-2-modules
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
+Phase: 03 (day-2-modules) — EXECUTING
+Plan: 2 of 5
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Plan: Not started
 | Phase 02-day-1-modules P01 | 12 | 2 tasks | 31 files |
 | Phase 02-day-1-modules P02 | 7min | 2 tasks | 4 files |
 | Phase 02-day-1-modules P03 | 13 | 3 tasks | 16 files |
+| Phase 03-day-2-modules P02 | 20min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ Recent decisions affecting current work:
 - [Phase 02-day-1-modules]: MDX cross-links use document id (e.g., ./module-01-reference) not relative path — required to avoid Docusaurus broken link warnings
 - [Phase 02-03]: MDX < character in .md starter files causes parse errors — use prose substitution (e.g., 'under 5min' not '<5min')
 - [Phase 02-03]: Module 3 Hermes install URL uses NousResearch/hermes-agent — verify URL is live before Day 1 delivery
+- [Phase 03-day-2-modules]: Module 5b composite lab: single LAB.mdx with 4 timed sections chosen over separate files — GSD workflow is the centerpiece (30 min Section 1)
+- [Phase 03-day-2-modules]: WorkerHeartbeatMissing alert documented as postgres-exporter stretch — not functional in base install, teaches the pattern honestly
+- [Phase 03-day-2-modules]: claude-mem and Crush MCP memory as parallel paths in Section 3 — participants follow one based on tool choice
 
 ### Pending Todos
 
@@ -99,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T19:27:22.106Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-day-2-modules/03-CONTEXT.md
+Last session: 2026-04-04T20:17:37.419Z
+Stopped at: Completed 03-day-2-modules 03-02-PLAN.md
+Resume file: None
