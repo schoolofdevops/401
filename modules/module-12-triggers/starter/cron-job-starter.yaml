@@ -1,0 +1,66 @@
+# Cron Job Starter — Module 12
+# Fill in all [placeholder] values before running hermes cron create
+#
+# Usage: copy this file, replace [placeholder] values, then run:
+#
+#   hermes cron create \
+#     --name "[your-cron-job-name]" \
+#     --schedule "[cron-expression]" \
+#     --skill "[skill-name]" \
+#     --prompt "[your-investigation-prompt]" \
+#     --deliver local
+#
+# This file is a parameter reference card — it is not read by Hermes directly.
+# The hermes cron create command accepts these as CLI flags.
+
+name: "[placeholder]"                   # replace with kebab-case name, e.g. daily-db-health
+schedule: "[placeholder]"               # replace with cron expression, e.g. "0 8 * * *"
+skill: "[placeholder]"                  # replace with skill name, e.g. dba-rds-slow-query
+prompt: "[placeholder]"                 # replace with your investigation prompt
+deliver: local                          # local | slack | telegram | discord | webhook
+
+# ---
+# Common schedule expressions:
+#
+#   "0 8 * * *"        8:00 AM every day
+#   "30 9 * * 1-5"     9:30 AM weekdays only (Mon-Fri)
+#   "0 0 * * 0"        Midnight every Sunday
+#   "*/5 * * * *"      Every 5 minutes (useful for lab testing)
+#   "0 */6 * * *"      Every 6 hours
+#
+# ---
+# Track-specific examples:
+#
+# Track A — Database Health:
+#   name: "daily-db-health"
+#   schedule: "0 8 * * *"
+#   skill: "dba-rds-slow-query"
+#   prompt: "Run daily health check for RDS. Report only if anomalies found."
+#
+# Track B — Cost Anomaly:
+#   name: "daily-cost-check"
+#   schedule: "0 8 * * *"
+#   skill: "cost-anomaly"
+#   prompt: "Run daily cost anomaly check. Report only if spending anomalies detected."
+#
+# Track C — Kubernetes Health:
+#   name: "daily-k8s-check"
+#   schedule: "0 8 * * *"
+#   skill: "kubernetes-health"
+#   prompt: "Run daily Kubernetes cluster health check. Report only if pods or nodes show issues."
+#
+# ---
+# Prompt guidelines:
+# - The cron agent has NO chat history — the prompt must be fully self-contained
+# - Include "Report only if anomalies found." to suppress noise ([SILENT] delivery suppression)
+# - Reference the domain you want investigated (RDS, cost, K8s cluster)
+# - Do not include questions — the agent cannot ask for clarification during a cron run
+#
+# ---
+# Delivery options:
+#
+#   local       Output to your terminal (lab default)
+#   slack       Route to Slack channel (requires ~/.hermes/config.yaml Slack setup)
+#   telegram    Route to Telegram chat (requires gateway Telegram config)
+#   discord     Route to Discord channel (requires gateway Discord config)
+#   origin      Route to the chat that created the job (gateway only)

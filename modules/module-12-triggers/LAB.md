@@ -1,0 +1,657 @@
+# Module 12 Lab: Triggers and Scheduling
+
+**Duration:** 75 minutes (50 min guided + 25 min free explore)
+**Prerequisites:** Module 10 agent working for your track, hermes gateway available
+**Outcome:** A working cron job that fires a daily health check + a webhook subscription that reacts to CloudWatch alerts in real time
+
+> This lab moves your Hermes agent from reactive (you type a prompt) to proactive (the agent
+> runs on a schedule or reacts to events). You will build two trigger mechanisms: a cron schedule
+> for daily health checks and a webhook subscription for alert-driven investigations.
+>
+> Both exercises are fully hands-on — you run the commands, see the output, and verify the
+> behavior yourself.
+
+---
+
+## GUIDED PHASE — 50 minutes
+
+---
+
+## Step 1: Morning Startup Sequence (5 min)
+
+> **Run this checklist at the START of every session before any cron work.**
+
+**WARNING: Cron jobs do NOT auto-recover after a laptop sleep or KIND cluster restart. If you closed your laptop overnight or ran `kind delete cluster`, your scheduled jobs appear registered but will never fire. Always run `hermes cron status` first — before assuming any cron job is active.**
+
+### Startup checklist
+
+**1. Check scheduler health:**
+
+```bash
+hermes cron status
+```
+
+Expected output when healthy:
+
+```
+Scheduler: running
+Jobs registered: 0
+Next tick: in ~60s
+```
+
+If you see `Scheduler: not running` or an error about the gateway not being available:
+
+```bash
+hermes gateway setup
+```
+
+Then re-run `hermes cron status` to confirm the scheduler is now running.
+
+**2. Verify any existing jobs are still registered:**
+
+```bash
+hermes cron list
+```
+
+If you created jobs in a previous session, they should appear here. If the list is empty after you expected jobs to be present, the cron store was reset — you will need to recreate them (Step 2).
+
+> **Why this happens:** The cron scheduler runs as part of the Hermes gateway process. If the
+> gateway was stopped (laptop sleep, restart, terminal close), the scheduler stops ticking.
+> Jobs persist in `~/.hermes/cron/jobs.json`, but they will not run until the gateway is
+> active again. The `hermes cron status` check confirms the scheduler is alive and watching
+> for due jobs.
+
+---
+
+## Step 2: Create a Daily Health Check Cron Job (10 min)
+
+Cron expressions use the standard five-field format: `minute hour day-of-month month day-of-week`
+
+| Expression | Meaning |
+|------------|---------|
+| `0 8 * * *` | 8:00 AM every day |
+| `30 9 * * 1-5` | 9:30 AM weekdays only |
+| `*/5 * * * *` | Every 5 minutes |
+| `0 0 * * 0` | Midnight every Sunday |
+
+Create your daily health check cron job. Run the command for your track:
+
+**Track A — Database Health:**
+
+```bash
+hermes cron create \
+  --name "daily-db-health" \
+  --schedule "0 8 * * *" \
+  --skill "dba-rds-slow-query" \
+  --prompt "Run daily health check for RDS. Report only if anomalies found." \
+  --deliver local
+```
+
+**Track B — Cost Anomaly:**
+
+```bash
+hermes cron create \
+  --name "daily-cost-check" \
+  --schedule "0 8 * * *" \
+  --skill "cost-anomaly" \
+  --prompt "Run daily cost anomaly check. Report only if spending anomalies detected." \
+  --deliver local
+```
+
+**Track C — Kubernetes Health:**
+
+```bash
+hermes cron create \
+  --name "daily-k8s-check" \
+  --schedule "0 8 * * *" \
+  --skill "kubernetes-health" \
+  --prompt "Run daily Kubernetes cluster health check. Report only if pods or nodes show issues." \
+  --deliver local
+```
+
+### What each flag does
+
+| Flag | Purpose |
+|------|---------|
+| `--name` | Human-readable job name (kebab-case). Used to reference the job in other commands. |
+| `--schedule` | Cron expression defining when the job runs. |
+| `--skill` | Skill to load before running the prompt. The agent reads the SKILL.md runbook first. |
+| `--prompt` | What the agent is asked to do when it fires. Must be self-contained — the cron agent has no chat history. |
+| `--deliver local` | Output goes to your terminal. **In production, use `--deliver slack` or `--deliver telegram` to route findings to your notification system.** |
+
+### Verify the job was registered
+
+```bash
+hermes cron list
+```
+
+Expected output shape:
+
+```
+Name              Schedule        Next Run              Skill                  State
+daily-db-health   0 8 * * *       2026-04-05 08:00:00   dba-rds-slow-query    scheduled
+```
+
+> **About --deliver local:** Using `--deliver local` routes the agent's output to your terminal
+> session. This is the right choice for lab work — you see output immediately without needing
+> to configure Slack or Telegram. In production, you would use `--deliver slack` (configured
+> in `~/.hermes/config.yaml`) or `--deliver telegram` so findings reach your on-call channel
+> even if you are not at your terminal.
+
+---
+
+## Step 3: Trigger Manually and Verify Output (10 min)
+
+You scheduled the job for 8 AM — but you do not need to wait. Manual trigger fires the job
+immediately and is your primary verification tool:
+
+```bash
+hermes cron trigger daily-db-health
+```
+
+(Use the job name you created: `daily-cost-check` for Track B, `daily-k8s-check` for Track C.)
+
+Watch the terminal. The agent will:
+1. Load the skill SKILL.md runbook
+2. Run the investigation using mock data (if `HERMES_LAB_MODE=mock` is set)
+3. Print its findings to the terminal
+
+Expected output shape:
+
+```
+[Cron] Firing job: daily-db-health
+[MOCK MODE] Running dba-rds-slow-query investigation...
+
+Daily Health Check — prod-db-01
+Status: HEALTHY
+No slow query anomalies detected above threshold.
+pg_stat_statements: 12 queries sampled, max mean_time_ms = 45ms (threshold: 500ms)
+
+[SILENT] (no anomalies to report)
+```
+
+> **About [SILENT]:** When the cron agent finds nothing to report, it responds with `[SILENT]`.
+> This suppresses delivery — you will not receive a Slack or Telegram notification. This is by
+> design: agents that cry wolf on every run lose their usefulness. The agent only delivers a
+> full report when it finds something worth reporting.
+
+> **Manual trigger is also your recovery mechanism.** If you suspect a cron job silently failed
+> overnight (Step 1 warning), trigger it manually to confirm the job still executes correctly.
+> A successful manual trigger proves the skill, prompt, and delivery path are all working — the
+> only missing piece was the scheduler tick.
+
+Confirm the run was recorded:
+
+```bash
+hermes cron list
+```
+
+Check that `Last Run` now shows today's timestamp.
+
+---
+
+## Step 4: Pause, Resume, and Status (5 min)
+
+Pause the job without deleting it:
+
+```bash
+hermes cron pause daily-db-health
+```
+
+Check the paused state:
+
+```bash
+hermes cron status
+```
+
+Expected output shows the job in paused state:
+
+```
+Scheduler: running
+Jobs registered: 1
+  daily-db-health   PAUSED
+Next tick: in ~43s
+```
+
+Resume the job:
+
+```bash
+hermes cron resume daily-db-health
+```
+
+Verify it is back to scheduled state:
+
+```bash
+hermes cron status
+```
+
+Expected:
+
+```
+Scheduler: running
+Jobs registered: 1
+  daily-db-health   scheduled   next: 2026-04-05 08:00:00
+Next tick: in ~51s
+```
+
+> **Teaching point:** Pause and resume is how you stop overnight runs without deleting the job
+> configuration. Use pause when you are doing maintenance, running a planned load test, or
+> temporarily silencing a job that is generating too many alerts. Deleting and recreating a job
+> is the wrong approach — you lose the configuration and have to remember all the flags.
+
+---
+
+## Step 5: Start the Webhook Gateway (5 min)
+
+> **This step is explicit — do not assume the webhook gateway is running from a previous
+> module. Always verify before subscribing.**
+
+Set up the webhook platform:
+
+```bash
+hermes gateway setup
+```
+
+Follow the prompts. When asked about webhooks, enable them and accept the default port (8644).
+
+Verify the endpoint is live:
+
+```bash
+curl http://localhost:8644/health
+```
+
+Expected response:
+
+```json
+{"status": "ok"}
+```
+
+> **Troubleshooting — port 8644 already in use:**
+>
+> If `curl` returns `Connection refused`, the gateway did not start on that port. Check for an
+> existing process:
+>
+> ```bash
+> lsof -i :8644
+> ```
+>
+> If a process is listed, either stop it or use a different port when running `hermes gateway setup`.
+>
+> If `curl` returns an error about the connection being reset (not refused), the gateway is
+> running but the webhook adapter is not enabled. Re-run `hermes gateway setup` and confirm
+> that webhooks are enabled in the prompt sequence.
+
+---
+
+## Step 6: Subscribe a Webhook for CloudWatch Alerts (10 min)
+
+A webhook subscription tells Hermes: "when a POST arrives at this route, fire an agent run
+using this prompt."
+
+Subscribe to CloudWatch alarm events:
+
+```bash
+hermes webhook subscribe cloudwatch-alerts \
+  --events "cloudwatch-alarm" \
+  --prompt "CloudWatch alert received: {alarm.name} is {alarm.state}. Investigate." \
+  --deliver local
+```
+
+### What each part means
+
+| Part | Purpose |
+|------|---------|
+| `cloudwatch-alerts` | The route name. Hermes creates an endpoint at `/webhooks/cloudwatch-alerts`. |
+| `--events "cloudwatch-alarm"` | Event type filter. Only payloads matching this event type trigger the agent. |
+| `--prompt "..."` | Template string. `{alarm.name}` and `{alarm.state}` are replaced with values from the incoming JSON payload. |
+| `--deliver local` | Route agent output to the terminal. |
+
+After running the command, Hermes prints the webhook URL and HMAC secret:
+
+```
+Subscription created: cloudwatch-alerts
+URL: http://localhost:8644/webhooks/cloudwatch-alerts
+Secret: <auto-generated HMAC-SHA256 secret>
+Event filter: cloudwatch-alarm
+```
+
+Verify the subscription is listed:
+
+```bash
+hermes webhook list
+```
+
+Expected output:
+
+```
+Name                 Route                              Events             Deliver
+cloudwatch-alerts    /webhooks/cloudwatch-alerts        cloudwatch-alarm   local
+```
+
+> **Note:** In production, you would configure CloudWatch SNS to POST to your public webhook
+> URL (not localhost) with the HMAC secret for signature verification. For this lab, you
+> simulate the POST locally in the next step.
+
+---
+
+## Step 7: Test the Webhook with a Simulated Alert (10 min)
+
+Simulate a CloudWatch alarm firing — no real AWS needed:
+
+```bash
+hermes webhook test cloudwatch-alerts \
+  --payload '{"alarm": {"name": "rds-cpu-high", "state": "ALARM"}}'
+```
+
+Watch the terminal. The sequence:
+1. Hermes receives the simulated POST to `/webhooks/cloudwatch-alerts`
+2. The payload `{"alarm": {"name": "rds-cpu-high", "state": "ALARM"}}` is matched against the prompt template
+3. The resolved prompt becomes: `CloudWatch alert received: rds-cpu-high is ALARM. Investigate.`
+4. Hermes fires an agent run with your track skill loaded
+5. The agent investigates using mock data and prints findings to the terminal
+
+Expected output shape:
+
+```
+[Webhook] Received cloudwatch-alarm event on cloudwatch-alerts
+[MOCK MODE] Investigating: CloudWatch alert received: rds-cpu-high is ALARM. Investigate.
+
+Alert Investigation — rds-cpu-high
+State: ALARM | CPUUtilization: 78.4%
+
+Finding: Sequential scan detected on users table (created_at column, 12,847 rows).
+Recommendation: CREATE INDEX CONCURRENTLY idx_users_created_at ON users (created_at)
+Action required: REQUIRES-DBA-APPROVAL
+
+No additional anomalies found.
+```
+
+> **Teaching point — cron vs webhook:**
+>
+> You now have both trigger mechanisms running:
+>
+> - **Cron asks "is anything wrong?"** It fires on a schedule whether or not an alarm has fired.
+>   Use it for proactive health checks and daily summaries.
+>
+> - **Webhook reacts to "something IS wrong."** It fires in response to an external event — a
+>   CloudWatch alarm, a Kubernetes pod eviction, a Stripe payment failure. Use it for incident
+>   response automation where latency matters.
+>
+> Both can load the same skill and run the same investigation prompt. The difference is timing
+> and trigger: scheduled vs event-driven.
+
+Try a different alarm in the payload:
+
+```bash
+hermes webhook test cloudwatch-alerts \
+  --payload '{"alarm": {"name": "rds-storage-low", "state": "ALARM"}}'
+```
+
+Observe how the resolved prompt changes: `CloudWatch alert received: rds-storage-low is ALARM. Investigate.`
+
+---
+
+## Step 8: Slack — What This Looks Like in Production (5 min)
+
+> **Demo-only section.** Slack bot configuration requires admin access to your Slack workspace.
+> If you are following this lab solo, skip the Slack config steps — you have already done the
+> hands-on equivalent with `--deliver local`.
+
+In production, replacing `--deliver local` with `--deliver slack` routes the agent's findings
+to your `#devops-alerts` channel automatically. Here is what that configuration looks like:
+
+### Slack config format (requires Slack admin to add bot)
+
+```yaml
+# In ~/.hermes/config.yaml
+notifications:
+  slack:
+    webhook_url: "https://hooks.slack.com/services/T.../B.../..."
+    channel: "#devops-alerts"
+```
+
+### What changes
+
+Only the delivery target changes — the skill, prompt, and investigation logic are identical:
+
+```bash
+# Lab version (what you ran above):
+hermes cron create \
+  --name "daily-db-health" \
+  --schedule "0 8 * * *" \
+  --skill "dba-rds-slow-query" \
+  --prompt "Run daily health check for RDS. Report only if anomalies found." \
+  --deliver local
+
+# Production version (Slack delivery):
+hermes cron create \
+  --name "daily-db-health" \
+  --schedule "0 8 * * *" \
+  --skill "dba-rds-slow-query" \
+  --prompt "Run daily health check for RDS. Report only if anomalies found." \
+  --deliver slack
+```
+
+### What the Slack bot message looks like
+
+When a cron job or webhook fires with `--deliver slack`, the Hermes bot posts to the configured
+channel:
+
+```
+Cronjob Response: daily-db-health
+-------------
+
+Daily Health Check — prod-db-01
+Status: ALERT
+Finding: Sequential scan on users table...
+Recommendation: CREATE INDEX CONCURRENTLY...
+
+Note: The agent cannot see this message, and therefore cannot respond to it.
+```
+
+> **Local alternative (what you did today):** `--deliver local` is the same pipeline — skill
+> loaded, agent runs, investigation executes — but output goes to your terminal instead of
+> Slack. Everything you practiced today is the production workflow. Switching to Slack is a
+> one-flag change once Slack admin has added the bot.
+
+---
+
+## FREE EXPLORE PHASE — 25 minutes
+
+Choose challenges based on your available time and experience level.
+
+---
+
+## Challenge 1 (Starter — 10 min): Cross-track cron job
+
+Create a second cron job using a skill from a different track than your primary one:
+
+- Track A participant: try `--skill "cost-anomaly"` or `--skill "kubernetes-health"`
+- Track B participant: try `--skill "dba-rds-slow-query"` or `--skill "kubernetes-health"`
+- Track C participant: try `--skill "dba-rds-slow-query"` or `--skill "cost-anomaly"`
+
+Use a fast schedule to see it fire during the lab:
+
+```bash
+hermes cron create \
+  --name "cross-track-check" \
+  --schedule "*/5 * * * *" \
+  --skill "cost-anomaly" \
+  --prompt "Quick cost anomaly scan. Report only if anomalies detected." \
+  --deliver local
+```
+
+Trigger it manually to confirm it works:
+
+```bash
+hermes cron trigger cross-track-check
+```
+
+Then run:
+
+```bash
+hermes cron status
+```
+
+What does the output tell you about both jobs? Does running a cross-track skill produce useful output, or does the agent report it cannot find the expected data source?
+
+---
+
+## Challenge 2 (Intermediate — 15 min): Webhook for a different event type
+
+Unsubscribe the CloudWatch webhook and create one for a different event type:
+
+```bash
+hermes webhook unsubscribe cloudwatch-alerts
+```
+
+Subscribe to a Kubernetes pod event (Track C) or cost spike event (Track B):
+
+```bash
+# Track B — cost spike
+hermes webhook subscribe cost-spike \
+  --events "cost-alert" \
+  --prompt "Cost alert received: {alert.service} exceeded budget by {alert.overage_pct}%. Investigate." \
+  --deliver local
+
+# Track C — pod eviction
+hermes webhook subscribe pod-eviction \
+  --events "pod-event" \
+  --prompt "Pod event received: {pod.name} in namespace {pod.namespace} has state {pod.state}. Investigate." \
+  --deliver local
+```
+
+Test with a matching payload:
+
+```bash
+# Track B test
+hermes webhook test cost-spike \
+  --payload '{"alert": {"service": "RDS", "overage_pct": "47"}}'
+
+# Track C test
+hermes webhook test pod-eviction \
+  --payload '{"pod": {"name": "api-server-xyz", "namespace": "production", "state": "OOMKilled"}}'
+```
+
+Observe: does the agent adapt its investigation based on the payload values? What changes in the output between a 10% overage and a 47% overage?
+
+---
+
+## Challenge 3 (Advanced — 20 min): Combine cron + webhook on the same skill
+
+Set up both a cron schedule and a webhook subscription pointing at the same skill:
+
+```bash
+# Cron: fires every 5 min for lab speed
+hermes cron create \
+  --name "rapid-health" \
+  --schedule "*/5 * * * *" \
+  --skill "dba-rds-slow-query" \
+  --prompt "Quick RDS health snapshot. Use [SILENT] if no anomalies." \
+  --deliver local
+
+# Webhook: fires on demand
+hermes webhook subscribe rds-alerts \
+  --events "cloudwatch-alarm" \
+  --prompt "CloudWatch alert received: {alarm.name} is {alarm.state}. Run full investigation." \
+  --deliver local
+```
+
+Now fire the webhook while the cron is also scheduled to tick:
+
+```bash
+hermes webhook test rds-alerts \
+  --payload '{"alarm": {"name": "rds-cpu-high", "state": "ALARM"}}'
+```
+
+Then check status:
+
+```bash
+hermes cron status
+hermes webhook list
+```
+
+**Questions to explore:**
+- Do both executions complete without interfering with each other?
+- The cron prompt asks for a quick snapshot; the webhook prompt asks for a full investigation. Does the output differ?
+- What does `hermes cron status` show while a webhook-triggered run is executing?
+- If you trigger the webhook 3 times in quick succession, what happens?
+
+Clean up when done:
+
+```bash
+hermes cron pause rapid-health
+hermes webhook unsubscribe rds-alerts
+```
+
+---
+
+## Closing
+
+**What you built in this lab:**
+
+- A cron-scheduled health check that fires at 8 AM daily, loads a domain skill, and delivers findings to your terminal (or Slack in production)
+- A webhook subscription that reacts to CloudWatch alarm payloads and runs an agent investigation on demand
+- Hands-on experience with the full cron lifecycle: create, trigger, pause, resume, delete
+- Understanding of when to use scheduled triggers (proactive) vs event-driven webhooks (reactive)
+
+**Key commands reference:**
+
+```bash
+# Cron management
+hermes cron status                      # Always run at session start
+hermes cron create --name ... --schedule ... --skill ... --prompt ... --deliver local
+hermes cron list
+hermes cron trigger <name>              # Manual fire + recovery verification
+hermes cron pause <name>
+hermes cron resume <name>
+hermes cron delete <name>
+
+# Webhook management
+hermes gateway setup                    # Enable webhook platform
+curl http://localhost:8644/health       # Verify endpoint is live
+hermes webhook subscribe <name> --events ... --prompt ... --deliver local
+hermes webhook list
+hermes webhook test <name> --payload '{"key": "value"}'
+hermes webhook unsubscribe <name>
+```
+
+**Starter file:** `course/modules/module-12-triggers/starter/cron-job-starter.yaml` provides
+a parameter reference card for building your own cron jobs.
+
+**Next:** Module 13 covers governance — approval workflows, maturity levels, and audit trails.
+The cron and webhook triggers you built here become the entry points for governed agent actions
+in Module 13.
+
+---
+
+## Verification Checklist
+
+Run these commands to confirm your lab completed successfully:
+
+```bash
+# 1. Cron scheduler is running
+hermes cron status
+# Expected: Scheduler: running
+
+# 2. Daily health check job is registered
+hermes cron list
+# Expected: daily-db-health (or daily-cost-check / daily-k8s-check) in the list
+
+# 3. Job fires successfully on demand
+hermes cron trigger daily-db-health
+# Expected: agent runs and prints output (or [SILENT] if no anomalies)
+
+# 4. Webhook endpoint is live
+curl http://localhost:8644/health
+# Expected: {"status": "ok"}
+
+# 5. Webhook subscription is active
+hermes webhook list
+# Expected: cloudwatch-alerts (or your custom subscription) in the list
+
+# 6. Webhook test fires the agent
+hermes webhook test cloudwatch-alerts \
+  --payload '{"alarm": {"name": "rds-cpu-high", "state": "ALARM"}}'
+# Expected: agent runs investigation and prints findings to terminal
+```
