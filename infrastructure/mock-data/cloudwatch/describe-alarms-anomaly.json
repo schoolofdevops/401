@@ -1,0 +1,135 @@
+{
+  "_metadata": {
+    "source": "aws cloudwatch describe-alarms",
+    "format_date": "2026-04-04",
+    "aws_cli_version": "2.x",
+    "note": "MOCK DATA — Set HERMES_LAB_MODE=live for real AWS"
+  },
+  "MetricAlarms": [
+    {
+      "AlarmName": "HighCPUUtilization",
+      "AlarmDescription": "Triggers when EC2 instance CPU utilization exceeds 85% for 3 consecutive 5-minute periods. This threshold was chosen based on observed normal peak load of 70%. Sustained high CPU may indicate a runaway process, traffic spike, or under-provisioning.",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:HighCPUUtilization",
+      "ActionsEnabled": true,
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "OKActions": [],
+      "InsufficientDataActions": [],
+      "StateValue": "ALARM",
+      "StateReason": "Threshold Crossed: 3 out of the last 3 datapoints [92.1 (04/04/26 09:45:00), 89.7 (04/04/26 09:40:00), 87.3 (04/04/26 09:35:00)] were greater than the threshold (85.0).",
+      "StateReasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-04-04T09:50:00.000+0000\",\"recentDatapoints\":[92.1,89.7,87.3],\"threshold\":85.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-04-04T09:45:00.000+0000\",\"value\":92.1},{\"timestamp\":\"2026-04-04T09:40:00.000+0000\",\"value\":89.7},{\"timestamp\":\"2026-04-04T09:35:00.000+0000\",\"value\":87.3}]}",
+      "StateUpdatedTimestamp": "2026-04-04T09:50:00.000Z",
+      "MetricName": "CPUUtilization",
+      "Namespace": "AWS/EC2",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "InstanceId",
+          "Value": "i-0abc123def456001"
+        }
+      ],
+      "Period": 300,
+      "EvaluationPeriods": 3,
+      "DatapointsToAlarm": 3,
+      "Threshold": 85.0,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "missing",
+      "EvaluateLowSampleCountPercentile": ""
+    },
+    {
+      "AlarmName": "DatabaseConnections",
+      "AlarmDescription": "Monitors active database connection count on the production RDS PostgreSQL instance. Alert fires when connections exceed 80 for 2 consecutive 5-minute periods. Max connections for db.t3.medium is 100 — alerting at 80% capacity to allow graceful response before connection pool exhaustion.",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:DatabaseConnections",
+      "ActionsEnabled": true,
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "OKActions": [],
+      "InsufficientDataActions": [],
+      "StateValue": "ALARM",
+      "StateReason": "Threshold Crossed: 2 out of the last 2 datapoints [127.0 (04/04/26 09:45:00), 94.0 (04/04/26 09:40:00)] were greater than the threshold (80.0).",
+      "StateReasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-04-04T09:50:00.000+0000\",\"recentDatapoints\":[127.0,94.0],\"threshold\":80.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-04-04T09:45:00.000+0000\",\"value\":127.0},{\"timestamp\":\"2026-04-04T09:40:00.000+0000\",\"value\":94.0}]}",
+      "StateUpdatedTimestamp": "2026-04-04T09:50:00.000Z",
+      "MetricName": "DatabaseConnections",
+      "Namespace": "AWS/RDS",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "DBInstanceIdentifier",
+          "Value": "prod-db-01"
+        }
+      ],
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "DatapointsToAlarm": 2,
+      "Threshold": 80.0,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "missing",
+      "EvaluateLowSampleCountPercentile": ""
+    },
+    {
+      "AlarmName": "HighMemoryUsage",
+      "AlarmDescription": "Custom metric tracking application-level memory usage percentage on prod-app-01, emitted by the Node.js application via CloudWatch Embedded Metrics Format. Fires when memory usage exceeds 90% for 5 consecutive 1-minute periods. Higher sensitivity (1m period) because memory leaks tend to grow slowly and early detection reduces restart disruption.",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:HighMemoryUsage",
+      "ActionsEnabled": true,
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "OKActions": [],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Not Crossed: no datapoints were greater than the threshold (90.0). The most recent datapoints: [73.4 (04/04/26 09:49:00), 72.1 (04/04/26 09:48:00), 74.3 (04/04/26 09:47:00), 71.9 (04/04/26 09:46:00), 72.8 (04/04/26 09:45:00)].",
+      "StateReasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-04-04T09:50:00.000+0000\",\"recentDatapoints\":[73.4,72.1,74.3,71.9,72.8],\"threshold\":90.0}",
+      "StateUpdatedTimestamp": "2026-04-03T14:00:00.000Z",
+      "MetricName": "MemoryUsage",
+      "Namespace": "Custom/App",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "InstanceId",
+          "Value": "i-0abc123def456003"
+        }
+      ],
+      "Period": 60,
+      "EvaluationPeriods": 5,
+      "DatapointsToAlarm": 5,
+      "Threshold": 90.0,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "missing",
+      "EvaluateLowSampleCountPercentile": ""
+    },
+    {
+      "AlarmName": "APILatencyP99",
+      "AlarmDescription": "Tracks P99 API response latency emitted by the application's /metrics endpoint via CloudWatch custom metrics. Threshold of 2000ms reflects SLA commitment to customers. Fires after 3 consecutive 1-minute breaches to filter out transient spikes. Downstream of this alarm: PagerDuty integration triggers on-call rotation.",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:APILatencyP99",
+      "ActionsEnabled": true,
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "OKActions": [],
+      "InsufficientDataActions": [],
+      "StateValue": "INSUFFICIENT_DATA",
+      "StateReason": "Insufficient Data: The alarm has just been created or updated and does not have enough data to evaluate. Metric Custom/API:P99Latency has not reported data in the last 3 evaluation periods.",
+      "StateReasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-04-04T09:50:00.000+0000\",\"recentDatapoints\":[],\"threshold\":2000.0}",
+      "StateUpdatedTimestamp": "2026-04-04T08:00:00.000Z",
+      "MetricName": "P99Latency",
+      "Namespace": "Custom/API",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "InstanceId",
+          "Value": "i-0abc123def456003"
+        }
+      ],
+      "Period": 60,
+      "EvaluationPeriods": 3,
+      "DatapointsToAlarm": 3,
+      "Threshold": 2000.0,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "missing",
+      "EvaluateLowSampleCountPercentile": ""
+    }
+  ],
+  "CompositeAlarms": []
+}

@@ -1,0 +1,58 @@
+{
+  "_metadata": {
+    "source": "aws cloudwatch describe-alarm-history",
+    "format_date": "2026-04-04",
+    "aws_cli_version": "2.x",
+    "note": "MOCK DATA — Set HERMES_LAB_MODE=live for real AWS"
+  },
+  "AlarmHistoryItems": [
+    {
+      "AlarmName": "HighCPUUtilization",
+      "AlarmType": "MetricAlarm",
+      "Timestamp": "2026-04-04T08:00:00.000Z",
+      "HistoryItemType": "ConfigurationUpdate",
+      "HistorySummary": "Alarm threshold updated from 90.0 to 85.0",
+      "HistoryData": "{\"type\":\"Update\",\"updatedAlarm\":{\"threshold\":85.0,\"evaluationPeriods\":3},\"oldState\":{\"threshold\":90.0,\"evaluationPeriods\":3},\"updatedBy\":\"arn:aws:iam::123456789012:user/ops-engineer\",\"reason\":\"Reducing threshold after capacity planning review — baseline CPU now consistently 60-70% during peak, 90% threshold was catching real incidents too late.\"}"
+    },
+    {
+      "AlarmName": "HighCPUUtilization",
+      "AlarmType": "MetricAlarm",
+      "Timestamp": "2026-04-04T09:35:00.000Z",
+      "HistoryItemType": "StateUpdate",
+      "HistorySummary": "Alarm updated from OK to ALARM",
+      "HistoryData": "{\"version\":\"1.0\",\"oldState\":{\"stateValue\":\"OK\",\"stateReason\":\"Threshold Not Crossed\"},\"newState\":{\"stateValue\":\"ALARM\",\"stateReason\":\"Threshold Crossed: 3 out of the last 3 datapoints [87.3 (09:35:00), 86.1 (09:30:00), 85.9 (09:25:00)] were greater than the threshold (85.0).\",\"stateReasonData\":{\"recentDatapoints\":[87.3,86.1,85.9],\"threshold\":85.0}}}"
+    },
+    {
+      "AlarmName": "HighCPUUtilization",
+      "AlarmType": "MetricAlarm",
+      "Timestamp": "2026-04-04T09:35:12.000Z",
+      "HistoryItemType": "Action",
+      "HistorySummary": "Successfully executed action arn:aws:sns:us-east-1:123456789012:ops-alerts",
+      "HistoryData": "{\"actionState\":\"Succeeded\",\"notificationResource\":\"arn:aws:sns:us-east-1:123456789012:ops-alerts\",\"publishedMessage\":{\"AlarmName\":\"HighCPUUtilization\",\"NewStateValue\":\"ALARM\",\"NewStateReason\":\"Threshold Crossed: 3 out of the last 3 datapoints exceeded threshold (85.0)\",\"StateChangeTime\":\"2026-04-04T09:35:00.000+0000\",\"Region\":\"US East (N. Virginia)\"}}"
+    },
+    {
+      "AlarmName": "HighCPUUtilization",
+      "AlarmType": "MetricAlarm",
+      "Timestamp": "2026-04-04T09:50:00.000Z",
+      "HistoryItemType": "StateUpdate",
+      "HistorySummary": "Alarm updated from ALARM to OK",
+      "HistoryData": "{\"version\":\"1.0\",\"oldState\":{\"stateValue\":\"ALARM\",\"stateReason\":\"Threshold Crossed\"},\"newState\":{\"stateValue\":\"OK\",\"stateReason\":\"Threshold Not Crossed: no datapoints were greater than the threshold (85.0). The most recent datapoints: [78.4 (09:50:00), 72.1 (09:45:00), 69.3 (09:40:00)].\",\"stateReasonData\":{\"recentDatapoints\":[78.4,72.1,69.3],\"threshold\":85.0}}}"
+    },
+    {
+      "AlarmName": "HighCPUUtilization",
+      "AlarmType": "MetricAlarm",
+      "Timestamp": "2026-04-04T10:05:00.000Z",
+      "HistoryItemType": "StateUpdate",
+      "HistorySummary": "Alarm updated from OK to ALARM",
+      "HistoryData": "{\"version\":\"1.0\",\"oldState\":{\"stateValue\":\"OK\",\"stateReason\":\"Threshold Not Crossed\"},\"newState\":{\"stateValue\":\"ALARM\",\"stateReason\":\"Threshold Crossed: 3 out of the last 3 datapoints [92.1 (10:05:00), 89.7 (10:00:00), 87.3 (09:55:00)] were greater than the threshold (85.0).\",\"stateReasonData\":{\"recentDatapoints\":[92.1,89.7,87.3],\"threshold\":85.0}}}"
+    },
+    {
+      "AlarmName": "HighCPUUtilization",
+      "AlarmType": "MetricAlarm",
+      "Timestamp": "2026-04-04T10:05:14.000Z",
+      "HistoryItemType": "Action",
+      "HistorySummary": "Successfully executed action arn:aws:sns:us-east-1:123456789012:ops-alerts",
+      "HistoryData": "{\"actionState\":\"Succeeded\",\"notificationResource\":\"arn:aws:sns:us-east-1:123456789012:ops-alerts\",\"publishedMessage\":{\"AlarmName\":\"HighCPUUtilization\",\"NewStateValue\":\"ALARM\",\"NewStateReason\":\"Threshold Crossed: 3 out of the last 3 datapoints exceeded threshold (85.0)\",\"StateChangeTime\":\"2026-04-04T10:05:00.000+0000\",\"Region\":\"US East (N. Virginia)\",\"OldStateValue\":\"OK\"}}"
+    }
+  ]
+}
