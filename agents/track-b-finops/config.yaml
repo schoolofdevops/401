@@ -1,0 +1,24 @@
+# Track B: Cost Anomaly & FinOps Agent
+# Governance Level: L2 Advisory
+# Install: cp -r course/agents/track-b-finops/ ~/.hermes/profiles/track-b/
+# Launch:  hermes -p track-b chat
+
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: manual       # L2: all flagged dangerous commands require human approval
+  timeout: 300       # 5 min — required for lab flows
+
+# Track B safety note: aws ec2 terminate/modify-instance-attribute are not in
+# Hermes DANGEROUS_PATTERNS. SOUL.md NEVER rules enforce the behavioral boundary.
+# For L4, add custom patterns to command_allowlist if your hermes version supports it.
+command_allowlist: []  # L2: nothing pre-approved
+
+agent:
+  max_turns: 30
+  verbose: false
