@@ -1,0 +1,120 @@
+name: Reference App CI
+
+on:
+  push:
+    paths:
+      - 'reference-app/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    paths:
+      - 'reference-app/**'
+
+env:
+  CLUSTER_NAME: lab
+
+jobs:
+  test:
+    name: Test Rust Services
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "reference-app"
+
+      - name: Run unit tests (all services)
+        working-directory: reference-app
+        run: cargo test --workspace
+
+  build-and-deploy:
+    name: Build, Deploy to KIND, Verify
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js (for dashboard build)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: reference-app/dashboard/package-lock.json
+
+      - name: Build dashboard
+        working-directory: reference-app/dashboard
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Docker images
+        working-directory: reference-app
+        run: |
+          GIT_SHA=${GITHUB_SHA::8}
+          docker build --build-arg GIT_SHA=$GIT_SHA -t reference-app/api-gateway:ci services/api-gateway/
+          docker build --build-arg GIT_SHA=$GIT_SHA -t reference-app/catalog:ci services/catalog/
+          docker build --build-arg GIT_SHA=$GIT_SHA -t reference-app/worker:ci services/worker/
+          docker build -t reference-app/dashboard:ci dashboard/
+
+      - name: Create KIND cluster
+        uses: helm/kind-action@v1
+        with:
+          config: infrastructure/kind/cluster-config.yaml
+          cluster_name: lab
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Load images into KIND
+        run: |
+          kind load docker-image reference-app/api-gateway:ci --name $CLUSTER_NAME
+          kind load docker-image reference-app/catalog:ci --name $CLUSTER_NAME
+          kind load docker-image reference-app/worker:ci --name $CLUSTER_NAME
+          kind load docker-image reference-app/dashboard:ci --name $CLUSTER_NAME
+
+      - name: Deploy PostgreSQL
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+          helm upgrade --install postgresql bitnami/postgresql \
+            --namespace db --create-namespace \
+            --set auth.username=refapp \
+            --set auth.password=refapp-lab-password \
+            --set auth.database=refapp \
+            --wait --timeout 120s
+
+      - name: Deploy reference app
+        run: |
+          helm upgrade --install reference-app reference-app/helm/reference-app \
+            --namespace app --create-namespace \
+            --set apiGateway.image.tag=ci \
+            --set catalog.image.tag=ci \
+            --set worker.image.tag=ci \
+            --set dashboard.image.tag=ci \
+            --wait --timeout 120s
+
+      - name: Verify pods are running
+        run: |
+          kubectl get pods -n app
+          kubectl wait --for=condition=ready pod \
+            -l app.kubernetes.io/name=reference-app \
+            --timeout=120s -n app
+
+      - name: Verify health endpoints
+        run: |
+          # Port-forward api-gateway and verify version + health endpoints
+          kubectl port-forward -n app svc/reference-app-api-gateway 8080:8080 &
+          PF_PID=$!
+          sleep 5
+          echo "--- /version ---"
+          curl -sf http://localhost:8080/version | jq .
+          echo "--- /health/ready ---"
+          curl -sf http://localhost:8080/health/ready | jq .
+          kill $PF_PID || true
+          # GIT_SHA should appear in version response
+          GIT_SHA=${GITHUB_SHA::8}
+          echo "Expected GIT_SHA in response: $GIT_SHA"
