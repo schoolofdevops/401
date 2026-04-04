@@ -1,0 +1,24 @@
+# Track C: Kubernetes Health & Self-Healing Agent
+# Governance Level: L2 Advisory
+# Install: cp -r course/agents/track-c-kubernetes/ ~/.hermes/profiles/track-c/
+# Launch:  hermes -p track-c chat
+# Prerequisite: KIND cluster running (see course/setup/setup-kind.md)
+
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: manual       # L2: all flagged dangerous commands require human approval
+  timeout: 300       # 5 min — required for lab flows
+
+# Track C safety note: kubectl delete, kubectl drain, kubectl cordon are not in
+# Hermes DANGEROUS_PATTERNS. SOUL.md NEVER rules enforce the behavioral boundary.
+command_allowlist: []
+
+agent:
+  max_turns: 30
+  verbose: false
