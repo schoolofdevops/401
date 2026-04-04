@@ -1,0 +1,38 @@
+# Module 10 Lab — Track B: FinOps Agent config.yaml starter
+# This file goes at: ~/.hermes/profiles/track-b/config.yaml
+# See course/agents/track-b-finops/config.yaml for a completed example.
+#
+# Quality gate: grep -c '\[' ~/.hermes/profiles/track-b/config.yaml
+# Result must be 0 when ready. Every bracket must be filled in.
+
+model:
+  # Fill in your chosen model.
+  # Recommended: "anthropic/claude-haiku-4" (lowest cost, sufficient for cost analysis)
+  # Alternatives: "google/gemini-2.5-flash" (Google AI Studio free tier)
+  default: "[your-model] # recommended: anthropic/claude-haiku-4"
+  provider: "auto"
+
+platform_toolsets:
+  # L2 Advisory: agent can run commands, read files, browse, and load skills.
+  # Do not change this for the guided lab — L2 is the target governance level.
+  cli: [terminal, file, web, skills]
+
+approvals:
+  # Fill in the approval mode.
+  # L2 Advisory: use "manual" — every flagged dangerous command requires your approval.
+  # Options: manual | smart | off
+  mode: "[manual|auto] # L2 Advisory: use manual"
+
+  # Fill in the approval timeout in seconds.
+  # Recommended: 300 (5 minutes) for lab flows with multiple investigation steps.
+  timeout: "[seconds] # recommended: 300"
+
+# command_allowlist: [] — L2: nothing pre-approved
+# Track B safety note: aws ec2 terminate-instances and modify-instance-attribute are NOT
+# in Hermes DANGEROUS_PATTERNS. SOUL.md NEVER rules enforce the behavioral boundary.
+# For L4 Semi-Autonomous, you would add read-only AWS command patterns here.
+command_allowlist: []
+
+agent:
+  max_turns: 30
+  verbose: false
