@@ -10,13 +10,13 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 ### Foundation Infrastructure
 
 - [x] **FOUND-01**: Reference microservices application (2-3 services + PostgreSQL) deployable on KIND — serves as the course backbone for all labs
-- [ ] **FOUND-02**: Helm chart packaging for the reference app (used in Module 5 lab and Module 6 Track B)
-- [ ] **FOUND-03**: CI/CD pipeline (GitHub Actions) for the reference app — build, test, deploy to KIND
-- [ ] **FOUND-04**: ArgoCD GitOps setup on KIND for the reference app — real GitOps, not simulated
-- [ ] **FOUND-05**: Participant setup guide covering Claude Code install, Crush/OpenCode install, KIND + Docker, AWS CLI, multi-provider LLM config (Claude subscription, Gemini 2.5 Flash, OpenRouter, Grok, Groq)
-- [ ] **FOUND-06**: Environment verification script (verify.sh) that validates all prerequisites
+- [x] **FOUND-02**: Helm chart packaging for the reference app (used in Module 5 lab and Module 6 Track B)
+- [x] **FOUND-03**: CI/CD pipeline (GitHub Actions) for the reference app — build, test, deploy to KIND
+- [x] **FOUND-04**: ArgoCD GitOps setup on KIND for the reference app — real GitOps, not simulated
+- [x] **FOUND-05**: Participant setup guide covering Claude Code install, Crush/OpenCode install, KIND + Docker, AWS CLI, multi-provider LLM config (Claude subscription, Gemini 2.5 Flash, OpenRouter, Grok, Groq)
+- [x] **FOUND-06**: Environment verification script (verify.sh) that validates all prerequisites
 - [x] **FOUND-07**: Real AWS connections first (Cost Explorer, CloudWatch, RDS Performance Insights) when participants have AWS accounts. Mock data as clearly-labeled fallback only — realistic format matching current AWS CLI output, with instructions to swap in real credentials
-- [ ] **FOUND-08**: Multi-provider LLM access documentation — setup instructions for each provider with rate limits and fallback guidance
+- [x] **FOUND-08**: Multi-provider LLM access documentation — setup instructions for each provider with rate limits and fallback guidance
 
 ### Module 1 — AI Foundations
 
@@ -133,13 +133,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FOUND-01 | Phase 1 | Complete |
-| FOUND-02 | Phase 1 | Pending |
-| FOUND-03 | Phase 1 | Pending |
-| FOUND-04 | Phase 1 | Pending |
-| FOUND-05 | Phase 1 | Pending |
-| FOUND-06 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Complete |
+| FOUND-03 | Phase 1 | Complete |
+| FOUND-04 | Phase 1 | Complete |
+| FOUND-05 | Phase 1 | Complete |
+| FOUND-06 | Phase 1 | Complete |
 | FOUND-07 | Phase 1 | Complete |
-| FOUND-08 | Phase 1 | Pending |
+| FOUND-08 | Phase 1 | Complete |
 | MOD1-01 | Phase 2 | Pending |
 | MOD1-02 | Phase 2 | Pending |
 | MOD1-03 | Phase 2 | Pending |

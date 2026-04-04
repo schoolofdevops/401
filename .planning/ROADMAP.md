@@ -12,7 +12,7 @@ Build a complete dual-format course (3-day workshop + Udemy) teaching DevOps pra
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Reference app, shared mock data, setup guide, environment verification
+- [x] **Phase 1: Foundation** - Reference app, shared mock data, setup guide, environment verification (completed 2026-04-04)
 - [ ] **Phase 2: Day 1 Modules** - Modules 1-4 labs, reading, quiz — context engineering mental model
 - [ ] **Phase 3: Day 2 Modules** - Modules 5-6 labs with dual/triple tracks — structured coding and AI-assisted IaC
 - [ ] **Phase 4: Remaining Content** - Modules 9 and 14, all-module reading/quiz/explainers, format overlays
@@ -33,8 +33,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md — Rust backend services (api-gateway, catalog, worker) with Cargo workspace, Dockerfiles, PostgreSQL migrations
 - [x] 01-02-PLAN.md — CloudWatch alarm mock data (clean + anomaly scenarios) and mock-aws wrapper update
-- [ ] 01-03-PLAN.md — Svelte health dashboard, Helm chart, KIND config, Prometheus values, Makefile, GitHub Actions CI/CD
-- [ ] 01-04-PLAN.md — Participant setup guide (SETUP.md), course verify.sh, LLM access docs (Claude Code + OpenCode)
+- [x] 01-03-PLAN.md — Svelte health dashboard, Helm chart, KIND config, Prometheus values, Makefile, GitHub Actions CI/CD
+- [x] 01-04-PLAN.md — Participant setup guide (SETUP.md), course verify.sh, LLM access docs (Claude Code + OpenCode)
 
 ### Phase 2: Day 1 Modules
 **Goal**: A participant completing Day 1 can explain context engineering using infrastructure analogies, has hands-on experience with AWS platform AI features, understands the gap between platform AI and custom agents, and can score their own operational tasks for automation potential
@@ -96,7 +96,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 1/4 | In Progress|  |
+| 1. Foundation | 4/4 | Complete   | 2026-04-04 |
 | 2. Day 1 Modules | 0/3 | Not started | - |
 | 3. Day 2 Modules | 0/3 | Not started | - |
 | 4. Remaining Content | 0/3 | Not started | - |

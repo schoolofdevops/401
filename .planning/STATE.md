@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 01-foundation/01-01-PLAN.md
-last_updated: "2026-04-04T16:39:15.806Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 01-foundation/01-04-PLAN.md
+last_updated: "2026-04-04T16:59:35.344Z"
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 4
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 01 (foundation) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 
 ## Performance Metrics
 
@@ -48,6 +48,8 @@ Plan: 3 of 4
 *Updated after each plan completion*
 | Phase 01 P02 | 3 | 2 tasks | 5 files |
 | Phase 01-foundation P01 | 11 | 2 tasks | 13 files |
+| Phase 01-foundation P03 | 8min | 3 tasks | 30 files |
+| Phase 01-foundation P04 | 6min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -66,6 +68,13 @@ Recent decisions affecting current work:
 - [Phase 01-foundation]: Runtime sqlx::query (not macros) chosen to avoid DATABASE_URL at compile time — lower setup friction for course
 - [Phase 01-foundation]: axum 0.8 path syntax is {id} not :id — updated in catalog route
 - [Phase 01-foundation]: PgPool::connect_lazy for unit test fake pools — services testable without live database
+- [Phase 01-foundation]: No ArgoCD in CI/CD — pipeline does direct helm upgrade; GitOps taught conceptually in later modules (D-06)
+- [Phase 01-foundation]: Svelte 5 runes pattern: polling in $effect with cleanup, AbortSignal.timeout(3000) mandatory for health dashboard
+- [Phase 01-foundation]: nginx proxy pattern: /api-gateway/*, /catalog/*, /worker/* map to K8s service DNS hostnames
+- [Phase 01-foundation]: D-14 honored: Claude Code and OpenCode documented as two equal paths in SETUP.md, verify.sh, and llm-access.md
+- [Phase 01-foundation]: D-15 honored: OpenCode refers to sst/opencode from opencode.ai, not archived opencode-ai/opencode
+- [Phase 01-foundation]: D-08 honored: Datadog free tier documented as optional alternative observability in SETUP.md Step 7
+- [Phase 01-foundation]: January 2026 Anthropic OAuth block documented in SETUP.md and llm-access.md per ROADMAP success criteria 4
 
 ### Pending Todos
 
@@ -79,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T16:39:15.804Z
-Stopped at: Completed 01-foundation/01-01-PLAN.md
+Last session: 2026-04-04T16:59:35.341Z
+Stopped at: Completed 01-foundation/01-04-PLAN.md
 Resume file: None
