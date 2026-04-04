@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# mock-kubectl — kubectl mock/live router for Hermes DevOps labs
+# Usage: Add this directory to PATH before real kubectl: export PATH="$(pwd)/wrappers:$PATH"
+#
+# HERMES_LAB_MODE=mock  -> serve pre-baked JSON files (offline, free)
+# HERMES_LAB_MODE=live  -> pass through to real kubectl (requires K8s cluster)
+# HERMES_LAB_SCENARIO=clean|messy|crashloop -> select scenario variant (default: clean)
+#
+set -euo pipefail
+
+MOCK_DATA_DIR="${MOCK_DATA_DIR:-$(dirname "$0")/../mock-data}"
+LAB_MODE="${HERMES_LAB_MODE:-live}"
+SCENARIO="${HERMES_LAB_SCENARIO:-clean}"
+
+if [[ "$LAB_MODE" != "mock" ]]; then
+  exec "$(command -v kubectl)" "$@"
+fi
+
+# ── MOCK MODE BANNER ────────────────────────────────────────────────────
+printf '\n'
+printf '╔══════════════════════════════════════════╗\n'
+printf '║            [ MOCK MODE ]                 ║\n'
+printf '║   Data source: pre-baked JSON files      ║\n'
+printf '║   Set HERMES_LAB_MODE=live for real K8s  ║\n'
+printf '╚══════════════════════════════════════════╝\n'
+printf '\n'
+# ────────────────────────────────────────────────────────────────────────
+
+# Build a normalized command key from the first 3 positional args
+CMD="${1:-} ${2:-} ${3:-}"
+
+case "$CMD" in
+  "get pods "* | "get pods")
+    if [[ "$SCENARIO" == "messy" || "$SCENARIO" == "crashloop" ]]; then
+      cat "$MOCK_DATA_DIR/kubernetes/get-pods-crashloop.json"
+    else
+      cat "$MOCK_DATA_DIR/kubernetes/get-pods-healthy.json"
+    fi
+    ;;
+  "get pod "*)
+    # kubectl get pod <name> -o json — serve the OOM describe for any pod name
+    cat "$MOCK_DATA_DIR/kubernetes/describe-pod-oom.json"
+    ;;
+  "describe pod "*)
+    # kubectl describe pod returns text, not JSON — serve a text mock
+    printf 'Name:         api-deployment-def456\n'
+    printf 'Namespace:    default\n'
+    printf 'Status:       Running\n'
+    printf 'IP:           10.0.1.11\n'
+    printf 'Containers:\n'
+    printf '  api:\n'
+    printf '    Image:          api:v2.1.0\n'
+    printf '    Limits:\n'
+    printf '      cpu:          500m\n'
+    printf '      memory:       256Mi\n'
+    printf '    Requests:\n'
+    printf '      cpu:          100m\n'
+    printf '      memory:       128Mi\n'
+    printf '    Last State:     Terminated\n'
+    printf '      Reason:       OOMKilled\n'
+    printf '      Exit Code:    137\n'
+    printf '      Started:      Sat, 04 Apr 2026 12:00:00 +0000\n'
+    printf '      Finished:     Sat, 04 Apr 2026 12:04:55 +0000\n'
+    printf '    Ready:          False\n'
+    printf '    Restart Count:  8\n'
+    printf 'Events:\n'
+    printf '  Type     Reason     Age    From     Message\n'
+    printf '  ----     ------     ---    ----     -------\n'
+    printf '  Warning  OOMKilling  2m    kubelet  Container api exceeded memory limit, killed.\n'
+    printf '  Warning  BackOff     1m    kubelet  Back-off restarting failed container api\n'
+    ;;
+  "get nodes "* | "get nodes")
+    printf '{"apiVersion":"v1","kind":"NodeList","items":[{"metadata":{"name":"lab-control-plane"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}\n'
+    ;;
+  "top pods "* | "top pods")
+    printf 'NAME                          CPU(cores)   MEMORY(bytes)\n'
+    printf 'webapp-deployment-abc123      25m          180Mi\n'
+    printf 'api-deployment-def456         5m           251Mi\n'
+    printf 'memory-hog-mno345             12m          410Mi\n'
+    ;;
+  *)
+    printf 'MOCK ERROR: No mock defined for: kubectl %s\n' "$*" >&2
+    printf 'Available mocks: get pods, get pod <name>, describe pod <name>, get nodes, top pods\n' >&2
+    exit 1
+    ;;
+esac

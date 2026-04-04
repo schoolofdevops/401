@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# mock-aws — AWS CLI mock/live router for Hermes DevOps labs
+# Usage: Add this directory to PATH before real aws: export PATH="$(pwd)/wrappers:$PATH"
+#
+# HERMES_LAB_MODE=mock  -> serve pre-baked JSON files (offline, free)
+# HERMES_LAB_MODE=live  -> pass through to real aws CLI (requires AWS credentials)
+# HERMES_LAB_SCENARIO=clean|messy -> select scenario variant (default: clean)
+#
+set -euo pipefail
+
+MOCK_DATA_DIR="${MOCK_DATA_DIR:-$(dirname "$0")/../mock-data}"
+LAB_MODE="${HERMES_LAB_MODE:-live}"
+SCENARIO="${HERMES_LAB_SCENARIO:-clean}"
+
+if [[ "$LAB_MODE" != "mock" ]]; then
+  exec "$(command -v aws)" "$@"
+fi
+
+# ── MOCK MODE BANNER ────────────────────────────────────────────────────
+printf '\n'
+printf '╔══════════════════════════════════════════╗\n'
+printf '║            [ MOCK MODE ]                 ║\n'
+printf '║   Data source: pre-baked JSON files      ║\n'
+printf '║   Set HERMES_LAB_MODE=live for real AWS  ║\n'
+printf '╚══════════════════════════════════════════╝\n'
+printf '\n'
+# ────────────────────────────────────────────────────────────────────────
+
+case "$1 $2" in
+  "rds describe-db-instances")
+    if [[ "$SCENARIO" == "messy" ]]; then
+      cat "$MOCK_DATA_DIR/rds/describe-db-instances-slow.json"
+    else
+      cat "$MOCK_DATA_DIR/rds/describe-db-instances.json"
+    fi
+    ;;
+  "ce get-cost-and-usage")
+    if [[ "$SCENARIO" == "messy" ]]; then
+      cat "$MOCK_DATA_DIR/cost-explorer/anomaly-spike.json"
+    else
+      cat "$MOCK_DATA_DIR/cost-explorer/normal-spend.json"
+    fi
+    ;;
+  "cloudwatch get-metric-statistics" | "cloudwatch get-metric-data")
+    cat "$MOCK_DATA_DIR/rds/cloudwatch-rds-cpu-high.json"
+    ;;
+  "cloudwatch describe-alarms")
+    printf '{"MetricAlarms":[],"CompositeAlarms":[]}\n'
+    ;;
+  "cloudwatch describe-alarm-history")
+    printf '{"AlarmHistoryItems":[]}\n'
+    ;;
+  "ec2 describe-instances")
+    cat "$MOCK_DATA_DIR/cost-explorer/ec2-instances.json"
+    ;;
+  "ec2 describe-instance-status")
+    printf '{"InstanceStatuses":[{"InstanceId":"i-0abc123def456789a","InstanceState":{"Code":16,"Name":"running"},"InstanceStatus":{"Status":"ok"},"SystemStatus":{"Status":"ok"}}]}\n'
+    ;;
+  "elbv2 describe-target-health")
+    printf '{"TargetHealthDescriptions":[{"Target":{"Id":"i-0abc123def456789a","Port":8080},"TargetHealth":{"State":"healthy"}}]}\n'
+    ;;
+  "cloudtrail lookup-events")
+    printf '{"Events":[]}\n'
+    ;;
+  "rds describe-db-parameters")
+    printf '{"Parameters":[{"ParameterName":"work_mem","ParameterValue":"4096","ApplyType":"dynamic"},{"ParameterName":"shared_buffers","ParameterValue":"32768","ApplyType":"static"},{"ParameterName":"max_connections","ParameterValue":"100","ApplyType":"static"}]}\n'
+    ;;
+  *)
+    printf 'MOCK ERROR: No mock defined for: aws %s\n' "$*" >&2
+    printf 'Available mocks: rds describe-db-instances, ce get-cost-and-usage,\n' >&2
+    printf '  cloudwatch get-metric-statistics, cloudwatch describe-alarms,\n' >&2
+    printf '  ec2 describe-instances, ec2 describe-instance-status,\n' >&2
+    printf '  elbv2 describe-target-health, cloudtrail lookup-events,\n' >&2
+    printf '  rds describe-db-parameters\n' >&2
+    exit 1
+    ;;
+esac

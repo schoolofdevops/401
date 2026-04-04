@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# mock-psql — psql mock/live router for Hermes DevOps labs
+# Usage: Add this directory to PATH before real psql: export PATH="$(pwd)/wrappers:$PATH"
+#
+# HERMES_LAB_MODE=mock  -> serve pre-baked CSV output (offline, free)
+# HERMES_LAB_MODE=live  -> pass through to real psql (requires DB connection)
+# HERMES_LAB_SCENARIO=clean|messy -> select scenario variant (default: clean)
+#
+# Note: psql output format varies by command. Mock returns CSV-compatible output.
+#
+set -euo pipefail
+
+MOCK_DATA_DIR="${MOCK_DATA_DIR:-$(dirname "$0")/../mock-data}"
+LAB_MODE="${HERMES_LAB_MODE:-live}"
+SCENARIO="${HERMES_LAB_SCENARIO:-clean}"
+
+if [[ "$LAB_MODE" != "mock" ]]; then
+  exec "$(command -v psql)" "$@"
+fi
+
+# ── MOCK MODE BANNER ────────────────────────────────────────────────────
+printf '\n'
+printf '╔══════════════════════════════════════════╗\n'
+printf '║            [ MOCK MODE ]                 ║\n'
+printf '║   Data source: pre-baked JSON files      ║\n'
+printf '║   Set HERMES_LAB_MODE=live for real DB   ║\n'
+printf '╚══════════════════════════════════════════╝\n'
+printf '\n'
+# ────────────────────────────────────────────────────────────────────────
+
+# Detect query type from -c argument
+# psql is invoked as: psql -h HOST -p PORT -U USER -d DB -c "QUERY" --csv
+# We detect the query intent by keyword scanning args
+QUERY=""
+CAPTURE_NEXT=0
+for arg in "$@"; do
+  if [[ "$CAPTURE_NEXT" == "1" ]]; then
+    QUERY="$arg"
+    CAPTURE_NEXT=0
+  elif [[ "$arg" == "-c" ]]; then
+    CAPTURE_NEXT=1
+  fi
+done
+
+# Normalize query to lowercase for routing (avoid subshell with $() for bash 3.2 compat)
+QUERY_LOWER=$(printf '%s' "$QUERY" | tr '[:upper:]' '[:lower:]')
+
+if printf '%s' "$QUERY_LOWER" | grep -q "pg_stat_statements"; then
+  if [[ "$SCENARIO" == "messy" ]]; then
+    python3 -c "
+import json, sys
+data = json.load(open('$MOCK_DATA_DIR/rds/pg-stat-statements-messy.json'))
+print('mean_time_ms,total_time_ms,calls,rows_per_call,query')
+for row in data:
+    q = row['query'].replace('\"', '\"\"')
+    print(str(row['mean_exec_time_ms']) + ',' + str(row['total_exec_time_ms']) + ',' + str(row['calls']) + ',' + str(row['rows_per_call']) + ',\"' + q + '\"')
+"
+  else
+    python3 -c "
+import json, sys
+data = json.load(open('$MOCK_DATA_DIR/rds/pg-stat-statements-clean.json'))
+print('mean_time_ms,total_time_ms,calls,rows_per_call,query')
+for row in data:
+    q = row['query'].replace('\"', '\"\"')
+    print(str(row['mean_exec_time_ms']) + ',' + str(row['total_exec_time_ms']) + ',' + str(row['calls']) + ',' + str(row['rows_per_call']) + ',\"' + q + '\"')
+"
+  fi
+elif printf '%s' "$QUERY_LOWER" | grep -q "pg_stat_user_tables"; then
+  printf 'schemaname,table_name,seq_scan,idx_scan,seq_scan_pct\n'
+  printf 'public,users,8420,312,96.43\n'
+  printf 'public,orders,1203,4521,21.02\n'
+  printf 'public,products,421,3201,11.62\n'
+elif printf '%s' "$QUERY_LOWER" | grep -q "pg_stat_activity"; then
+  printf 'pid,state,query_start,query\n'
+  printf '12345,active,2026-04-04 09:15:00,SELECT * FROM users WHERE ...\n'
+else
+  printf 'MOCK ERROR: No mock defined for psql query: %s\n' "$QUERY" >&2
+  printf 'Detected queries: pg_stat_statements, pg_stat_user_tables, pg_stat_activity\n' >&2
+  exit 1
+fi
