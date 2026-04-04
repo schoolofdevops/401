@@ -1,0 +1,25 @@
+# Fleet Coordinator Agent
+# Role: Cross-domain incident triage and specialist delegation
+# Install: cp -r course/agents/fleet-coordinator/ ~/.hermes/profiles/fleet/
+# Launch:  hermes -p fleet chat
+# Note: This agent has no skills/ directory. Its capability is delegation.
+# Specialists (track-a, track-b, track-c) must be installed as separate profiles.
+
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
+
+platform_toolsets:
+  cli: [web, skills]   # No terminal: coordinator delegates, never executes domain commands
+
+delegation:
+  max_iterations: 30
+  default_toolsets: ["terminal", "file", "web", "skills"]
+
+approvals:
+  mode: manual
+  timeout: 300
+
+agent:
+  max_turns: 30
+  verbose: false
