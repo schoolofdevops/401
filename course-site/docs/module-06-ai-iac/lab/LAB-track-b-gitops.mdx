@@ -1,0 +1,391 @@
+---
+id: module-06-lab-track-b
+title: "Lab: AI-Assisted IaC — Track B (K8s + ArgoCD GitOps)"
+sidebar_label: "Lab Track B: GitOps"
+sidebar_position: 2
+description: "Deploy the reference app via ArgoCD GitOps on KIND — use AI to generate the Application CRD with guided context engineering"
+---
+
+# Lab: AI-Assisted IaC — Track B (K8s + ArgoCD GitOps)
+
+**Duration:** 60 minutes
+**Deliverable:** Reference app deployed via ArgoCD on KIND with automated sync — you push a change to Git and watch ArgoCD reconcile it to the cluster within 3 minutes
+
+## What You Need
+
+- **Claude Code** (primary) or **Crush** (alternative)
+- **KIND cluster running** — verify with `kubectl cluster-info --context kind-lab`
+- **kubectl configured** for the KIND context (`kind-lab`)
+- **GitHub account** — ArgoCD pulls from Git, not your local filesystem (see Prerequisite below)
+
+## Prerequisite: Fork the Course Repo
+
+> **This step is mandatory before Step 2.** ArgoCD syncs from a Git repository URL — it cannot sync from your local filesystem. If you try to point ArgoCD at a local path, it will fail with "failed to get git client."
+
+Fork the course repository to your own GitHub account:
+
+1. Go to the course repo on GitHub
+2. Click **Fork** (top right)
+3. Select your personal account as the destination
+
+Your fork will be at: `https://github.com/YOUR_USERNAME/agentic-devops-course`
+
+<details>
+<summary>Expected result</summary>
+
+Fork exists at `https://github.com/YOUR_USERNAME/agentic-devops-course`. You can verify with:
+```bash
+git remote -v
+# Should show your fork as origin or a remote you can push to
+```
+
+Keep this URL — you will use it in Step 4 when generating the ArgoCD Application CRD.
+
+</details>
+
+---
+
+## Step 1: Verify KIND Cluster
+
+Confirm your KIND cluster is up and the reference app namespace exists:
+
+```bash
+kubectl cluster-info --context kind-lab
+kubectl get nodes
+```
+
+<details>
+<summary>Expected result</summary>
+
+```
+Kubernetes control plane is running at https://127.0.0.1:PORT
+CoreDNS is running at ...
+
+NAME                 STATUS   ROLES           AGE
+lab-control-plane    Ready    control-plane   XXm
+```
+
+If the cluster is not running, start it:
+```bash
+kind create cluster --config infrastructure/kind/cluster-config.yaml
+```
+
+</details>
+
+---
+
+## Step 2: Create Your Project CLAUDE.md
+
+Before generating any ArgoCD configuration, create a CLAUDE.md that encodes your cluster state, constraints, and GitOps vocabulary. This is the same context engineering pattern from Track A — structured domain knowledge before AI generation.
+
+Create `CLAUDE.md` in your working directory for this lab:
+
+```markdown
+# GitOps Lab — ArgoCD on KIND
+
+## System State
+- KIND cluster: context "kind-lab"
+- Kubernetes: 1.32
+- Reference app Helm chart: reference-app/helm/reference-app/
+- Namespaces: app (reference app), argocd (ArgoCD)
+
+## Constraints
+- Local KIND cluster — no cloud resources
+- ArgoCD install from stable manifests (not Helm chart — simpler for the lab)
+- Resource patches required for laptop constraints (256Mi limits on argocd-server and argocd-repo-server, 512Mi on application-controller)
+- ArgoCD syncs from GitHub fork, not local filesystem (file:// paths will fail)
+
+## Vocabulary
+- "GitOps" = Git as single source of truth; ArgoCD continuously reconciles cluster state to match
+- "sync" = ArgoCD detects drift between Git and cluster, applies changes automatically
+- "Application CRD" = ArgoCD custom resource defining what to deploy, from where, and to which cluster/namespace
+- "prune" = ArgoCD removes cluster resources that are no longer in Git
+- "selfHeal" = ArgoCD reverts manual cluster changes that drift from Git
+```
+
+<details>
+<summary>Expected result</summary>
+
+CLAUDE.md created. When you open Claude Code in this directory, it reads this file and applies these constraints automatically.
+
+Notice the vocabulary section defines "GitOps," "sync," "prune," and "selfHeal" precisely. When you ask Claude Code to "generate an Application with automated sync," it now knows exactly what automated sync means in ArgoCD terms (prune + selfHeal) rather than guessing at the configuration.
+
+</details>
+
+---
+
+## Step 3: Install ArgoCD on KIND
+
+Use Claude Code to generate the install script, then compare against the starter:
+
+**Guided generation prompt:**
+```
+Based on the CLAUDE.md context, generate a bash script that:
+1. Creates the argocd namespace (idempotent — use --dry-run=client)
+2. Installs ArgoCD from stable manifests (kubectl apply from the stable URL)
+3. Patches argocd-repo-server to 128Mi request, 256Mi limit (laptop constraint)
+4. Patches argocd-server to 128Mi request, 256Mi limit (laptop constraint)
+5. Patches argocd-application-controller to 256Mi request, 512Mi limit (laptop constraint)
+6. Waits for all argocd pods with condition=ready, timeout 300s
+7. Prints the initial admin password from the argocd-initial-admin-secret
+
+Use kubectl patch with --type=json to add the resource limits.
+```
+
+Compare against `lab/starter/gitops/setup-argocd.sh`, then run it:
+
+```bash
+chmod +x setup-argocd.sh
+./setup-argocd.sh
+```
+
+> **Important:** If pods stay in Pending status, the resource patches likely did not apply. Check with `kubectl describe pod -n argocd` — look for "Insufficient memory" in the Events section. Apply the patches manually and restart the deployments.
+
+<details>
+<summary>Expected result</summary>
+
+```
+=== Installing ArgoCD on KIND ===
+namespace/argocd configured
+customresourcedefinition.apiextensions.k8s.io/... created
+[... many resources created ...]
+=== Patching resource limits for laptop constraints ===
+deployment.apps/argocd-repo-server patched
+deployment.apps/argocd-server patched
+deployment.apps/argocd-application-controller patched
+=== Waiting for ArgoCD pods ===
+pod/argocd-application-controller-... condition met
+pod/argocd-repo-server-... condition met
+pod/argocd-server-... condition met
+=== ArgoCD installed ===
+Admin password:
+xxxxxxxxxxxxxxxxx
+```
+
+Verify all ArgoCD pods are running:
+```bash
+kubectl get pods -n argocd
+# All pods should show STATUS=Running and READY=1/1 (or 2/2 for dex)
+```
+
+</details>
+
+---
+
+## Step 4: Access ArgoCD UI
+
+Port-forward to the ArgoCD server and log in:
+
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8443:443 &
+```
+
+Open your browser at: **https://localhost:8443**
+
+Accept the self-signed certificate warning (this is expected for a local KIND installation).
+
+Login credentials:
+- **Username:** `admin`
+- **Password:** The password printed at the end of Step 3
+
+<details>
+<summary>Expected result</summary>
+
+ArgoCD dashboard is visible at https://localhost:8443. The Applications view is empty — no applications deployed yet.
+
+If the browser shows "connection refused" — the port-forward may have died. Re-run the port-forward command.
+
+If login fails — retrieve the password again:
+```bash
+kubectl get secret argocd-initial-admin-secret -n argocd \
+  -o jsonpath='{.data.password}' | base64 -d && echo
+```
+
+</details>
+
+---
+
+## Step 5: Guided Generation — ArgoCD Application CRD
+
+Now generate the ArgoCD Application CRD that will deploy the reference app. Paste this into Claude Code:
+
+```
+Based on the CLAUDE.md context, generate an ArgoCD Application CRD that:
+1. Name: reference-app, namespace: argocd
+2. Project: default
+3. Source: My GitHub fork at https://github.com/YOUR_USERNAME/agentic-devops-course
+4. Path to Helm chart: reference-app/helm/reference-app
+5. targetRevision: HEAD
+6. Helm configuration: releaseName "reference-app", valueFiles ["values.yaml"]
+7. Destination: in-cluster (https://kubernetes.default.svc), namespace: app
+8. Automated sync policy: prune=true, selfHeal=true
+9. syncOptions: CreateNamespace=true
+
+Replace YOUR_USERNAME with my actual GitHub username: REPLACE_WITH_YOUR_USERNAME
+```
+
+Replace `REPLACE_WITH_YOUR_USERNAME` with your actual GitHub username before running this prompt.
+
+Compare the generated output against the starter at `lab/starter/gitops/argocd-app.yaml` (skeleton) and the solution at `lab/solution/gitops/argocd-app.yaml` (complete).
+
+<details>
+<summary>Expected result</summary>
+
+Claude Code generates a complete Application CRD:
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: reference-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_USERNAME/agentic-devops-course
+    targetRevision: HEAD
+    path: reference-app/helm/reference-app
+    helm:
+      releaseName: reference-app
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+```
+
+**What to watch for:**
+- The `repoURL` must be your GitHub fork URL — not the upstream course repo, and not a local path
+- `syncPolicy.automated` with `prune: true` and `selfHeal: true` — if the AI omits these, it generated a manual-sync application (no automated reconciliation)
+- `syncOptions: [CreateNamespace=true]` — without this, ArgoCD fails if the `app` namespace does not exist
+
+</details>
+
+---
+
+## Step 6: Deploy and Verify
+
+Apply the Application CRD to the cluster:
+
+```bash
+kubectl apply -f argocd-app.yaml
+```
+
+Watch the sync status:
+```bash
+kubectl get applications -n argocd
+```
+
+Check ArgoCD UI: https://localhost:8443 — the reference-app application should appear and show its sync status.
+
+<details>
+<summary>Expected result</summary>
+
+Within 2-3 minutes:
+```bash
+kubectl get applications -n argocd
+# NAME            SYNC STATUS   HEALTH STATUS
+# reference-app   Synced        Healthy
+```
+
+In the ArgoCD UI, the reference-app card shows:
+- **Sync Status:** Synced (green checkmark)
+- **Health:** Healthy (green heart)
+- The resource tree shows all Helm chart resources deployed to the `app` namespace
+
+Verify the reference app pods are running:
+```bash
+kubectl get pods -n app
+# api-gateway, catalog, worker, dashboard pods should all be Running
+```
+
+If the application shows OutOfSync or Degraded:
+- Check that your GitHub fork URL is correct (not a local path)
+- Check that the Helm chart path is `reference-app/helm/reference-app` (relative to repo root)
+- Check ArgoCD logs: `kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller`
+
+</details>
+
+---
+
+## Step 7: The GitOps Demo — Push to Sync
+
+This is the pedagogical payoff: demonstrate that Git is the single source of truth.
+
+**Make a visible change:**
+
+Edit `reference-app/helm/reference-app/values.yaml` in your fork — change the `apiGateway.replicaCount` from 1 to 2:
+
+```yaml
+apiGateway:
+  replicaCount: 2  # Changed from 1
+```
+
+Or use the override file at `lab/solution/gitops/values-override.yaml` as reference.
+
+**Push the change:**
+```bash
+git add reference-app/helm/reference-app/values.yaml
+git commit -m "demo: scale api-gateway to 2 replicas for GitOps sync demo"
+git push origin main
+```
+
+**Watch ArgoCD sync:**
+```bash
+# Watch for the change — ArgoCD polls Git every 3 minutes by default
+watch kubectl get applications -n argocd
+```
+
+**Verify the scale-up:**
+```bash
+kubectl get pods -n app -l app.kubernetes.io/name=api-gateway
+```
+
+<details>
+<summary>Expected result</summary>
+
+Within 3 minutes of the push:
+1. ArgoCD detects the Git change (polls Git every 3 minutes by default)
+2. ArgoCD UI shows the application transitioning from Synced to OutOfSync to Syncing to Synced
+3. `kubectl get pods -n app` shows 2 api-gateway pods running
+
+```bash
+kubectl get pods -n app
+# NAME                           READY   STATUS    RESTARTS   AGE
+# api-gateway-xxxxxxxxx-xxxxx    1/1     Running   0          2m
+# api-gateway-xxxxxxxxx-yyyyy    1/1     Running   0          30s  <- new pod
+# catalog-...                    1/1     Running   0          5m
+# worker-...                     1/1     Running   0          5m
+```
+
+**The teaching moment:** You did not run `kubectl` to scale the deployment. You pushed to Git. ArgoCD reconciled the cluster state to match. That is GitOps — Git as the single source of truth, with an automated operator continuously enforcing it.
+
+**selfHeal in action (optional):** Try `kubectl scale deployment api-gateway -n app --replicas=1`. Watch ArgoCD restore it to 2 within 3 minutes — because Git says 2, and selfHeal: true means ArgoCD reverts any manual drift.
+
+</details>
+
+---
+
+## Reflection
+
+You have now:
+1. Created a CLAUDE.md that encoded your cluster topology, constraints, and GitOps vocabulary
+2. Used that context to generate a complete ArgoCD Application CRD
+3. Deployed the reference app via GitOps — without running a single `helm upgrade` or `kubectl apply` of application manifests
+4. Witnessed automated reconciliation: push to Git, cluster state changes automatically
+
+The GitOps pattern generalizes to any workload: declare desired state in Git, let ArgoCD reconcile. The AI-generated Application CRD is the bridge between the Git repository and the cluster — and the quality of that YAML depends entirely on the context you provided.
+
+---
+
+## What to Explore Next
+
+- **Scale back down:** Edit `values.yaml` to set `apiGateway.replicaCount: 1`, push, and watch ArgoCD scale down
+- **Test selfHeal:** Manually delete a pod (`kubectl delete pod -n app api-gateway-xxxxx`) and watch Kubernetes restart it — then try `kubectl scale deployment api-gateway -n app --replicas=0` and watch ArgoCD restore it
+- **Disable automated sync:** Edit the Application CRD to remove `syncPolicy.automated`, apply, then push a change — notice ArgoCD detects the drift but does not reconcile until you click "Sync" in the UI
+- **Add another service:** Deploy a second Helm release (e.g., a monitoring stack) by adding another Application CRD — no changes to ArgoCD itself, just another Git-backed resource
