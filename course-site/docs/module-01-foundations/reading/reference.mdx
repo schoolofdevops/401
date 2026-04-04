@@ -1,0 +1,243 @@
+---
+id: module-01-reference
+title: "The AI Spectrum and Context Engineering"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "From chat to autonomous agents — and why context engineering is the skill that matters"
+---
+
+# The AI Spectrum and Context Engineering
+
+## 1. The AI Spectrum: From Chat to Squad
+
+AI capabilities are not binary. They exist on a spectrum that maps cleanly to the operational maturity model you already know from infrastructure automation.
+
+### The Four Levels
+
+| Level | AI Capability | What It Does | Operational Analogy |
+|-------|--------------|--------------|---------------------|
+| **Chat** | Single question, single answer | You describe a problem; the AI responds with information or a suggestion | Manual ops — SSH in, look around, type commands |
+| **Copilot** | Assists while you work | Suggests code, explains errors, drafts documents as you work | Scripted ops — run the playbook, human monitors and decides |
+| **Agent** | Autonomous task execution with tools | Receives a goal, uses tools (CLI, APIs) to accomplish it, reports back | Orchestrated ops — Ansible runs, checks, remediates, reports |
+| **Squad** | Multiple agents coordinating | Coordinator delegates to specialists, aggregates results across domains | Self-healing infra — PagerDuty triggers multi-step auto-remediation |
+
+### Where You Are Now, Where You're Going
+
+You started this module at the **Chat** level — pasting alarm JSON and asking a question. The improvements you saw across layers 1-4 were Chat-level interactions done with increasing sophistication.
+
+By the end of this course:
+- **Module 2 (Platform AI):** Understand what AWS has built at the Copilot level
+- **Module 5-6 (Structured Coding + IaC):** Use Claude Code at the Copilot level for infrastructure work
+- **Module 10 (Domain Agent Build):** Build a working Agent that autonomously handles your operational domain
+- **Module 11 (Fleet Orchestration):** Connect multiple agents into a Squad
+
+### Why the Spectrum Matters
+
+Each level adds **autonomy and tool access**, which means:
+- More capability → more risk → more governance required
+- More capability → more context engineering required
+
+A Chat interaction with bad context produces a bad answer. An Agent with bad context takes bad actions — with tools, against real infrastructure. Context engineering becomes more critical as you move right on the spectrum.
+
+### Concrete Examples at Each Level
+
+**Chat — Module 1 (this lab):**
+You pasted alarm data and asked for analysis. The AI responded. You decided what to do.
+
+**Copilot — Module 5-6:**
+You describe what Terraform or Ansible should do. Claude Code suggests, edits, and refines. You review and apply.
+
+**Agent — Module 10 (Hermes):**
+An SRE agent receives a CloudWatch alarm, runs `aws ec2 describe-instances`, queries CloudWatch metrics, cross-references the runbook, and posts a structured triage report to your incident ticket — without you typing anything.
+
+**Squad — Module 11:**
+A coordinator agent receives a multi-service incident. It delegates to:
+- A SRE agent (diagnoses the EC2/RDS issue)
+- A cost agent (checks if this spike correlates to a cost anomaly)
+- A deployment agent (checks if a recent deploy triggered this)
+
+Each agent reports back. The coordinator synthesizes across domains and recommends a resolution.
+
+---
+
+## 2. Context Engineering: The Core Skill
+
+### What It Is (and What It Is Not)
+
+**Context engineering is NOT prompt engineering.**
+
+These terms get conflated, but they describe fundamentally different activities:
+
+| | Prompt Engineering | Context Engineering |
+|---|---|---|
+| **Question it asks** | "How do I phrase this?" | "What does the model need to know?" |
+| **Focus** | Wording, tone, instruction style | Domain knowledge, system state, constraints |
+| **Skill required** | Linguistic creativity | Operational expertise |
+| **Scales with** | Model capability | Your domain knowledge |
+| **Output quality driver** | Clever phrasing | Information richness |
+
+The quality improvements you saw across layers 1-4 in the lab were not about phrasing. The words "Analyze this alarm:" never changed. What changed was the *information* you provided.
+
+> **The Anthropic framing:** Context engineering is "the art of providing the right information, in the right format, at the right time."
+>
+> Source: Anthropic engineering blog on agentic systems (2025)
+
+### Why DevOps Practitioners Are Already Good at This
+
+You've been doing context engineering your whole career. You just didn't call it that.
+
+Every structured artifact you write for automation is a context engineering artifact:
+
+| What You Write | What It Does | Context Engineering Equivalent |
+|----------------|--------------|--------------------------------|
+| Ansible playbook | Tells automation what state to achieve and how | Role context + procedural context for an agent |
+| Terraform module | Encodes infrastructure patterns with inputs/outputs | System context for an IaC generation agent |
+| Runbook wiki page | Documents decision trees for on-call | Layer 4 runbook context in the lab |
+| Dockerfile | Defines the exact environment a process needs | Identity/environment context for a containerized agent |
+| CI/CD pipeline | Orchestrates steps with conditions and dependencies | Workflow context for a deployment agent |
+
+The SKILL.md files you'll write in Module 7 are exactly this — operational knowledge encoded in a format that an AI agent can read, understand, and apply.
+
+### The Four-Layer Pattern
+
+The lab taught a specific context architecture. Here it is as a reusable pattern:
+
+```
+Layer 1: Task definition
+  What should be done?
+  "Analyze this CloudWatch alarm"
+
+Layer 2: Role/expertise context
+  Who is doing it? What frame should they use?
+  "You are an experienced SRE... think in terms of incident severity, MTTR"
+
+Layer 3: System context
+  Where is this happening? What are the specific constraints?
+  "i-0abc123def456001 is the catalog-api EC2 instance (t3.large)...
+   CPU typically runs at 60-65% during peak hours..."
+
+Layer 4: Procedural context
+  How should it be done? What decision tree applies?
+  "SRE runbook — HighCPUUtilization response:
+   1. Check: Is this a known traffic spike?
+   2. Check: Is there a runaway process?..."
+```
+
+This pattern is not specific to alarm triage. It applies across the full DevOps spectrum.
+
+---
+
+## 3. Context Engineering in Practice: DevOps Scenarios
+
+The same 4-layer pattern applies to every operational domain. Here's how it maps across the scenarios you'll encounter in this course.
+
+### Alarm Triage (Module 1)
+
+| Layer | Content |
+|-------|---------|
+| Task | Analyze this CloudWatch alarm and recommend immediate actions |
+| Role | Experienced SRE on a production e-commerce platform. Thinks in: incident severity, customer impact, MTTR |
+| System | Instance roles, service topology, normal baselines, on-call routing |
+| Procedure | Per-alarm runbook with decision trees, escalation thresholds, CLI commands to run |
+
+**Output quality:** Generic diagnosis → Expert incident response with specific CLI commands
+
+### Cost Anomaly Analysis (Module 2)
+
+| Layer | Content |
+|-------|---------|
+| Task | Analyze this Cost Explorer anomaly — daily spend is 3x average |
+| Role | FinOps analyst responsible for AWS cost governance |
+| System | Account structure, service budgets, normal spend patterns per service/environment |
+| Procedure | Cost investigation checklist: tag filtering, resource attribution, right-sizing criteria |
+
+**Output quality:** "Your bill is high" → "EC2 i-type instances in dev account spiked 400% — likely from an untagged batch job, recommend: check `aws ec2 describe-instances` for dev-account, filter by launch-time"
+
+### Deployment Validation (Module 5)
+
+| Layer | Content |
+|-------|---------|
+| Task | Review this Ansible playbook for EC2 hardening |
+| Role | Senior infrastructure engineer responsible for security compliance |
+| System | Target environment (prod/dev/staging), existing policies, OS versions, security benchmarks in scope |
+| Procedure | Validation checklist: idempotency check, security baseline items, rollback criteria |
+
+**Output quality:** "Looks good" → "Line 34: `become: yes` without specifying `become_user` defaults to root — violates least-privilege. Line 67: no `--check` mode handler means this cannot be safely tested before apply."
+
+### Infrastructure Generation (Module 6)
+
+| Layer | Content |
+|-------|---------|
+| Task | Generate Terraform for an RDS PostgreSQL instance |
+| Role | Infrastructure engineer following company IaC standards |
+| System | VPC/subnet IDs, existing security groups, naming conventions, tagging requirements |
+| Procedure | Standard patterns: use `aws_db_instance` not `aws_db_cluster` for single instance, always enable `deletion_protection`, required tags: `owner`, `environment`, `cost-center` |
+
+**Output quality:** Generic RDS resource → Company-standard module with correct VPC placement, security groups, tags, and parameter group
+
+---
+
+## 4. The Vocabulary Shift: Context Engineering Throughout This Course
+
+Starting now, the course uses **context engineering** vocabulary consistently.
+
+When you hear "write a better prompt" in other AI content, translate it to: "add the right context."
+
+Key terms to internalize:
+
+| Old Framing | Course Framing |
+|-------------|----------------|
+| "Write a prompt" | "Design your context" |
+| "Prompt the model" | "Provide context to the model" |
+| "Good prompting skills" | "Context architecture skills" |
+| "Prompt template" | "Context template" |
+| "System prompt" | "Role and identity context" |
+| "Few-shot examples" | "Procedural context examples" |
+
+The SKILL.md files in Modules 7-8 are **context engineering artifacts** — they encode domain expertise, system context, and procedural knowledge in a format an agent reads at runtime.
+
+The SOUL.md files that give agents their identity are **identity context** — they define who the agent is, what it's responsible for, and how it should behave.
+
+Context engineering is not a technique you use occasionally. It is the primary activity of building and operating AI agents.
+
+---
+
+## Quick Reference
+
+### Token Size Estimates
+
+| Content Type | Approx Tokens |
+|---|---|
+| Simple question | 10–30 |
+| CloudWatch alarm JSON | 150–200 |
+| Layer 4 context (full lab) | ~1,000 |
+| Typical SRE runbook | 400–800 |
+| Full service topology (10 services) | 1,000–2,000 |
+| 30 days incident history | ~25,000 |
+| Claude's context window | 200,000 |
+
+### Model Selection Quick Guide
+
+| Use Case | Recommended Model | Why |
+|----------|-------------------|-----|
+| Daily agent work (subscribers) | Claude Sonnet 4.6 | Best reasoning for ops tasks |
+| Free tier, high volume | Gemini 2.5 Flash | 500 req/day free; strong reasoning |
+| Fast inference demos | Groq Llama 3.1 8B | 14,400 req/day free; very fast |
+| Module labs (any participant) | Any of the above | Labs designed to be model-agnostic |
+
+### Context Layer Checklist
+
+Before sending context to any AI model, verify:
+
+- [ ] **Task defined:** What is the model being asked to do?
+- [ ] **Role set:** What expertise frame should it adopt?
+- [ ] **System context present:** Does it know the specific environment?
+- [ ] **Procedure available:** Does it have the relevant runbook or decision tree?
+- [ ] **Output format specified:** Have you told it how to structure the response?
+- [ ] **Token budget reasonable:** Is the context within practical limits?
+
+If you're missing Layers 3 or 4, the output will be generic. Generic output in production ops is a liability, not an asset.
+
+---
+
+**Next module:** [Module 2 — Platform AI: Features Already in Your Stack](../../module-02-platform-ai/)

@@ -1,0 +1,219 @@
+---
+id: module-01-concepts
+title: "How LLMs Work — An Operations Perspective"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "LLM fundamentals explained through the lens of infrastructure and operations"
+---
+
+# How LLMs Work — An Operations Perspective
+
+You spent the lab building context for a CloudWatch alarm. You experienced what happens when you give an AI model richer context. Now let's understand *why* it works — what's happening inside the model when you add that infrastructure topology and runbook context.
+
+This isn't an academic deep-dive. It's the operational understanding you need to build effective AI workflows.
+
+---
+
+## 1. Tokenization
+
+Before a language model can process any text, it converts the text into numbers — specifically, into a sequence of **tokens**.
+
+A token is not a word. It's a subword unit — a chunk of characters the model learned to recognize from training data. "Kubernetes" might tokenize as `["Kubern", "etes"]` — two tokens. "kubectl" might be one token. "arn:aws:cloudwatch:us-east-1" will be many tokens because it has unusual patterns the model doesn't see often.
+
+**Why this matters for DevOps:**
+
+JSON is token-expensive compared to prose. Every curly brace, colon, and quoted key is one or more tokens. The alarm JSON from the lab clocks in at roughly 150 tokens. If you sent the full alarm history (describe-alarm-history.json), you'd be looking at 600+ tokens just for the input data.
+
+A useful rule of thumb: **1 token ≈ 4 characters** for English text. For JSON, closer to 3 characters per token because of the structural syntax.
+
+**The operational analogy:** Tokenization is like log parsing. A log aggregator reads raw text and breaks it into structured fields — timestamp, log level, service name, message. A tokenizer does the same thing, but the "fields" are learned patterns from billions of text examples rather than a delimiter schema you wrote.
+
+**Practical exploration:** Try the [Anthropic tokenizer tool](https://www.anthropic.com) or [OpenAI tokenizer](https://platform.openai.com/tokenizer) and paste in some Terraform HCL or Kubernetes YAML. You'll see exactly how token-dense infrastructure code is compared to plain English.
+
+---
+
+## 2. Context Window
+
+The **context window** is the total amount of text (measured in tokens) that a model can see at once. Everything outside the window is invisible to the model. It doesn't exist.
+
+Current context windows (2026):
+
+| Model | Context Window |
+|-------|----------------|
+| Claude Sonnet 4.6 | 200,000 tokens (~150,000 words) |
+| Gemini 2.5 Flash | 1,000,000 tokens |
+| GPT-4o | 128,000 tokens |
+| Llama 3.1 8B | 128,000 tokens |
+
+The window includes everything: the system prompt, all your context layers, the alarm JSON, the conversation history, and the model's response. It all counts.
+
+**The operational analogy:** A context window is like container memory limits. A container process has a fixed memory ceiling — exceed it and you get OOM-killed. The model has a fixed context ceiling — exceed it and earlier content gets truncated (or the call fails outright, depending on implementation).
+
+The key difference: you can't just add more RAM. The context window is architecturally fixed by how the model was trained and deployed. You can't override it at runtime.
+
+**Why this matters for agents:**
+
+The Layer 4 context from the lab was approximately 1,000 tokens. That's 0.5% of Claude's 200K window — you have enormous room. But consider an agent that processes alarms autonomously:
+
+- It receives an alarm (150 tokens)
+- It calls `aws ec2 describe-instances` and gets the response (400 tokens)
+- It calls `aws logs get-log-events` and gets the last 100 log entries (2,000 tokens)
+- It checks the deployment history (800 tokens)
+- It writes a summary (300 tokens)
+
+That's ~3,650 tokens for one alarm. At 100 alarms in a session, you've consumed 365,000 tokens — more than Claude's entire window. Context management is the **#1 operational skill** for production agent work.
+
+---
+
+## 3. Inference Pipeline — Prefill and Decode
+
+Every time you send a message to an LLM, the model runs a two-phase process. Understanding this explains cost, latency, and why rich context is cheaper than you think.
+
+### Phase 1: Prefill
+
+The model processes **all your input tokens simultaneously** in parallel. Your entire context window — system prompt, topology, runbook, alarm JSON — is processed in one batch. This is called prefill.
+
+Prefill is computationally efficient because it uses the GPU's parallel processing capability. More input tokens doesn't mean proportionally more time or cost. Processing 1,000 tokens in parallel takes nearly the same wall-clock time as processing 200 tokens.
+
+### Phase 2: Decode
+
+The model generates output **one token at a time**. Each token depends on all previous tokens (input + all previously generated output tokens). This is inherently sequential — you cannot parallelize it. Each decode step must wait for the previous step to complete.
+
+This is why generating a long response takes more time than a short one. And it's why output tokens cost more than input tokens.
+
+**The operational analogy:** Think of a 2-phase deployment pipeline.
+
+- **Prefill = `terraform plan`**: Load the entire state file, evaluate all resources in parallel, compute the execution plan. The work is bounded by the state file size, but it's parallelized.
+- **Decode = `terraform apply`**: Execute changes one resource at a time, in dependency order. Each resource must wait for its upstream dependencies. Sequential, cannot be parallelized, takes time proportional to the number of changes.
+
+**Practical implications:**
+
+The Claude Sonnet 4.6 pricing (2026):
+- Input tokens (prefill): **$3/million tokens**
+- Output tokens (decode): **$15/million tokens**
+
+Input tokens are 5x cheaper than output tokens. This has an important consequence for how you design your context:
+
+> **Make your context rich (cheap) and your requested output concise (expensive).**
+
+A detailed runbook in your context costs $3/M. The same information generated by the model in its response costs $15/M. Always provide structured context rather than asking the model to reconstruct knowledge from scratch.
+
+The "respond in JSON with these specific fields" instruction you see in production agent code isn't just about parsing convenience. It's cost engineering — constraining the decode phase to produce only what you need.
+
+---
+
+## 4. Temperature
+
+Temperature controls how the model selects the next token during the decode phase.
+
+At each step, the model computes a probability distribution over its entire vocabulary — which token should come next? Temperature adjusts how sharply peaked that distribution is:
+
+- **Temperature 0**: Always pick the highest-probability token. Deterministic. Given the same input, always produces the same output.
+- **Temperature 1**: Sample from the full distribution. More random, more creative, more variable.
+- **Temperature 0.5**: In between — still tends toward high-probability tokens but allows variation.
+
+**The operational analogy:** Load balancer routing strategy.
+
+- Temperature 0 = Round-robin to the single best server, every time. Predictable, consistent, the same result on every request.
+- Temperature 1 = Weighted random selection. The best server gets more traffic but others get a share. More variation in which server handles each request.
+
+**When to use each setting:**
+
+| Use Case | Temperature | Why |
+|----------|-------------|-----|
+| Incident triage (SRE agent) | 0 | Need consistent, deterministic responses. On-call handoffs require reproducibility. |
+| Runbook execution | 0 | Every invocation must follow the same decision tree. |
+| Code generation (IaC) | 0 to 0.2 | Low temperature for correct, consistent code. Some variation for avoiding repetitive patterns. |
+| Architecture brainstorming | 0.7 to 1.0 | Want diverse ideas, not the same answer every time. |
+| Content generation | 0.5 to 0.8 | Balance quality and variety. |
+
+In the lab, you used the default temperature (typically 1.0 for Claude). For Module 7 SKILL.md authoring, you'll set temperature to 0 for all production agent skills — consistent behavior is more valuable than creative one.
+
+---
+
+## 5. Top-P and Top-K
+
+These are two additional filtering mechanisms that operate before the temperature step. They limit the **candidate vocabulary** for the next token.
+
+**Top-K:** Only consider the K most likely next tokens. If Top-K = 50, the model will only sample from the 50 highest-probability candidates, ignoring everything else.
+
+**Top-P (nucleus sampling):** Keep adding candidate tokens in order of probability until their cumulative probability reaches P. If Top-P = 0.9, consider tokens until you've covered 90% of the probability mass.
+
+In practice: these parameters interact with temperature. High temperature expands the effective vocabulary. Top-K and Top-P constrain it back. Most production applications use default values for these — temperature is the main tuning knob.
+
+**A brief analogy:** Both are forms of admission control. Top-K admits a fixed-size candidate pool. Top-P admits candidates until a probability budget is consumed. If you need to tune these, think of them as safety governors — they prevent the model from sampling truly improbable tokens that could derail the output.
+
+**Practical guidance:** Unless you're doing advanced inference optimization, leave Top-K and Top-P at their defaults. Focus on temperature for behavioral tuning, and focus on context engineering for quality tuning.
+
+---
+
+## 6. Token Economics
+
+Understanding token pricing helps you make rational decisions about context design.
+
+### Current Pricing (2026)
+
+| Provider | Model | Input ($/M tokens) | Output ($/M tokens) | Free Tier |
+|----------|-------|--------------------|---------------------|-----------|
+| Anthropic | Claude Sonnet 4.6 | $3.00 | $15.00 | Via Claude subscription |
+| Google | Gemini 2.5 Flash | — | — | 500 req/day via AI Studio |
+| Groq | Llama 3.1 8B Instant | — | — | 14,400 req/day |
+
+Prices have dropped approximately 80% since 2024. Context engineering is increasingly affordable.
+
+### The Core Insight
+
+**Context engineering is cost engineering.**
+
+Rich input context costs $3/M tokens (prefill). Thin context produces longer, wandering output — costing $15/M tokens (decode) while delivering less value.
+
+Layer 4 context (1,000 tokens × $3/M) = **$0.003 per alarm analysis**.
+
+If thin context causes the model to ask clarifying questions, generate preamble, or produce outputs you have to re-query — you've paid $15/M for all of that.
+
+### Calculating Real Costs
+
+From the lab's Part 3 exercise:
+
+```
+500 alarms/day × 1,000 tokens each × $3/M = $1.50/day
+500 alarms/day × 500 tokens output each × $15/M = $3.75/day
+Total: ~$5.25/day for fully automated CloudWatch triage
+Monthly: ~$157.50
+```
+
+Compared to the alternative:
+```
+500 alarms/day × 5 min/alarm = 2,500 minutes/day
+= 41.7 hours/day (requires 5+ people just for triage)
+```
+
+The economics strongly favor Layer 4. The per-alarm cost is negligible compared to SRE time. The question is not "can we afford rich context?" — it's "can we afford NOT to use it?"
+
+### The Free Tier Option
+
+Gemini 2.5 Flash gives you 500 requests/day at zero cost. If your alarm volume is under 500/day, Layer 4 analysis on all alarms is **completely free**. Token economics are approaching zero for moderate workloads.
+
+### What You Learned in the Lab
+
+You calculated this in Part 3. Layer 4 costs 7x Layer 1 ($0.003 vs. $0.00045 per alarm). But Layer 4 produces operationally useful output while Layer 1 produces generic advice you can't act on.
+
+The right question isn't "what does Layer 4 cost?" It's "what does a false negative cost?" — an alarm that gets triaged superficially and misses a real incident.
+
+---
+
+## Summary
+
+| Concept | What It Is | Operational Implication |
+|---------|------------|------------------------|
+| Tokenization | Text → subword units | JSON is token-dense; estimate 3 chars/token for code |
+| Context window | Fixed memory limit | Agents that call many tools fill context fast |
+| Prefill | Parallel input processing | Rich context doesn't proportionally slow things down |
+| Decode | Sequential output generation | Constrain output format to reduce cost |
+| Temperature | Output randomness | 0 for agents; higher for exploration |
+| Top-P / Top-K | Vocabulary filtering | Leave at defaults; tune temperature instead |
+| Token economics | Input cheap, output expensive | Rich context (prefill) beats verbose output (decode) |
+
+These concepts become practical when you start writing SKILL.md files in Module 7. A well-designed skill is essentially a context engineering artifact — it encodes exactly the prefill context (role, topology, runbook) needed for the decode phase to produce expert-level output.
+
+**Next:** [Reference — The AI Spectrum and Context Engineering](./module-01-reference)
