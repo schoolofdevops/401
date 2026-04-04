@@ -46,12 +46,12 @@ Plans:
   3. Module 3 demo script walks a facilitator through a live Hermes agent first-run in under 15 minutes with participant observation cues
   4. Module 4 automation quadrant template is completable solo (no team needed) and produces a ranked list of at least 10 operational tasks with scores
   5. Every module (1-4) has LAB.md, concepts.md, reference.md, QUIZ.md, and README.md in the standard directory structure
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Module 1 lab (progressive context engineering with CloudWatch data, token economics)
-- [ ] 02-02: Module 1 reading materials and quiz (tokenization, context windows, AI spectrum, context engineering philosophy)
-- [ ] 02-03: Modules 2-4 labs, reading, quiz (platform AI, bridge content, impact assessment)
+- [ ] 02-01-PLAN.md — Docusaurus site init + Module 1 lab (progressive context engineering with CloudWatch data, token economics)
+- [ ] 02-02-PLAN.md — Module 1 reading materials and quiz (tokenization, context windows, AI spectrum, context engineering philosophy)
+- [ ] 02-03-PLAN.md — Modules 2-4 labs, reading, quiz (platform AI, bridge content, impact assessment)
 
 ### Phase 3: Day 2 Modules
 **Goal**: A participant completing Day 2 has built real infrastructure artifacts (Helm chart or CI/CD pipeline) using a structured AI workflow and has working IaC in at least one track (Terraform, K8s+GitOps, or CI/CD with Argo Workflows)
@@ -97,6 +97,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete   | 2026-04-04 |
-| 2. Day 1 Modules | 0/3 | Not started | - |
+| 2. Day 1 Modules | 0/3 | Planned | - |
 | 3. Day 2 Modules | 0/3 | Not started | - |
 | 4. Remaining Content | 0/3 | Not started | - |
