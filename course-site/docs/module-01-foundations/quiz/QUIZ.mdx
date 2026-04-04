@@ -1,0 +1,239 @@
+---
+id: module-01-quiz
+title: "Module 1 Quiz: AI Foundations"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of LLM fundamentals and context engineering"
+---
+
+# Module 1 Quiz: AI Foundations
+
+These questions test your understanding of LLM fundamentals and context engineering from the reading and the lab. Questions focus on operational understanding — not syntax trivia.
+
+---
+
+### Question 1: Tokenization
+
+A CloudWatch alarm JSON payload is 800 characters long. Approximately how many tokens is this?
+
+A) 80 tokens
+B) 200 tokens
+C) 800 tokens
+D) 2,400 tokens
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) 200 tokens**
+
+Tokens are subword units, roughly 3–4 characters each for English text. JSON syntax characters (`{`, `}`, `:`, `"`) each tend to be individual tokens, making JSON slightly more token-dense than prose — closer to 3 characters per token.
+
+800 characters ÷ ~4 chars/token ≈ **200 tokens**.
+
+This matters because every token has a cost. The alarm JSON from the lab (~150 tokens) is manageable, but a large CloudWatch event with nested metadata can easily reach 500–600 tokens. When designing agent context, estimate your token budget before sending.
+
+</details>
+
+---
+
+### Question 2: Context Window
+
+Why is context window size the #1 operational constraint for AI agents?
+
+A) Larger windows cost significantly more money per request
+B) The model can only process a fixed amount of text at once — agents that call many tools fill the window quickly
+C) Larger windows make the model noticeably slower for the end user
+D) Context windows limit how many parallel API calls an agent can make
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) The model can only process a fixed amount of text at once — agents that call many tools fill the window quickly**
+
+A single agent interaction can consume context fast. From the concepts reading:
+
+```
+Receives alarm:       150 tokens
+Calls describe-instances: 400 tokens
+Gets CloudWatch metrics: 500 tokens
+Checks deployment history: 800 tokens
+Writes incident summary: 300 tokens
+Total:                ~2,150 tokens for one alarm
+```
+
+At 100 alarms in a session, you've used 215,000 tokens — more than Claude's 200K window. An agent that loses earlier context is like an SRE who forgot the beginning of the incident — the analysis degrades.
+
+Options A and C are partially true but not the primary constraint. Option D is incorrect — context windows don't limit parallel API calls.
+
+</details>
+
+---
+
+### Question 3: Inference Pipeline
+
+In the LLM inference pipeline, why are input tokens cheaper than output tokens?
+
+A) Input tokens are smaller units than output tokens
+B) Input tokens are processed in parallel (prefill), while output tokens are generated one at a time (decode)
+C) Input tokens don't require GPU resources — only output generation does
+D) Output tokens require persistent storage that input tokens don't
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Input tokens are processed in parallel (prefill), while output tokens are generated one at a time (decode)**
+
+The inference pipeline has two phases:
+
+- **Prefill**: All your input tokens (system context, topology, runbook, alarm JSON) are processed simultaneously in parallel on the GPU. Efficient.
+- **Decode**: Output tokens are generated one at a time, each depending on all previous tokens. Sequential. Cannot be parallelized.
+
+This is why Claude Sonnet 4.6 charges $3/M for input tokens but $15/M for output tokens — parallel work (prefill) is 5x more efficient than sequential work (decode).
+
+**Practical implication**: Make your context rich (cheap prefill) and constrain your output format (limit expensive decode). A "respond in JSON with these exact fields" instruction isn't just about parsing — it's cost engineering.
+
+</details>
+
+---
+
+### Question 4: Context Engineering vs Prompt Engineering
+
+What is the key difference between context engineering and prompt engineering?
+
+A) Context engineering produces longer, more detailed prompts
+B) Context engineering focuses on WHAT information the model needs, not HOW to phrase the request
+C) Prompt engineering is the more advanced, production-grade approach
+D) Context engineering only works with Claude and Anthropic models
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Context engineering focuses on WHAT information the model needs, not HOW to phrase the request**
+
+The distinction from the reference reading:
+
+| | Prompt Engineering | Context Engineering |
+|---|---|---|
+| Question it asks | "How do I phrase this?" | "What does the model need to know?" |
+| Focus | Wording, tone, style | Domain knowledge, system state, constraints |
+| Quality driver | Clever phrasing | Information richness |
+
+In the lab, you used the same task instruction ("Analyze this alarm:") across all four layers. The wording never changed. The quality improvement came entirely from adding information — infrastructure context and runbook procedural knowledge.
+
+Context engineering is model-agnostic. The same 4-layer pattern works with Claude, Gemini, Llama, or any capable model.
+
+</details>
+
+---
+
+### Question 5: Lab Application
+
+In the Module 1 lab, which context layer transition produced the biggest quality improvement?
+
+A) Layer 1 → Layer 2 (adding SRE role context)
+B) Layer 2 → Layer 3 (adding infrastructure topology)
+C) Layer 3 → Layer 4 (adding runbook context)
+D) All layers improved quality roughly equally
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Layer 2 → Layer 3 (adding infrastructure topology)**
+
+Layer 3 is where the response shifts from *generic* to *specific*. With topology context:
+
+- The model knows `i-0abc123def456001` is the `catalog-api` EC2 instance
+- It can calculate the actual deviation: CPU at 92% is 27–32 points above the normal 60–65% baseline
+- It flags the DatabaseConnections alarm as correlated (high CPU on catalog-api is likely exhausting the connection pool)
+- It reasons about YOUR system, not a hypothetical EC2 instance
+
+Layer 1→2 adds framing (SRE vocabulary). Useful but still generic.
+Layer 3→4 adds procedural detail. Valuable but builds on the specificity Layer 3 established.
+
+Layer 3 is the inflection point where context engineering pays off most clearly.
+
+</details>
+
+---
+
+### Question 6: Token Economics
+
+At $3/M input tokens, what does it cost to analyze 500 CloudWatch alarms per day with Layer 4 context (~1,000 tokens each)?
+
+A) $0.15/day
+B) $1.50/day
+C) $15.00/day
+D) $150.00/day
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) $1.50/day**
+
+```
+500 alarms × 1,000 tokens/alarm = 500,000 input tokens
+500,000 tokens ÷ 1,000,000 × $3 = $1.50/day
+Monthly: $1.50 × 30 = $45/month
+```
+
+Compare this to the manual alternative:
+
+```
+500 alarms × 5 min/alarm = 2,500 min/day = 41.7 hours/day
+A team of 5 would each spend 8+ hours/day on nothing but alarm triage
+```
+
+At $1.50/day (or $0 on Gemini 2.5 Flash free tier), the economics strongly favor Layer 4 context engineering. The question is not whether you can afford rich context — it's whether you can afford not to use it.
+
+</details>
+
+---
+
+### Question 7: AI Spectrum
+
+A system that autonomously detects a failing pod, diagnoses the root cause using `kubectl` and log queries, and restarts the service without human intervention — which level of the AI spectrum is this?
+
+A) Chat
+B) Copilot
+C) Agent
+D) Squad
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) Agent**
+
+An Agent performs autonomous task execution with tools. In this scenario:
+
+1. Detects the failing pod (observe)
+2. Runs `kubectl describe pod` and queries logs (tool use — act)
+3. Diagnoses root cause (think)
+4. Restarts the service (act)
+5. Confirms resolution (observe)
+
+This is the Observe → Think → Act loop executing autonomously — no human in the loop.
+
+**Why not Squad?** A Squad involves multiple agents coordinating across domains. A Squad would have one agent diagnose the pod issue, another check if the pod failure correlates with a network change, and another verify that the restart resolved the issue — each a separate specialized agent with its own context.
+
+**Why not Copilot?** A Copilot assists while a human decides. In this scenario, the system acts without human intervention.
+
+By Module 10, you'll build this — an agent that handles your specific operational domain autonomously.
+
+</details>
+
+---
+
+## Score Interpretation
+
+| Score | Interpretation |
+|-------|---------------|
+| 7/7 | Solid conceptual foundation — ready for Module 2 |
+| 5–6/7 | Good understanding — review the explanations for any you missed |
+| 3–4/7 | Re-read concepts.mdx, focus on inference pipeline and context engineering sections |
+| 0–2/7 | Work through the lab again before proceeding to Module 2 |
+
+## What's Next
+
+These concepts become *operational* when you start building agents. Module 2 shows what platform AI (AWS built-ins) gives you without custom context. Module 7 is where you write your first SKILL.md — a context engineering artifact that encodes your operational expertise for an agent to use at runtime.
+
+**Continue to:** [Module 2 — Platform AI: Features Already in Your Stack](../../module-02-platform-ai/)
