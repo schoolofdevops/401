@@ -1,0 +1,83 @@
+---
+id: module-06-readme
+title: "Module 6: AI-Assisted Infrastructure as Code"
+sidebar_label: "Overview"
+sidebar_position: 0
+---
+
+# Module 6: AI-Assisted Infrastructure as Code
+
+**Duration:** 90 minutes
+**Day:** Day 2, Session 3
+
+## What This Module Is About
+
+You already know how to write Terraform, Helm, and Kubernetes manifests. This module is about something different: using AI as a *generation accelerator* for infrastructure code, with structured context engineering as the input discipline.
+
+The key insight is this — AI-generated IaC is only as good as the context you provide. A generic prompt produces generic, often broken Terraform. A structured CLAUDE.md with system state, constraints, and vocabulary produces production-quality code that fits your actual environment. This module makes that difference visceral.
+
+## Choose Your Track
+
+Participants choose ONE track based on their primary specialty:
+
+| Track | Focus | Best For |
+|-------|-------|----------|
+| **Track A: Terraform** | EC2 + CloudWatch + SNS on AWS free tier | Cloud/IaC specialists |
+| **Track B: ArgoCD GitOps** | Deploy reference app via GitOps on KIND | Platform/K8s specialists |
+
+Both tracks use the same guided generation technique — you will create a project CLAUDE.md, feed structured context to Claude Code or Crush, and compare AI-generated code to solution files.
+
+> **Note:** There is no Track C. Argo Workflows was evaluated and descoped from this module — it adds complexity without adding pedagogical value at this point in the course. GitOps is taught hands-on in Track B; Argo Workflows is covered conceptually in Module 9.
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. **Apply context engineering to IaC generation** — structure CLAUDE.md with system state, constraints, and vocabulary so AI produces correct, environment-specific infrastructure code
+2. **Validate AI-generated infrastructure** — compare generated code to solution files, identify gaps, understand what the AI got right and where it needed correction
+3. **Recognize AI failure modes in IaC** — generic resource names, missing version constraints, wrong defaults — and know how structured context prevents them
+4. **Use the starter-to-solution technique** — give AI a skeleton with clear TODO comments; understand how starter files function as machine-readable context
+5. **Apply the guided generation pattern** — break IaC generation into discrete steps with explicit prompts, validating at each step before proceeding
+
+## Prerequisites
+
+- Module 5a or 5b completed (structured AI coding workflow)
+- Claude Code or Crush installed and working
+- **Track A only:** Terraform 1.7+ installed (`terraform version` to check), AWS account (optional — mock fallback documented)
+- **Track B only:** KIND cluster running (`kubectl cluster-info --context kind-lab`), GitHub account (ArgoCD requires Git access)
+
+## Module Contents
+
+| Section | Content | Time |
+|---------|---------|------|
+| Lab Track A | Terraform: EC2 + CloudWatch + SNS | 60 min |
+| Lab Track B | ArgoCD GitOps: Reference app on KIND | 60 min |
+
+## Why Context Engineering Matters for IaC
+
+Consider the difference:
+
+**Without structured context:**
+> "Write Terraform for an EC2 instance with CloudWatch monitoring"
+
+AI generates a valid `aws_instance` resource — using a hardcoded AMI ID from 2020, no data source for the latest image, no tags, monitoring disabled, and a CloudWatch alarm with a random threshold. It compiles. It will also fail in your environment.
+
+**With structured context (CLAUDE.md):**
+```
+## System State
+- AWS region: us-east-1, free tier target
+- Terraform version: 1.7+, AWS provider >= 5.0
+
+## Constraints
+- t2.micro only — no paid instance types
+- Basic monitoring (not detailed) — stays free
+- SNS email subscription only — no SMS
+
+## Vocabulary
+- "monitoring" = CloudWatch CPUUtilization alarm
+- "notification" = SNS topic + email subscription
+```
+
+Now AI generates: `data "aws_ami" "amazon_linux"` with the correct filter for the latest image, `t2.micro`, free-tier-compatible monitoring settings, correct threshold and evaluation periods, proper tags — code that actually works in your account.
+
+The AI's capability did not change. The context did.

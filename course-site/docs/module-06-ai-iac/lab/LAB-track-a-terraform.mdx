@@ -1,0 +1,313 @@
+---
+id: module-06-lab-track-a
+title: "Lab: AI-Assisted IaC — Track A (Terraform)"
+sidebar_label: "Lab Track A: Terraform"
+sidebar_position: 1
+description: "Build a Terraform module for EC2 + CloudWatch + SNS using guided context engineering"
+---
+
+# Lab: AI-Assisted IaC — Track A (Terraform)
+
+**Duration:** 60 minutes
+**Deliverable:** Terraform module for an EC2 instance with CloudWatch CPU alarm and SNS email notification, generated via guided context engineering
+
+## What You Need
+
+- **Claude Code** (primary) or **Crush** (alternative)
+- **Terraform 1.7+** — CRITICAL, see Step 0 before anything else
+- **AWS account with free-tier access** — optional, see Alternative Path below
+- The starter files at `course-site/docs/module-06-ai-iac/lab/starter/terraform/`
+
+---
+
+## Step 0: Version Check (Required)
+
+Before starting, verify your Terraform version. The mock fallback path requires 1.7.0 or higher.
+
+```bash
+terraform version
+```
+
+<details>
+<summary>Expected result</summary>
+
+Output should show `Terraform v1.7.0` or higher:
+```
+Terraform v1.9.8
+on darwin_arm64
+```
+
+If your version is below 1.7.0, install the latest version:
+- **macOS (Homebrew):** `brew install tfenv && tfenv install 1.9.8 && tfenv use 1.9.8`
+- **Direct download:** https://developer.hashicorp.com/terraform/install
+- **tfenv:** `tfenv install 1.9.8 && tfenv use 1.9.8`
+
+If Terraform is not installed at all, install it from https://developer.hashicorp.com/terraform/install before continuing.
+
+</details>
+
+---
+
+## Step 1: Examine the Starter Files
+
+Navigate to the starter Terraform directory and examine the structure:
+
+```bash
+cd course-site/docs/module-06-ai-iac/lab/starter/terraform
+ls -la modules/ec2-monitored/
+```
+
+You will find four files:
+- `main.tf` — skeleton with TODO comments marking what AI will fill in
+- `variables.tf` — partially declared (one variable defined, two declared as TODO)
+- `outputs.tf` — empty with TODO comments
+- `versions.tf` — complete provider constraints (already set to >= 1.7, AWS >= 5.0)
+
+And the environment root:
+- `environments/lab/main.tf` — module call with variable declarations
+- `environments/lab/terraform.tfvars` — example values for the lab
+
+<details>
+<summary>Expected result</summary>
+
+```
+modules/ec2-monitored/
+├── main.tf         (skeleton — data source and 4 resources as commented TODO blocks)
+├── outputs.tf      (empty — outputs declared as TODO)
+├── variables.tf    (partial — instance_name defined, alarm_threshold and notification_email as TODO)
+└── versions.tf     (complete — Terraform >= 1.7, AWS provider >= 5.0)
+```
+
+The starter files are intentionally incomplete. They give AI the structure and naming conventions without the implementation. This is the "skeleton" pattern — machine-readable context that guides generation without dictating it.
+
+</details>
+
+---
+
+## Step 2: Create Your Project CLAUDE.md
+
+The guided generation pattern starts here: before writing a single prompt, create a CLAUDE.md that encodes your system state, constraints, and vocabulary. This is the context layer that transforms generic AI output into environment-specific infrastructure code.
+
+Create `CLAUDE.md` in the `starter/terraform/` directory:
+
+```markdown
+# Terraform Lab — EC2 with CloudWatch Monitoring
+
+## System State
+- AWS region: us-east-1
+- Target: AWS free tier (t2.micro, basic monitoring)
+- Terraform version: 1.7+
+- AWS provider: hashicorp/aws >= 5.0
+
+## Constraints
+- Free tier ONLY — no resources that incur charges
+- t2.micro for EC2 instances (free tier eligible)
+- Basic (not detailed) CloudWatch monitoring — detailed costs $0.01/metric/month
+- SNS email subscription only — no SMS (costs $0.00006/notification, but add up)
+- Data source for AMI lookup — never hardcode AMI IDs (region-specific, change over time)
+
+## Vocabulary
+- "monitoring" = CloudWatch metric alarm on CPUUtilization
+- "notification" = SNS topic + email subscription
+- "module" = reusable Terraform module in modules/ec2-monitored/
+- "alarm_actions" = list of SNS topic ARNs to notify when alarm fires
+```
+
+<details>
+<summary>Expected result</summary>
+
+CLAUDE.md created at `starter/terraform/CLAUDE.md`. When you open Claude Code in this directory with `claude`, it will automatically read this file and apply these constraints to every generation request.
+
+Notice the vocabulary section: this is the "expert frame" that tells the AI what "monitoring" and "notification" mean in your context. Without it, the AI might generate a CloudWatch Logs subscription instead of a metric alarm.
+
+</details>
+
+---
+
+## Step 3: Guided Generation — Module main.tf
+
+With CLAUDE.md in place, paste this context into Claude Code or Crush:
+
+```
+Using the CLAUDE.md context and the starter at modules/ec2-monitored/main.tf, generate the complete Terraform resources:
+
+1. data "aws_ami" "amazon_linux" — filter for latest Amazon Linux 2 AMI (owner: amazon, name pattern: amzn2-ami-hvm-*-x86_64-gp2, most_recent: true)
+2. resource "aws_instance" "this" — t2.micro, uses data.aws_ami.amazon_linux.id, Name tag from var.instance_name, monitoring = false (basic, not detailed)
+3. resource "aws_cloudwatch_metric_alarm" "cpu_high" — MetricName: CPUUtilization, Namespace: AWS/EC2, Statistic: Average, Period: 300, EvaluationPeriods: 2, Threshold: var.alarm_threshold, ComparisonOperator: GreaterThanThreshold, alarm_actions: [aws_sns_topic.alerts.arn], dimensions reference the EC2 instance
+4. resource "aws_sns_topic" "alerts" — name: "${var.instance_name}-alerts"
+5. resource "aws_sns_topic_subscription" "email" — topic_arn: aws_sns_topic.alerts.arn, protocol: "email", endpoint: var.notification_email
+
+Use Terraform best practices: proper resource naming, tags map with Name and Environment, data source for AMI lookup.
+```
+
+Compare the generated output against the solution at `lab/solution/terraform/modules/ec2-monitored/main.tf`.
+
+<details>
+<summary>Expected result</summary>
+
+Claude Code generates a complete `main.tf` with:
+- `data "aws_ami" "amazon_linux"` using `most_recent = true` and the correct filter for Amazon Linux 2
+- `aws_instance "this"` with `instance_type = "t2.micro"`, `ami = data.aws_ami.amazon_linux.id`, `monitoring = false`, and a `tags` map
+- `aws_cloudwatch_metric_alarm "cpu_high"` with `threshold = var.alarm_threshold`, `evaluation_periods = 2`, `period = 300`, and `alarm_actions = [aws_sns_topic.alerts.arn]`
+- `aws_sns_topic "alerts"` with a name derived from the instance_name variable
+- `aws_sns_topic_subscription "email"` with `protocol = "email"` and `endpoint = var.notification_email`
+
+**What to watch for:** If the generated code hardcodes an AMI ID instead of using a data source, or uses `t3.micro` instead of `t2.micro`, that means the CLAUDE.md context was not being read. Check that CLAUDE.md is in the same directory where you ran `claude`.
+
+</details>
+
+---
+
+## Step 4: Guided Generation — Variables, Outputs, and Versions
+
+Complete the remaining module files. Use these guided prompts in Claude Code:
+
+**For variables.tf:**
+```
+Based on the CLAUDE.md context and the resources in main.tf, generate the complete variables.tf for the ec2-monitored module with these variables:
+- instance_name: string, required, description "Name tag for the EC2 instance"
+- alarm_threshold: number, default 80, description "CPU utilization threshold (%) to trigger alarm"
+- notification_email: string, required, description "Email address for CloudWatch alarm notifications"
+- vpc_id: string, optional (default null), description "VPC ID for the EC2 instance — defaults to the default VPC if not set"
+```
+
+**For outputs.tf:**
+```
+Generate outputs.tf for the ec2-monitored module with these outputs:
+- instance_id: value aws_instance.this.id
+- instance_public_ip: value aws_instance.this.public_ip
+- alarm_arn: value aws_cloudwatch_metric_alarm.cpu_high.arn
+- sns_topic_arn: value aws_sns_topic.alerts.arn
+```
+
+**For versions.tf:** This file is already complete in the starter — no changes needed.
+
+<details>
+<summary>Expected result</summary>
+
+After completing this step:
+- `variables.tf` has all 4 variables with types, descriptions, and defaults where appropriate
+- `outputs.tf` has all 4 outputs with value references to the resources in main.tf
+- `versions.tf` is unchanged (already set to `>= 1.7` and AWS `>= 5.0`)
+
+**Why vpc_id is declared but not used in main.tf:** This is an intentional "future hook" pattern. Declaring the variable signals intent without requiring the lab participant to also configure subnet selection. In production Terraform modules, placeholder variables like this communicate the module's intended scope to the next engineer.
+
+</details>
+
+---
+
+## Step 5: Validate
+
+Run Terraform validation from the `environments/lab/` directory:
+
+```bash
+cd environments/lab/
+terraform init
+terraform validate
+```
+
+If you have AWS credentials configured (`aws configure` or `AWS_PROFILE` set):
+```bash
+terraform plan -input=false
+```
+
+Compare your generated files against the solution:
+```bash
+diff modules/ec2-monitored/main.tf \
+  ../../../../solution/terraform/modules/ec2-monitored/main.tf
+```
+
+<details>
+<summary>Expected result</summary>
+
+`terraform validate` output:
+```
+Success! The configuration is valid.
+```
+
+`terraform plan` output (with AWS credentials):
+```
+Terraform will perform the following actions:
+
+  # module.app.aws_cloudwatch_metric_alarm.cpu_high will be created
+  # module.app.aws_instance.this will be created
+  # module.app.aws_sns_topic.alerts will be created
+  # module.app.aws_sns_topic_subscription.email will be created
+
+Plan: 4 to add, 0 to change, 0 to destroy.
+```
+
+Without AWS credentials, `terraform plan` will fail with `Error: No valid credential sources found`. That is expected — use the Alternative Path (Mock Fallback) below.
+
+The `diff` command may show minor differences in formatting, whitespace, or variable ordering — that is normal. What matters is that the resource types, required arguments, and relationships are the same.
+
+</details>
+
+---
+
+## Alternative Path: Mock Fallback (No AWS Required)
+
+<details>
+<summary>Alternative: Run terraform test with mock_provider (no AWS credentials needed)</summary>
+
+If you do not have an AWS account, you can validate your Terraform module using the built-in mock provider. This requires Terraform 1.7+ (verified in Step 0).
+
+The test file at `lab/solution/terraform/tests/unit.tftest.hcl` uses `mock_provider "aws"` to substitute all AWS API calls with in-memory stubs. You can run assertions against the planned state without any real AWS credentials.
+
+**Copy the solution test file to your starter directory:**
+```bash
+mkdir -p tests/
+cp ../../../../solution/terraform/tests/unit.tftest.hcl tests/
+```
+
+**Run the tests from `environments/lab/`:**
+```bash
+terraform test
+```
+
+The test file contains three assertions:
+1. CPU alarm threshold is set to 80 (the default)
+2. SNS topic name is not empty
+3. EC2 instance type is `t2.micro`
+
+<details>
+<summary>Expected result</summary>
+
+```
+tests/unit.tftest.hcl... in progress
+  run "ec2_alarm_has_correct_threshold"... pass
+  run "sns_topic_exists"... pass
+  run "ec2_instance_is_free_tier"... pass
+tests/unit.tftest.hcl... tearing down
+tests/unit.tftest.hcl... pass
+
+Success! 3 passed, 0 failed.
+```
+
+This proves your Terraform module is syntactically correct and structurally sound — without any AWS API calls, without credentials, and without a single dollar of cloud cost.
+
+**Teaching point:** This is the Terraform testing pattern for IaC unit tests. In a CI/CD pipeline, `terraform test` with mock_provider runs on every PR — validating module logic before any real infrastructure is touched. AI-generated code that passes `terraform test` is production-candidate code.
+
+</details>
+
+</details>
+
+---
+
+## Reflection
+
+You have now:
+1. Created a `CLAUDE.md` that encodes your environment's system state, constraints, and vocabulary
+2. Used that context to guide AI generation of a complete Terraform module — one resource at a time
+3. Validated the output both syntactically (`terraform validate`) and structurally (`terraform test`)
+4. Compared your AI-generated code against a reference solution
+
+The pattern generalizes to any IaC: before you write a prompt, write your context. The quality of the generated code tracks directly with the quality of the context you provide — not the cleverness of your prompt.
+
+---
+
+## What to Explore Next
+
+- Change the `alarm_threshold` variable to 90 and re-run `terraform test` — the first assertion will fail. Fix the test to use the new value, then put the threshold back.
+- Add a second CloudWatch alarm for network traffic (`NetworkIn > 1000000 bytes` in a 5-minute period). Ask Claude Code to add it, referencing the existing alarm as a pattern.
+- Compare the solution's `tags` map to what AI generated — what did the AI add that you did not specify? What did it miss?
