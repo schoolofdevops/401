@@ -1,0 +1,58 @@
+[
+  {
+    "mean_exec_time_ms": 3241.87,
+    "total_exec_time_ms": 324187.0,
+    "calls": 100,
+    "rows_per_call": 8731.0,
+    "query": "SELECT o.*, oi.*, p.name, p.sku, p.price FROM orders o JOIN order_items oi ON o.id = oi.order_id JOIN products p ON oi.product_id = p.id WHERE o.created_at BETWEEN $1 AND $2 ORDER BY o.created_at DESC"
+  },
+  {
+    "mean_exec_time_ms": 1892.45,
+    "total_exec_time_ms": 946225.0,
+    "calls": 500,
+    "rows_per_call": 2847.0,
+    "query": "SELECT u.id, u.email, u.name, u.created_at, COUNT(o.id) as order_count, SUM(o.total) as lifetime_value FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE u.created_at > $1 GROUP BY u.id, u.email, u.name, u.created_at ORDER BY lifetime_value DESC LIMIT $2"
+  },
+  {
+    "mean_exec_time_ms": 1134.22,
+    "total_exec_time_ms": 113422.0,
+    "calls": 100,
+    "rows_per_call": 15432.0,
+    "query": "SELECT i.*, w.name as warehouse, w.location FROM inventory i JOIN warehouses w ON i.warehouse_id = w.id WHERE i.quantity < $1 OR i.last_restock_date < $2"
+  },
+  {
+    "mean_exec_time_ms": 742.18,
+    "total_exec_time_ms": 74218.0,
+    "calls": 100,
+    "rows_per_call": 312.0,
+    "query": "UPDATE sessions SET last_seen = $1, metadata = $2 WHERE user_id = $3 AND expires_at > NOW()"
+  },
+  {
+    "mean_exec_time_ms": 589.63,
+    "total_exec_time_ms": 58963.0,
+    "calls": 100,
+    "rows_per_call": 4218.0,
+    "query": "SELECT p.*, c.name as category, AVG(r.rating) as avg_rating, COUNT(r.id) as review_count FROM products p JOIN categories c ON p.category_id = c.id LEFT JOIN reviews r ON p.id = r.product_id GROUP BY p.id, c.name HAVING AVG(r.rating) > $1"
+  },
+  {
+    "mean_exec_time_ms": 4.82,
+    "total_exec_time_ms": 48200.0,
+    "calls": 10000,
+    "rows_per_call": 1.0,
+    "query": "SELECT id, status, updated_at FROM orders WHERE id = $1"
+  },
+  {
+    "mean_exec_time_ms": 3.14,
+    "total_exec_time_ms": 31400.0,
+    "calls": 10000,
+    "rows_per_call": 1.0,
+    "query": "INSERT INTO audit_events (event_type, resource_id, resource_type, actor_id, created_at) VALUES ($1, $2, $3, $4, NOW())"
+  },
+  {
+    "mean_exec_time_ms": 9.71,
+    "total_exec_time_ms": 97100.0,
+    "calls": 10000,
+    "rows_per_call": 3.0,
+    "query": "SELECT id, name, email FROM users WHERE id = ANY($1)"
+  }
+]

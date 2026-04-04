@@ -1,0 +1,15 @@
+{
+  "Datapoints": [
+    {"Timestamp": "2026-04-04T09:00:00Z", "Average": 45.2, "Maximum": 62.3, "Unit": "Percent"},
+    {"Timestamp": "2026-04-04T09:05:00Z", "Average": 78.1, "Maximum": 89.4, "Unit": "Percent"},
+    {"Timestamp": "2026-04-04T09:10:00Z", "Average": 91.3, "Maximum": 97.8, "Unit": "Percent"},
+    {"Timestamp": "2026-04-04T09:15:00Z", "Average": 88.7, "Maximum": 95.2, "Unit": "Percent"},
+    {"Timestamp": "2026-04-04T09:20:00Z", "Average": 82.4, "Maximum": 91.1, "Unit": "Percent"},
+    {"Timestamp": "2026-04-04T09:25:00Z", "Average": 75.6, "Maximum": 88.3, "Unit": "Percent"}
+  ],
+  "Label": "CPUUtilization",
+  "ResponseMetadata": {
+    "RequestId": "example-request-id-1234",
+    "HTTPStatusCode": 200
+  }
+}

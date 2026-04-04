@@ -1,0 +1,23 @@
+[
+  {
+    "mean_exec_time_ms": 2847.32,
+    "total_exec_time_ms": 284732.0,
+    "calls": 100,
+    "rows_per_call": 1523.0,
+    "query": "SELECT u.*, p.* FROM users u JOIN profile p ON u.id = p.user_id WHERE u.created_at > $1 ORDER BY u.created_at DESC"
+  },
+  {
+    "mean_exec_time_ms": 12.5,
+    "total_exec_time_ms": 1250.0,
+    "calls": 100,
+    "rows_per_call": 1.0,
+    "query": "SELECT id FROM sessions WHERE token = $1"
+  },
+  {
+    "mean_exec_time_ms": 8.3,
+    "total_exec_time_ms": 83.0,
+    "calls": 10,
+    "rows_per_call": 5.0,
+    "query": "INSERT INTO audit_log (action, user_id, ts) VALUES ($1, $2, $3)"
+  }
+]
