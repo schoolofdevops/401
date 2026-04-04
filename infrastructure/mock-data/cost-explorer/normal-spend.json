@@ -1,0 +1,114 @@
+{
+  "ResultsByTime": [
+    {
+      "TimePeriod": {"Start": "2026-03-28", "End": "2026-03-29"},
+      "Total": {
+        "BlendedCost": {"Amount": "13.067910", "Unit": "USD"},
+        "UnblendedCost": {"Amount": "13.067910", "Unit": "USD"},
+        "UsageQuantity": {"Amount": "24.000000", "Unit": "Hrs"}
+      },
+      "Groups": [
+        {"Keys": ["Amazon EC2"], "Metrics": {"BlendedCost": {"Amount": "8.112345", "Unit": "USD"}}},
+        {"Keys": ["Amazon RDS"], "Metrics": {"BlendedCost": {"Amount": "3.432109", "Unit": "USD"}}},
+        {"Keys": ["AWS Data Transfer"], "Metrics": {"BlendedCost": {"Amount": "0.987654", "Unit": "USD"}}},
+        {"Keys": ["Other"], "Metrics": {"BlendedCost": {"Amount": "0.535802", "Unit": "USD"}}}
+      ],
+      "Estimated": false
+    },
+    {
+      "TimePeriod": {"Start": "2026-03-29", "End": "2026-03-30"},
+      "Total": {
+        "BlendedCost": {"Amount": "13.215678", "Unit": "USD"},
+        "UnblendedCost": {"Amount": "13.215678", "Unit": "USD"},
+        "UsageQuantity": {"Amount": "24.000000", "Unit": "Hrs"}
+      },
+      "Groups": [
+        {"Keys": ["Amazon EC2"], "Metrics": {"BlendedCost": {"Amount": "8.234567", "Unit": "USD"}}},
+        {"Keys": ["Amazon RDS"], "Metrics": {"BlendedCost": {"Amount": "3.456789", "Unit": "USD"}}},
+        {"Keys": ["AWS Data Transfer"], "Metrics": {"BlendedCost": {"Amount": "1.012345", "Unit": "USD"}}},
+        {"Keys": ["Other"], "Metrics": {"BlendedCost": {"Amount": "0.511977", "Unit": "USD"}}}
+      ],
+      "Estimated": false
+    },
+    {
+      "TimePeriod": {"Start": "2026-03-30", "End": "2026-03-31"},
+      "Total": {
+        "BlendedCost": {"Amount": "12.987654", "Unit": "USD"},
+        "UnblendedCost": {"Amount": "12.987654", "Unit": "USD"},
+        "UsageQuantity": {"Amount": "24.000000", "Unit": "Hrs"}
+      },
+      "Groups": [
+        {"Keys": ["Amazon EC2"], "Metrics": {"BlendedCost": {"Amount": "7.998765", "Unit": "USD"}}},
+        {"Keys": ["Amazon RDS"], "Metrics": {"BlendedCost": {"Amount": "3.421098", "Unit": "USD"}}},
+        {"Keys": ["AWS Data Transfer"], "Metrics": {"BlendedCost": {"Amount": "0.976543", "Unit": "USD"}}},
+        {"Keys": ["Other"], "Metrics": {"BlendedCost": {"Amount": "0.591248", "Unit": "USD"}}}
+      ],
+      "Estimated": false
+    },
+    {
+      "TimePeriod": {"Start": "2026-03-31", "End": "2026-04-01"},
+      "Total": {
+        "BlendedCost": {"Amount": "13.456789", "Unit": "USD"},
+        "UnblendedCost": {"Amount": "13.456789", "Unit": "USD"},
+        "UsageQuantity": {"Amount": "24.000000", "Unit": "Hrs"}
+      },
+      "Groups": [
+        {"Keys": ["Amazon EC2"], "Metrics": {"BlendedCost": {"Amount": "8.345678", "Unit": "USD"}}},
+        {"Keys": ["Amazon RDS"], "Metrics": {"BlendedCost": {"Amount": "3.487654", "Unit": "USD"}}},
+        {"Keys": ["AWS Data Transfer"], "Metrics": {"BlendedCost": {"Amount": "1.098765", "Unit": "USD"}}},
+        {"Keys": ["Other"], "Metrics": {"BlendedCost": {"Amount": "0.524692", "Unit": "USD"}}}
+      ],
+      "Estimated": false
+    },
+    {
+      "TimePeriod": {"Start": "2026-04-01", "End": "2026-04-02"},
+      "Total": {
+        "BlendedCost": {"Amount": "12.876543", "Unit": "USD"},
+        "UnblendedCost": {"Amount": "12.876543", "Unit": "USD"},
+        "UsageQuantity": {"Amount": "24.000000", "Unit": "Hrs"}
+      },
+      "Groups": [
+        {"Keys": ["Amazon EC2"], "Metrics": {"BlendedCost": {"Amount": "7.876543", "Unit": "USD"}}},
+        {"Keys": ["Amazon RDS"], "Metrics": {"BlendedCost": {"Amount": "3.456789", "Unit": "USD"}}},
+        {"Keys": ["AWS Data Transfer"], "Metrics": {"BlendedCost": {"Amount": "0.998765", "Unit": "USD"}}},
+        {"Keys": ["Other"], "Metrics": {"BlendedCost": {"Amount": "0.544446", "Unit": "USD"}}}
+      ],
+      "Estimated": false
+    },
+    {
+      "TimePeriod": {"Start": "2026-04-02", "End": "2026-04-03"},
+      "Total": {
+        "BlendedCost": {"Amount": "14.234567", "Unit": "USD"},
+        "UnblendedCost": {"Amount": "14.234567", "Unit": "USD"},
+        "UsageQuantity": {"Amount": "24.000000", "Unit": "Hrs"}
+      },
+      "Groups": [
+        {"Keys": ["Amazon EC2"], "Metrics": {"BlendedCost": {"Amount": "8.987654", "Unit": "USD"}}},
+        {"Keys": ["Amazon RDS"], "Metrics": {"BlendedCost": {"Amount": "3.678901", "Unit": "USD"}}},
+        {"Keys": ["AWS Data Transfer"], "Metrics": {"BlendedCost": {"Amount": "1.032109", "Unit": "USD"}}},
+        {"Keys": ["Other"], "Metrics": {"BlendedCost": {"Amount": "0.535903", "Unit": "USD"}}}
+      ],
+      "Estimated": false
+    },
+    {
+      "TimePeriod": {"Start": "2026-04-03", "End": "2026-04-04"},
+      "Total": {
+        "BlendedCost": {"Amount": "13.109876", "Unit": "USD"},
+        "UnblendedCost": {"Amount": "13.109876", "Unit": "USD"},
+        "UsageQuantity": {"Amount": "24.000000", "Unit": "Hrs"}
+      },
+      "Groups": [
+        {"Keys": ["Amazon EC2"], "Metrics": {"BlendedCost": {"Amount": "8.123456", "Unit": "USD"}}},
+        {"Keys": ["Amazon RDS"], "Metrics": {"BlendedCost": {"Amount": "3.456789", "Unit": "USD"}}},
+        {"Keys": ["AWS Data Transfer"], "Metrics": {"BlendedCost": {"Amount": "0.987654", "Unit": "USD"}}},
+        {"Keys": ["Other"], "Metrics": {"BlendedCost": {"Amount": "0.541977", "Unit": "USD"}}}
+      ],
+      "Estimated": true
+    }
+  ],
+  "DimensionValueAttributes": [],
+  "ResponseMetadata": {
+    "RequestId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "HTTPStatusCode": 200
+  }
+}
