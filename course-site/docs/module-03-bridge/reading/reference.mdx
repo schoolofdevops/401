@@ -1,0 +1,110 @@
+---
+id: module-03-reference
+title: "Agent Architecture Reference"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "The agent loop, ReAct pattern, Hermes architecture overview, and what's coming in Day 2"
+---
+
+# Agent Architecture Reference
+
+## The Agent Loop
+
+Every agent — regardless of framework — follows the same fundamental loop:
+
+```
+Observe → Think → Act → Observe → ...
+```
+
+**Observe:** The agent perceives input. This could be a user message, a tool result, a file read, or an API response.
+
+**Think:** The model reasons about what the observation means and what to do next. This is where domain context (SKILL.md) matters — good context produces good reasoning.
+
+**Act:** The agent executes: generates text, calls a tool, writes a file, or terminates the loop with a final answer.
+
+The loop continues until the task is complete or a stopping condition is met (human approval required, error threshold reached, timeout).
+
+**DevOps analogy:** The agent loop is identical to a monitoring feedback loop — detect anomaly (Observe), analyze root cause (Think), execute remediation (Act), verify fix (Observe again). The difference is the model handles the "analyze" step instead of a human.
+
+---
+
+## The ReAct Pattern
+
+ReAct (**Re**asoning + **Act**ing) is the dominant pattern for tool-using agents. It interleaves reasoning steps and action steps:
+
+```
+Thought: I need to check if the CPU alarm is still firing.
+Action: Run `aws cloudwatch describe-alarms --state-value ALARM`
+Observation: [alarm JSON returned]
+Thought: The alarm is still active. Let me check recent deployments.
+Action: Run `git log --oneline --since="1 hour ago"`
+Observation: [commit list returned]
+Thought: A deployment happened 45 minutes ago — this is likely the cause.
+Final Answer: The high CPU is correlated with deployment abc123...
+```
+
+Each "Thought" step lets the model reason before acting. This is why context engineering matters more than prompt engineering — the model's thinking quality depends on what context it has available.
+
+---
+
+## Hermes Architecture Overview
+
+Hermes is the agent framework used in Modules 3, 7-8, and 10-13. Its architecture has four core components:
+
+| Component | What It Does | Analogy |
+|-----------|-------------|---------|
+| **Model** | The LLM that powers reasoning | CPU — the processing unit |
+| **Tools** | External capabilities (terminal, web, APIs) | OS syscalls — the agent's interface to the world |
+| **Skills** | Domain context files (SKILL.md) | Runbook library — institutional knowledge |
+| **Profile** | Combines model + tools + skills for a specific use case | Ansible inventory — who gets what configuration |
+
+### Key Hermes Concepts
+
+**SKILL.md** — A structured markdown file that encodes operational procedures, topology, and decision criteria. The agent loads it on startup and uses it during reasoning. Example structure:
+```markdown
+# CPU Alarm Response Skill
+## Trigger
+High CPU alarm fires (CPUUtilization > 85%)
+## Diagnostic Steps
+1. Check deployment history: `git log --oneline --since="2 hours ago"`
+2. Check related metrics: memory, network I/O, request count
+...
+```
+
+**SOUL.md** — Defines the agent's identity, role, communication style, and behavioral boundaries. Sets the "who it is" layer above the skills' "what it knows."
+
+**Profile** — A YAML/JSON config that wires model + tools + skills into a deployable agent. Analogous to an Ansible playbook that says "deploy this configuration to these hosts."
+
+---
+
+## What's Coming in Day 2
+
+| Module | What You'll Build |
+|--------|-----------------|
+| Module 5 | Structured coding workflow (TDD for IaC) using Claude Code |
+| Module 6 | AI-assisted Terraform/Ansible/K8s generation |
+| Module 7 | Write your first SKILL.md — encode a real operational procedure |
+| Module 8 | Wire a tool to Hermes — give the agent CLI/API access |
+
+By the end of Day 2, you'll have an agent that knows your runbooks AND can execute commands against your infrastructure. Day 3 connects this to a full domain agent for your capstone.
+
+---
+
+## Quick Reference: Hermes CLI
+
+```bash
+# Start interactive session
+hermes
+
+# Select/change model provider
+hermes model
+
+# Run a one-shot task (non-interactive)
+hermes run "Analyze the file at path/to/alarm.json and summarize the issues"
+
+# List available skills
+hermes skills list
+
+# Check installed version
+hermes --version
+```

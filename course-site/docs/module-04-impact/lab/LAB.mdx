@@ -1,0 +1,179 @@
+---
+id: module-04-lab
+title: "Lab: Impact Assessment — What to Automate"
+sidebar_label: "Lab"
+sidebar_position: 1
+description: "Score your operational tasks and identify the best candidates for AI agent automation"
+---
+
+# Lab: Impact Assessment — What to Automate
+
+**Duration:** 60 minutes
+**Deliverable:** A ranked list of 10+ operational tasks scored for automation potential, with your top candidate selected for the Day 3 capstone
+
+**What you need:** No tools required — just your operational experience and the three templates in the `starter/` folder
+
+**Solo-completable:** This lab is fully completable on your own. It's designed to work for both the live workshop and Udemy self-paced learners. No team dependency.
+
+---
+
+## Overview
+
+Not everything should be automated. Not everything CAN be automated well with today's AI. This lab gives you a structured framework to evaluate your operational tasks and identify which ones deliver the best return from an AI agent.
+
+The output of this lab is your **capstone candidate** — the operational task you'll build a real domain agent for on Day 3.
+
+---
+
+## Step 1: List Your Operational Tasks (15 min)
+
+Open `starter/scoring-sheet.md` and list at least 10 repetitive operational tasks you perform regularly. Think across your full DevOps scope.
+
+**Prompting categories to help you think broadly:**
+
+| Category | Examples |
+|----------|---------|
+| Incident response | Alarm triage, escalation decisions, postmortem reports |
+| Deployment | Pre-deploy checks, canary validation, rollback decisions |
+| Monitoring | Dashboard review, metric anomaly investigation, SLO tracking |
+| Cost management | Spend review, right-sizing, unused resource cleanup |
+| Security | Access review, vulnerability scanning, compliance checks |
+| Infrastructure | Capacity planning, config drift detection, cert renewal |
+| Database | Slow query investigation, backup verification, connection pool monitoring |
+| CI/CD | Pipeline failure triage, flaky test investigation, build performance analysis |
+
+**If you're drawing a blank, here are 5 starter examples to get you going:**
+
+1. **Morning dashboard review** — Check 4 dashboards for anomalies every morning (~20 min, daily)
+2. **Deployment readiness check** — Before each release: verify no open SEV-1 alarms, check rollback plan, confirm smoke tests pass (~30 min, 2-3x/week)
+3. **Monthly right-sizing review** — Identify underutilized EC2/RDS instances, estimate savings, draft recommendation (~60 min, monthly)
+4. **Alert noise triage** — Review low-priority alerts that fired overnight, close false positives, escalate genuine issues (~15 min, daily)
+5. **Terraform drift detection** — Run `terraform plan` across all environments to detect config drift (~20 min, weekly)
+
+**Expected result:** You have at least 10 tasks listed in the scoring sheet, each described in one sentence with an estimate of frequency and time.
+
+---
+
+## Step 2: Score Each Task (15 min)
+
+Using `starter/scoring-sheet.md`, score each task on four criteria from 1 to 5.
+
+### Scoring Criteria
+
+**Frequency (1-5) — How often do you perform this task?**
+- 1 = Monthly or less
+- 2 = Weekly
+- 3 = 2-3 times per week
+- 4 = Daily
+- 5 = Multiple times per day
+
+**Time per instance (1-5) — How long does one instance take?**
+- 1 = Under 5 minutes
+- 2 = 5-15 minutes
+- 3 = 15-30 minutes
+- 4 = 30-60 minutes
+- 5 = Over 60 minutes
+
+**Error risk (1-5) — How likely is a human mistake on this task?**
+- 1 = Almost never — it's routine and hard to get wrong
+- 2 = Rare — occasionally a minor slip
+- 3 = Occasional — mistakes happen a few times a month
+- 4 = Frequent — under pressure or fatigue, mistakes are common
+- 5 = High risk — this is where incidents happen
+
+**Tool count (1-5) — How many systems or tools does this task touch?**
+- 1 = Single tool
+- 2 = Two tools
+- 3 = Three tools
+- 4 = Four tools
+- 5 = Five or more tools
+
+**Total score** = sum of all four criteria (range: 4-20). Higher score = better automation candidate.
+
+**Expected result:** Each task in your scoring sheet has a total score. Sort by score to find your top candidates.
+
+---
+
+## Step 3: Plot on the Automation Quadrant (10 min)
+
+Open `starter/automation-quadrant.md`. Plot each task based on its Frequency score (x-axis) and Complexity score (y-axis = Error Risk + Tool Count combined, range 2-10).
+
+```
+High Complexity
+     |  ASSIST          PRIME
+     |  (AI helps)      (Automate first!)
+     |
+     |---------------------------
+     |
+     |  SKIP            QUICK WINS
+     |  (Not worth it)  (Script first)
+     |
+     +-------------------------> High Frequency
+```
+
+**Quadrant interpretation:**
+
+| Quadrant | Frequency | Complexity | Strategy |
+|----------|-----------|-----------|----------|
+| PRIME CANDIDATES | High | High | Automate FIRST — highest ROI, highest impact |
+| QUICK WINS | High | Low | Script it (or simple agent) — easy wins |
+| ASSIST MODE | Low | High | Build AI assistance — helps when it occurs |
+| SKIP | Low | Low | Manual effort is low enough — not worth the investment |
+
+**Expected result:** Your tasks are distributed across the quadrant. You can see which cluster in the PRIME zone — these are your best automation candidates.
+
+---
+
+## Step 4: Select Your Capstone Candidate (10 min)
+
+Take your top 3 candidates (highest total scores, or your PRIME quadrant tasks) and evaluate them against the 5 selection criteria in `starter/selection-criteria.md`.
+
+### The 5 Selection Criteria
+
+**1. Decomposable into discrete steps?**
+AI agents work best when a task can be broken into clear sequential steps. "Investigate alarm" decomposes into: read alarm data → check deployments → query related metrics → follow runbook → produce recommendation. "Use good judgment" does not decompose well.
+
+**2. Tools accessible via CLI/API?**
+The agent needs to be able to take action. If all the data the agent needs is accessible via CLI (AWS CLI, kubectl, git) or API, it can work. If critical data is in a proprietary GUI-only tool with no API, the agent is blind to it.
+
+**3. Clear success/failure criteria?**
+The agent needs to know when it's done. "The CPU alarm is resolved" is clear. "The infrastructure is in a good state" is not. Tasks with measurable outcomes are better automation candidates.
+
+**4. Safe with approval gates?**
+Can you define boundaries that make this safe to automate? "Create a recommendation" is inherently safe. "Execute a rollback" needs an approval gate. Most operational tasks can be made safe with the right governance structure — so this criterion is about whether governance is practical, not whether it exists.
+
+**5. Testable with mock data?**
+This is critical for the Day 3 capstone. You need to develop and test your agent against simulated data without touching production. If mock data for this task is feasible (like the CloudWatch JSON files we've been using), the capstone is practical. If your task requires live production queries with no simulation option, development becomes risky.
+
+**Your #1 candidate from this evaluation becomes your Day 3 capstone project.**
+
+**Expected result:** You have a single capstone candidate selected, with a clear rationale for why it scores well on all 5 criteria.
+
+---
+
+## Step 5: Write Your Problem Statement (10 min)
+
+This step applies to both live workshop and Udemy self-paced formats — it's purely a solo reflection exercise.
+
+In your course notes, write a 3-sentence problem statement for your capstone task:
+
+1. **What task will you automate?** (one sentence describing the task and its current manual state)
+2. **Why is it a good candidate?** (reference your scoring — frequency, complexity, tool count, error risk)
+3. **What tools would the agent need?** (AWS CLI? kubectl? Jira API? PagerDuty API? List the access points)
+
+**Example:**
+> "I will automate the morning alert triage process, currently 20 minutes of manual dashboard review across CloudWatch, PagerDuty, and Jira every morning. This task scores 18/20 (frequency=5, time=4, error risk=4, tools=5) and is a PRIME candidate because it's highly repetitive with significant cognitive load under pressure. The agent would need: CloudWatch describe-alarms, PagerDuty incidents API, Jira create-issue API, and access to a runbook SKILL.md encoding our triage procedures."
+
+**Expected result:** A clear problem statement you'll carry into Day 3 as the foundation for your capstone agent build.
+
+---
+
+## Wrap-Up
+
+After completing this lab:
+
+1. You have a ranked list of 10+ operational tasks with quantified automation potential
+2. You understand WHERE your tasks fall on the automation quadrant (PRIME vs QUICK WIN vs ASSIST vs SKIP)
+3. You have a capstone candidate with a written problem statement
+
+Bring your completed templates and problem statement to Day 3 — Module 10 starts with your agent design, and having a clear target makes the build dramatically faster.

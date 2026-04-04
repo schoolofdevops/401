@@ -1,0 +1,88 @@
+---
+id: module-03-concepts
+title: "What Custom Agents Add"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "The gap between platform AI and custom agents — tool use, domain context, and autonomy"
+---
+
+# What Custom Agents Add
+
+## The Gap Analysis
+
+In Module 2, you mapped what AWS platform AI features can do. In Module 3, you saw a custom agent — Hermes — work with the same alarm data. This reading explains why the two produce different results, and what three capabilities custom agents add that platform AI lacks.
+
+---
+
+## Platform AI vs Custom Agents: The Distinction
+
+Platform AI (CloudWatch, Cost Explorer, Q Developer) is **reactive and stateless.** Each request is evaluated independently, against patterns learned from broad AWS usage. The service knows nothing about your specific environment.
+
+A custom agent is **active and context-bearing.** It carries domain knowledge (SKILL.md files), has access to tools (terminal, APIs, file system), and can execute multi-step workflows. It acts on the world, not just on text.
+
+---
+
+## Three Capabilities Custom Agents Add
+
+### 1. Tool Use — Agents Can Act
+
+Platform AI generates recommendations. Custom agents execute commands.
+
+When Hermes analyzed the CloudWatch alarm data in the demo, it:
+1. Read the JSON file from disk (file tool)
+2. Parsed the alarm state values (reasoning)
+3. Could run follow-up commands to check instance state, deployment history, or related metrics
+
+A tool call is the agent invoking an external capability: run this command, call this API, read this file, write this output. The result comes back to the model, which incorporates it into the next step.
+
+**DevOps analogy:** Tool calling is like an API gateway. The LLM decides which endpoint to call and with what parameters. The result flows back through the same interface.
+
+### 2. Domain Context — Agents Can Know YOUR Infrastructure
+
+Platform AI knows AWS in general. A custom agent knows your infrastructure specifically.
+
+The difference is SKILL.md files — structured, machine-readable files that encode:
+- Your infrastructure topology ("web servers sit behind ALB, forward to Lambda, which reads from RDS")
+- Your runbooks ("CPU > 85% for 3+ minutes: check recent deployments first, then check for traffic spike")
+- Your escalation procedures ("SEV-1: page on-call immediately; SEV-2: create ticket within 15 min")
+- Your team's decision criteria ("Never roll back without confirming in staging first")
+
+This is context engineering at the operational level. The agent doesn't guess how your team works — it knows, because you told it.
+
+### 3. Autonomy — Agents Can Complete Tasks Without Human Intervention
+
+Platform AI fires an alert. A custom agent can respond to that alert, investigate the cause, and take corrective action — all without a human in the loop (within your defined guardrails).
+
+This autonomy exists on a spectrum:
+- **L1 — Assistive:** Agent provides recommendations; human acts
+- **L2 — Advisory:** Agent recommends and explains; human approves
+- **L3 — Proposal:** Agent drafts an action (PR, ticket, command); human reviews before execution
+- **L4 — Semi-autonomous:** Agent executes within defined scope; human reviews after
+
+Module 10 and beyond covers governance for L3/L4 autonomy. For now, the key insight is that autonomy is possible when the agent has domain context and tools.
+
+---
+
+## Scenario Comparison
+
+| Scenario | Platform AI Response | Custom Agent Response |
+|----------|---------------------|----------------------|
+| CPU alarm fires | CloudWatch sends SNS notification | Agent reads alarm, checks recent deployment (git log), queries related metrics, follows runbook checklist, creates Jira ticket with structured diagnosis |
+| Cost spike detected | Cost Explorer shows graph with anomaly flag | Agent identifies the spiking service, compares to same period last month, checks for new resources launched that day, outputs right-sizing recommendations with projected savings |
+| Failed deployment | CodeDeploy shows failure status | Agent reads deployment logs, identifies error pattern, checks if rollback is safe (smoke tests), drafts rollback command for human approval, or executes automatically if L4 config allows |
+
+The pattern: platform AI stops at observation. Custom agents continue through investigation and action.
+
+---
+
+## The Vocabulary Shift
+
+Modules 7-13 introduce specific vocabulary for building agents:
+
+- **SKILL.md** — machine-readable runbook file. The domain context that makes an agent useful for YOUR operations.
+- **SOUL.md** — identity and behavioral constraints file. Sets the agent's role, boundaries, and communication style.
+- **Tool** — external capability the agent can invoke (CLI, API, MCP server)
+- **Profile** — combination of model + skills + tools that defines an agent's capabilities
+- **Agent loop** — the Observe → Think → Act cycle that drives multi-step task completion
+
+You'll author these artifacts starting Day 2. This module is the "why" before the "how."

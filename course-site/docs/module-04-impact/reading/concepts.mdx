@@ -1,0 +1,123 @@
+---
+id: module-04-concepts
+title: "Evaluating Automation Candidates"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "The automation quadrant framework — when to automate, when to assist, and when to leave it manual"
+---
+
+# Evaluating Automation Candidates
+
+## Not Everything Should Be Automated
+
+The instinct to automate everything is understandable — AI agents are powerful and the potential ROI is high. But automation has a cost: design time, testing, maintenance, governance overhead, and the risk of wrong automation being worse than no automation.
+
+The framework in this module helps you make that trade-off systematically.
+
+---
+
+## The Automation Quadrant
+
+The core framework is a 2×2 matrix with two axes:
+
+- **Frequency:** How often does the task occur?
+- **Complexity:** How hard is it? (measured by error risk + tool count)
+
+```
+High Complexity
+     |  ASSIST          PRIME
+     |  (AI helps)      (Automate first!)
+     |
+     |---------------------------
+     |
+     |  SKIP            QUICK WINS
+     |  (Not worth it)  (Script first)
+     |
+     +-------------------------> High Frequency
+```
+
+### Quadrant B: PRIME CANDIDATES (High Frequency + High Complexity)
+
+These are your highest-ROI automation targets. They happen constantly, involve multiple tools, and carry significant error risk under pressure.
+
+Examples: Morning alert triage (daily, 4 dashboards, pager fatigue), pre-deployment checklist (multiple times per week, 5-7 tools, high stakes), incident escalation triage (daily, PagerDuty + Jira + Slack + runbook).
+
+**Why these are PRIME:** Every instance is an opportunity to reduce mean time to detection (MTTD) and mean time to resolution (MTTR). Automation pays back the investment quickly.
+
+### Quadrant C: QUICK WINS (High Frequency + Low Complexity)
+
+These happen constantly but aren't complex. A simple script or a narrow single-tool agent works here.
+
+Examples: Certificate expiry checks (daily, one AWS CLI command), disk usage alerts (daily, one command), restart failed services by name.
+
+**Recommendation:** Write a script first. If the task needs conditional logic or decision-making, then consider an agent.
+
+### Quadrant A: ASSIST MODE (Low Frequency + High Complexity)
+
+These are rare but high-stakes. An AI-assisted tool that helps when they occur is valuable — even if it doesn't fully automate them.
+
+Examples: Disaster recovery runbook (quarterly, 20+ steps, high stakes), major version upgrades (annually, cross-team coordination), novel failure modes (unpredictable frequency, complex root cause).
+
+**Recommendation:** Build an AI assistant or copilot — the agent helps the human, but the human stays in the loop. Full automation is risky here because the task requires judgment that benefits from human oversight.
+
+### Quadrant D: SKIP (Low Frequency + Low Complexity)
+
+These don't happen often and are easy when they do. The cost of building, testing, and maintaining automation exceeds the cost of just doing it manually.
+
+Examples: Monthly one-off reports, ad-hoc queries to a single service, one-time configuration tasks.
+
+**Recommendation:** Do it manually. Document it well. Don't automate it.
+
+---
+
+## When an Agent Is Overkill
+
+An AI agent is overkill when:
+- The task has no decision-making (single command, always the same output)
+- The task involves a single tool (one CLI call, one API request)
+- The task never varies (same inputs → same outputs, no conditional logic)
+
+For these tasks, write a shell script. Agents add value when they need to reason, choose between options, or coordinate across multiple tools. They're not a better cron job — they're a better SRE.
+
+**Good agent candidates:** Alarm triage (reads alarm, checks deployments, follows runbook, files ticket), deployment validation (runs smoke tests, checks rollback eligibility, compares metrics before/after), cost review (identifies anomalies, correlates with known events, drafts recommendations).
+
+**Poor agent candidates:** Password reset (one API call, deterministic), DNS record update (one CLI call, no decision needed), SSL cert renewal (single certbot command, no judgment required).
+
+---
+
+## The 5 Selection Criteria (Expanded)
+
+The selection criteria in the lab assess whether a task is ready for agent automation:
+
+### 1. Decomposable into discrete steps
+
+Agents work through sequential tool use. If you can't write a numbered procedure for the task, the agent can't follow one either. The selection criteria is a proxy for "can I write a runbook for this?" — because if you can write a runbook, you can write a SKILL.md.
+
+### 2. Tools accessible via CLI/API
+
+The agent needs programmatic access to every system it touches. This is often the practical blocker — proprietary monitoring tools, GUI-only dashboards, or data sources behind SSO that can't be accessed via API. Identify these gaps before your capstone build.
+
+### 3. Clear success/failure criteria
+
+The agent needs to know when it's done. Tasks with binary outcomes (alarm resolved / alarm still firing) are easier to automate correctly than tasks with fuzzy outcomes ("the infrastructure looks healthy"). Define success before you build.
+
+### 4. Safe with approval gates
+
+Most operational tasks can be made safe with the right governance structure. The question isn't "is this dangerous?" — it's "can I define the safe boundaries?" A rollback command that requires human approval before execution is safe. A rollback command that runs automatically is a different risk profile.
+
+### 5. Testable with mock data
+
+This is a practical constraint for the Day 3 capstone specifically. You need to build and test your agent without risking production. CloudWatch JSON fixtures work for alarm triage. Mock kubectl output works for cluster health checks. If your task can only be tested against live production data, you can't safely iterate on the agent design.
+
+---
+
+## Real-World Examples
+
+| Task | Score (approx) | Quadrant | Verdict |
+|------|---------------|---------|---------|
+| Morning CloudWatch alert review | 17/20 | PRIME | Build agent |
+| Terraform drift detection | 14/20 | PRIME | Build agent |
+| Pre-deploy readiness check | 15/20 | PRIME | Build agent |
+| Monthly EC2 right-sizing | 10/20 | ASSIST | Build AI-assisted tool |
+| Certificate expiry check | 8/20 | QUICK WIN | Write script first |
+| Password reset | 5/20 | SKIP | Keep manual |

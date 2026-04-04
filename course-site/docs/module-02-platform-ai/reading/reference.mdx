@@ -1,0 +1,98 @@
+---
+id: module-02-reference
+title: "AWS AI Services Reference"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "Quick reference for AWS AI services used in operations — pricing, CLI commands, documentation links"
+---
+
+# AWS AI Services Reference
+
+## Service Quick Reference
+
+| Service | What It Does | Pricing Tier | When to Use |
+|---------|-------------|--------------|-------------|
+| CloudWatch Basic Metrics | Monitor any AWS resource metric | Free (standard metrics) | Always — baseline monitoring |
+| CloudWatch Anomaly Detection | Automatic baseline learning + deviation alerts | $0.30/alarm/month beyond 10 free | When you have enough history (2+ weeks) and stable patterns |
+| Cost Explorer Web UI | Cost trends, service breakdown, forecasting | Free (web console) | Monthly cost review, anomaly investigation |
+| Cost Explorer API | Programmatic cost data access | $0.01 per API request | When building cost reporting automation |
+| Amazon Q Developer | Code explanation, security review, generation | Free (50 agentic req/month via Builder ID) | IaC review, code security scan |
+| Amazon Q Business | Enterprise AI assistant with org data | Paid ($20-40/user/month) | Out of scope for this course |
+| DevOps Guru | Cross-service operational anomaly detection | 3-month free trial, then resource-based | Optional stretch — enable only if you'll disable it |
+| CodeGuru Reviewer | Automated code review and security analysis | Free trial, then per-line pricing | Code review automation, security scanning |
+| Amazon Bedrock | Foundation model API access | Pay per token | Module 10+ — building custom agent backends |
+
+---
+
+## CLI Commands Used in Lab
+
+### CloudWatch
+
+```bash
+# List all metrics in a namespace
+aws cloudwatch list-metrics --namespace AWS/EC2 --region us-east-1
+
+# List all alarms
+aws cloudwatch describe-alarms --region us-east-1
+
+# List alarms in ALARM state only
+aws cloudwatch describe-alarms \
+  --state-value ALARM \
+  --region us-east-1
+
+# Get metric statistics (last hour of CPU data for one instance)
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/EC2 \
+  --metric-name CPUUtilization \
+  --dimensions Name=InstanceId,Value=i-1234567890abcdef0 \
+  --start-time $(date -u -v-1H +"%Y-%m-%dT%H:%M:%SZ") \
+  --end-time $(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+  --period 300 \
+  --statistics Average \
+  --region us-east-1
+```
+
+### Cost Explorer
+
+```bash
+# Get cost and usage for last 30 days, grouped by service
+aws ce get-cost-and-usage \
+  --time-period Start=$(date -v-30d +"%Y-%m-%d"),End=$(date +"%Y-%m-%d") \
+  --granularity MONTHLY \
+  --metrics BlendedCost \
+  --group-by Type=DIMENSION,Key=SERVICE \
+  --region us-east-1
+
+# Get cost anomalies (requires Cost Anomaly Detection enabled)
+aws ce get-anomalies \
+  --date-interval StartDate=$(date -v-30d +"%Y-%m-%d"),EndDate=$(date +"%Y-%m-%d")
+```
+
+> **Note:** The Cost Explorer API charges $0.01 per request. The web console is free. Use the CLI commands above only for automation and scripting — manual exploration belongs in the console.
+
+---
+
+## Free Tier Details (Verified April 2026)
+
+| Service | Free Tier Limit | After Free Tier |
+|---------|----------------|----------------|
+| CloudWatch Alarms | 10 alarms free | $0.10/alarm/month |
+| CloudWatch Anomaly Detection | 10 anomaly detection ranges free | $0.30/alarm/month |
+| CloudWatch Metrics | 10 custom metrics, basic AWS metrics always free | $0.30/custom metric/month |
+| Cost Explorer UI | Unlimited free | — |
+| Cost Explorer API | 0 free requests | $0.01/request |
+| Q Developer (Free) | 50 agentic requests/month, unlimited inline suggestions | Upgrade to Pro for more |
+| DevOps Guru | 3-month free trial | ~$0.0028/resource-hour analyzed |
+
+> **AWS Free Tier Note:** As of July 2025, AWS changed the free tier from "always free" to a 6-month credit for new accounts. Services previously "always free" (like CloudWatch basic metrics) remain free indefinitely — only the initial credits structure changed.
+
+---
+
+## AWS Documentation Links
+
+- [CloudWatch Anomaly Detection](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Anomaly_Detection.html)
+- [Cost Explorer User Guide](https://docs.aws.amazon.com/cost-management/latest/userguide/ce-what-is.html)
+- [Amazon Q Developer](https://aws.amazon.com/q/developer/)
+- [AWS Builder ID (free account)](https://profile.aws.amazon.com)
+- [DevOps Guru](https://docs.aws.amazon.com/devops-guru/latest/userguide/welcome.html)
+- [CloudWatch Pricing](https://aws.amazon.com/cloudwatch/pricing/)

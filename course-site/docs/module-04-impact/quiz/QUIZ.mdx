@@ -1,0 +1,108 @@
+---
+id: module-04-quiz
+title: "Module 4 Quiz: Impact Assessment"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of automation candidate evaluation and the quadrant framework"
+---
+
+# Module 4 Quiz: Impact Assessment
+
+Five questions covering automation candidate evaluation, the quadrant framework, and when agents add value.
+
+---
+
+**Question 1**
+
+What are the two axes of the Automation Quadrant framework?
+
+<details>
+<summary>Answer</summary>
+
+**Frequency** (x-axis) — how often the task occurs
+
+**Complexity** (y-axis) — how difficult/risky it is, measured by Error Risk + Tool Count combined
+
+The quadrant places tasks into four zones: PRIME CANDIDATES (high frequency + high complexity), QUICK WINS (high frequency + low complexity), ASSIST MODE (low frequency + high complexity), and SKIP (low frequency + low complexity).
+
+</details>
+
+---
+
+**Question 2**
+
+A task has these scores: Frequency=5, Time=4, Error Risk=4, Tool Count=5. What is the total score, and which quadrant does it fall in?
+
+<details>
+<summary>Answer</summary>
+
+**Total score: 18/20**
+
+- Frequency = 5 (multiple times per day) — HIGH frequency
+- Complexity = Error Risk + Tool Count = 4 + 5 = 9 — HIGH complexity
+
+This falls in the **PRIME CANDIDATES** quadrant — exactly the type of task to automate first. High ROI because it happens constantly and carries significant error risk across many tools.
+
+</details>
+
+---
+
+**Question 3**
+
+When is an AI agent overkill compared to a simple shell script? Give two indicators.
+
+<details>
+<summary>Answer</summary>
+
+An agent is overkill when the task:
+
+1. **Has no decision-making** — the same inputs always produce the same action, with no conditional logic or judgment required (e.g., "run this one command every morning")
+
+2. **Involves a single tool** — the task only touches one system and requires no cross-tool coordination
+
+In these cases, a shell script is faster to build, easier to maintain, and less likely to behave unexpectedly. Agents add value when the task requires reasoning, choosing between options, or coordinating across multiple systems — not as a replacement for a well-written cron job.
+
+</details>
+
+---
+
+**Question 4**
+
+Why is "testable with mock data" one of the 5 selection criteria for a capstone agent — even though production testing would seem more realistic?
+
+<details>
+<summary>Answer</summary>
+
+Building and iterating on an agent requires running it many times with varied inputs to test its behavior, catch edge cases, and refine the domain context (SKILL.md). Running against live production systems:
+
+- Creates real-world side effects (tickets filed, alerts triggered, commands executed)
+- May incur costs per API call
+- Is unsafe if the agent has write/execute access (which production agents need)
+- Makes it impossible to reproduce specific scenarios reliably
+
+Mock data (like the CloudWatch JSON fixtures used in Modules 1 and 3) provides a stable, reproducible, safe test environment. The agent can be thoroughly tested and refined before touching live infrastructure.
+
+This is the same reason you don't test Terraform by running `apply` against production on the first try.
+
+</details>
+
+---
+
+**Question 5**
+
+What makes a task a strong candidate for full AI agent automation (vs. augmentation or scripting)?
+
+<details>
+<summary>Answer</summary>
+
+A task is a strong candidate for full agent automation when it has:
+
+1. **High frequency** — it happens often enough that automation delivers ongoing value
+2. **High complexity** — it involves multiple tools, conditional logic, and judgment that a script can't handle
+3. **Discrete steps** — it can be decomposed into a numbered procedure (the foundation for a SKILL.md runbook)
+4. **Tool access** — every data source and action point is accessible via CLI or API
+5. **Clear success criteria** — the agent can verify completion without human interpretation
+
+Tasks that meet all five criteria are PRIME CANDIDATES. Tasks missing one or two criteria (especially discrete steps or tool access) may work better as AI-assisted tools where a human stays in the loop.
+
+</details>
