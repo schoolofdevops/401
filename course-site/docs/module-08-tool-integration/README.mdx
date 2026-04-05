@@ -1,0 +1,58 @@
+---
+id: module-08-readme
+title: "Module 8: Wiring Tools to Agents"
+sidebar_label: "Overview"
+sidebar_position: 0
+---
+
+# Module 8: Wiring Tools to Agents
+
+**Duration:** 60 minutes
+**Day:** Day 3, Session 2
+
+:::info Lab Location
+The hands-on lab for this module lives in the **Hermes repository**. Read the [Concepts](./reading/module-08-concepts) page first to understand the three tool integration patterns and why safety boundaries are non-negotiable. Then open the Hermes lab guide to wire your agent.
+:::
+
+## What This Module Is About
+
+Your SKILL.md from Module 7 tells the agent what to do. This module gives the agent the tools to actually do it.
+
+Tools are how agents reach beyond their context window to interact with the real world: executing shell commands, calling APIs, reading files, browsing documentation. Without tools, an agent is a conversation. With tools, it is an operator.
+
+This module covers three tool integration patterns (CLI, API, MCP), safety boundary configuration, and SOUL.md — the identity file that defines who your agent is and what it is allowed to do.
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. **Configure three tool integration patterns** in Hermes: direct CLI subprocess, API HTTP calls, and MCP server protocol
+2. **Set safety boundaries** using allowed/blocked command lists and credential protection — so your agent cannot accidentally (or maliciously) run destructive operations
+3. **Write a SOUL.md identity file** that shapes your agent's role, tone, and behavioral constraints
+4. **Explain MCP as a standardized tool protocol** and why it matters for tool interoperability across different AI systems
+
+## Prerequisites
+
+- Module 7 completed (you have a working SKILL.md)
+- Hermes installed and running
+- Basic understanding of shell commands and REST APIs
+
+## Module Contents
+
+| Section | Content | Time |
+|---------|---------|------|
+| Reading | [Concepts: Tool Types, MCP, and Safety](./reading/module-08-concepts) | 15 min |
+| Reading | [Reference: Tool Configuration and Safety Setup](./reading/module-08-reference) | 10 min |
+| Lab | Configure Tools and Safety Boundaries (Hermes repo) | 25 min |
+| Quiz | [Module 8 Assessment](./quiz/module-08-quiz) | 10 min |
+| Exploratory | [Stretch Projects](./exploratory/module-08-exploratory) | Optional |
+
+## Key Concept: Tools Define What Agents Can Do
+
+Think of tool configuration as your agent's access control policy. You define:
+- **Allowed tools:** What categories of action are permitted (terminal, web, files)
+- **Allowed commands:** Which specific commands the agent can run
+- **Blocked commands:** Explicit denials — destructive operations that should never execute autonomously
+- **Credential scope:** Which secrets the agent can access and from where
+
+This is context engineering at the access control layer: you are not just defining what the agent knows, you are defining what it is allowed to do. The discipline is identical to RBAC — principle of least privilege applied to agent capabilities.

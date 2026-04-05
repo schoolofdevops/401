@@ -1,0 +1,135 @@
+---
+id: module-08-exploratory
+title: "Exploratory: Tool Integration Stretch Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for Module 8 — custom MCP server and advanced safety policy design"
+---
+
+# Exploratory: Tool Integration Stretch Projects
+
+These are **exploratory stretch projects** — not required to complete Module 8. They extend the tool integration concepts from the lab into more advanced scenarios.
+
+---
+
+## Project 1: Custom MCP Server
+
+**Estimated time:** 60 minutes
+**Extends:** Module 8 lab (MCP tool section)
+**Prerequisites:** Module 8 lab completed, Node.js installed
+
+### What You Will Build
+
+Build a minimal custom MCP server that exposes one domain-specific tool to the Hermes agent. The tool should encapsulate a multi-step operation as a single agent-callable function — for example, "get RDS slow query report" as a single MCP tool that internally runs pg_stat_statements, filters results, and returns a structured summary.
+
+### Challenge
+
+The design challenge is deciding what the MCP boundary should be. Too coarse: the MCP tool does too much and the agent cannot reason about intermediate results. Too fine: the agent has to chain too many small tool calls and the overhead outweighs the benefit. The right boundary is a tool that returns one coherent piece of information the agent can act on.
+
+### Steps
+
+1. Choose a tool to wrap (examples: `rds-slow-queries`, `k8s-pod-health-summary`, `ec2-cost-summary`)
+
+2. Initialize a minimal MCP server using the MCP TypeScript SDK:
+
+```bash
+mkdir mcp-server-devops && cd mcp-server-devops
+npm init -y
+npm install @modelcontextprotocol/sdk
+```
+
+3. Implement the server with one tool:
+
+```typescript
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
+const server = new Server({ name: "devops-tools", version: "1.0.0" }, {
+  capabilities: { tools: {} }
+});
+
+server.setRequestHandler("tools/list", async () => ({
+  tools: [{
+    name: "rds_slow_queries",
+    description: "Get top slow queries from an RDS PostgreSQL instance",
+    inputSchema: {
+      type: "object",
+      properties: {
+        db_host: { type: "string", description: "RDS hostname" },
+        limit: { type: "number", description: "Number of queries to return (default: 5)", default: 5 }
+      },
+      required: ["db_host"]
+    }
+  }]
+}));
+
+server.setRequestHandler("tools/call", async (request) => {
+  // Implement the actual query logic here
+  // For lab purposes, return simulated data
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({ /* your simulated query results */ })
+    }]
+  };
+});
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+4. Register the MCP server in Hermes config.yaml and verify the agent can call the tool
+
+5. Compare: does your agent's diagnosis improve when it calls this structured MCP tool vs. running the raw psql command?
+
+### Expected Deliverable
+
+A runnable MCP server exposing one domain-specific tool, integrated with your Hermes agent, with notes on the design decisions you made about tool granularity.
+
+---
+
+## Project 2: Advanced Safety Policy Design
+
+**Estimated time:** 30 minutes
+**Extends:** Module 8 lab (safety configuration section)
+**Prerequisites:** Module 8 lab completed, your agent running with basic tool config
+
+### What You Will Build
+
+A tiered safety policy: three versions of your agent's tool configuration (read-only, proposal, limited-write), each documented with its intended use case, risk profile, and the specific approval gate that governs promotion between tiers.
+
+### Challenge
+
+Safety policies are easy to make too restrictive (agent becomes useless) or too permissive (agent becomes dangerous). The challenge is calibrating the policy to the agent's actual value — what must it be able to DO to be useful, and what would it need to do that crosses a safety threshold?
+
+### Steps
+
+1. Document your current allowed_commands list and categorize each command: Read, Propose (generates a recommendation), or Write (changes state)
+
+2. Create three config.yaml variants:
+   - `config-readonly.yaml`: only Read commands
+   - `config-proposal.yaml`: Read + one specific Write command that requires human confirmation
+   - `config-remediation.yaml`: Read + Write operations with require_approval_for gates
+
+3. For each tier, answer:
+   - What operational value does this tier provide that the tier below does not?
+   - What is the highest-blast-radius operation this tier can perform?
+   - What condition would trigger promoting from this tier to the next?
+
+4. Write a one-page "Safety Policy Document" describing: who should use each tier, what approval is required before an agent operates at the next tier, and how you would audit agent activity at each tier.
+
+### Expected Deliverable
+
+Three config.yaml variants (read-only, proposal, remediation) plus a one-page safety policy document with tier descriptions, promotion criteria, and audit approach. This is the precursor to the Module 13 governance work.
+
+---
+
+## Which Project Should You Do?
+
+| Your Interest | Recommended Project |
+|--------------|-------------------|
+| Building reusable tool infrastructure | Project 1 (custom MCP server) |
+| Governance and enterprise readiness | Project 2 (safety policy) |
+| Under 30 minutes available | Project 2 — high conceptual impact, lower implementation effort |
+
+Both projects extend naturally into Module 13 governance work. The safety policy from Project 2 is the foundation for the governance maturity levels you will configure in that module.

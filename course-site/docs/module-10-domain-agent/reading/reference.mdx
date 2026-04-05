@@ -1,0 +1,239 @@
+---
+id: module-10-reference
+title: "Reference: Agent Profile Structure and Output Evaluation"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "Agent profile directory structure, simulated data format, and output evaluation checklist"
+---
+
+# Reference: Agent Profile Structure and Output Evaluation
+
+Quick-reference for Module 10 — building and evaluating your domain agent.
+
+---
+
+## 1. Agent Profile Directory Structure
+
+```
+my-domain-agent/
+├── soul.md                    # Agent identity and behavioral constraints
+├── config.yaml                # Operational configuration
+├── skills/
+│   ├── primary-skill.md       # Main domain skill (from Module 7)
+│   └── secondary-skill.md     # Supporting skill (optional)
+└── data/
+    ├── mock-aws-response.json # Simulated CLI output for testing
+    └── mock-k8s-pods.json     # Simulated kubectl output
+```
+
+---
+
+## 2. Minimal config.yaml Per Track
+
+### Track A: DB Health Agent
+
+```yaml
+profile_name: "rds-health-agent"
+soul: "./soul.md"
+model: "claude-opus-4-5"
+
+tools:
+  terminal:
+    enabled: true
+    allowed_commands:
+      - "aws rds describe-db-instances *"
+      - "aws rds describe-db-parameters *"
+      - "aws cloudwatch get-metric-statistics *"
+      - "psql -h * -U readonly_user -c SELECT *"
+    blocked_commands:
+      - "aws rds modify-db-instance *"
+      - "aws rds delete-db-instance *"
+    environment:
+      AWS_PROFILE: "${AWS_PROFILE}"
+      AWS_DEFAULT_REGION: "us-east-1"
+      PGPASSWORD: "${PGPASSWORD}"
+
+skills:
+  - path: "./skills/rds-health.md"
+    triggers: ["slow queries", "connection pool", "rds performance", "db latency"]
+  - path: "./skills/query-analysis.md"
+    triggers: ["explain analyze", "query plan", "index recommendation"]
+```
+
+### Track B: FinOps Agent
+
+```yaml
+profile_name: "finops-advisor"
+soul: "./soul.md"
+model: "claude-opus-4-5"
+
+tools:
+  terminal:
+    enabled: true
+    allowed_commands:
+      - "aws ce get-cost-and-usage *"
+      - "aws ce get-cost-forecast *"
+      - "aws ec2 describe-instances *"
+      - "aws ec2 describe-volumes *"
+    blocked_commands:
+      - "aws ec2 terminate-instances *"
+      - "aws ec2 stop-instances *"
+    environment:
+      AWS_PROFILE: "${AWS_PROFILE}"
+
+skills:
+  - path: "./skills/cost-analysis.md"
+    triggers: ["cost anomaly", "cost spike", "billing", "spend analysis"]
+  - path: "./skills/right-sizing.md"
+    triggers: ["right-size", "underutilized", "instance type", "savings"]
+```
+
+### Track C: Kubernetes Health Agent
+
+```yaml
+profile_name: "k8s-health-agent"
+soul: "./soul.md"
+model: "claude-opus-4-5"
+
+tools:
+  terminal:
+    enabled: true
+    allowed_commands:
+      - "kubectl get *"
+      - "kubectl describe *"
+      - "kubectl logs --tail=100 *"
+      - "kubectl top *"
+    blocked_commands:
+      - "kubectl delete *"
+      - "kubectl exec *"
+      - "kubectl apply *"
+    environment:
+      KUBECONFIG: "${KUBECONFIG}"
+
+skills:
+  - path: "./skills/pod-health.md"
+    triggers: ["pod crashing", "crashloopbackoff", "image pull", "pod restart"]
+  - path: "./skills/resource-pressure.md"
+    triggers: ["oom killed", "resource pressure", "evicted", "node pressure"]
+```
+
+---
+
+## 3. Simulated Data Format Reference
+
+Simulated data files must match exact CLI output format. The agent's skill procedure references specific JSON paths — if the format is wrong, the skill fails.
+
+### AWS CloudWatch Mock (metrics)
+
+```json
+{
+  "_metadata": {
+    "source": "mock-cloudwatch",
+    "format_date": "2026-04-01",
+    "aws_cli_version": "2.15.0",
+    "note": "Simulated CPUUtilization metrics for RDS instance db-prod-01"
+  },
+  "Datapoints": [
+    {"Timestamp": "2026-04-01T10:00:00Z", "Average": 45.2, "Maximum": 62.1, "Unit": "Percent"},
+    {"Timestamp": "2026-04-01T10:05:00Z", "Average": 87.4, "Maximum": 95.8, "Unit": "Percent"},
+    {"Timestamp": "2026-04-01T10:10:00Z", "Average": 91.2, "Maximum": 98.1, "Unit": "Percent"}
+  ],
+  "Label": "CPUUtilization"
+}
+```
+
+### kubectl Mock (pods)
+
+```json
+{
+  "apiVersion": "v1",
+  "kind": "PodList",
+  "items": [
+    {
+      "metadata": {"name": "api-gateway-7d9f4b-xkp2q", "namespace": "app"},
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [{
+          "name": "api-gateway",
+          "ready": true,
+          "restartCount": 7,
+          "state": {"running": {"startedAt": "2026-04-01T09:45:00Z"}}
+        }]
+      }
+    }
+  ]
+}
+```
+
+**Note on the `_metadata` field:** Per course conventions, all mock JSON files include a `_metadata` field identifying them as simulated data. This prevents confusion when reviewing agent outputs — the diagnosis will reference the mock data source, not a real infrastructure endpoint.
+
+---
+
+## 4. Output Evaluation Checklist
+
+Use this after each test run to assess agent output quality:
+
+### Diagnosis Structure (All Tracks)
+
+```
+[ ] Summary section: 1-2 sentences, plain language, correct severity
+[ ] Evidence section: cites specific metric values or status from retrieved data
+[ ] Root Cause Hypothesis: names the hypothesis + confidence level (High/Medium/Low)
+[ ] Recommended Actions: numbered, each action includes exact command or step
+[ ] Escalation Decision: Escalate/Monitor/No Action + rationale
+```
+
+### Accuracy Verification (Track-Specific)
+
+**Track A (DB Health):**
+```
+[ ] CPU metric values match simulated data (no hallucinated numbers)
+[ ] pg_stat_statements interpretation matches decision tree branch
+[ ] Connection pool recommendation references actual max_connections value from parameter group
+[ ] P99 latency classification (normal/elevated/critical) matches defined thresholds in skill
+```
+
+**Track B (FinOps):**
+```
+[ ] Cost delta calculation is mathematically correct
+[ ] Baseline period correctly identified from Cost Explorer data
+[ ] Right-sizing recommendation includes utilization percentage from CloudWatch data
+[ ] Savings estimate labeled as approximate with stated assumptions
+```
+
+**Track C (Kubernetes):**
+```
+[ ] Pod restart count matches kubectl output
+[ ] OOMKilled classification based on actual exit code (137)
+[ ] Resource limit vs request ratio correctly calculated
+[ ] Image pull failure distinguishes between NotFound and auth errors
+```
+
+---
+
+## 5. Track Comparison Summary
+
+| Dimension | Track A (DB Health) | Track B (FinOps) | Track C (K8s) |
+|-----------|--------------------|--------------------|----------------|
+| Data sources | CloudWatch + psql | Cost Explorer + EC2 | kubectl only |
+| Diagnosis type | Point-in-time health | Trend analysis | State inspection |
+| Primary skill focus | Decision trees | Pattern recognition | Hierarchical traversal |
+| Cloud credentials needed | Yes (or mock data) | Yes (or mock data) | No (local KIND) |
+| Most common failure mode | Missing pg access | Baseline definition | Log noise filtering |
+
+---
+
+## 6. Running Against Simulated Data
+
+```bash
+# Point your agent at simulated data directory
+hermes --profile ./my-domain-agent --simulate --data-dir ./data/
+
+# Run a test task
+hermes --profile ./my-domain-agent --task "Investigate high CPU on db-prod-01"
+
+# Compare actual output to expected output
+hermes --profile ./my-domain-agent --task "..." --expected ./tests/scenario-01-expected.md
+```
+
+The `--simulate` flag tells Hermes to route CLI commands through the mock data files instead of executing them against real infrastructure. The agent's skill procedure runs identically — only the data source changes.

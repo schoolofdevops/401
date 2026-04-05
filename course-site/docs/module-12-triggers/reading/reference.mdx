@@ -1,0 +1,224 @@
+---
+id: module-12-reference
+title: "Reference: Cron Config, Webhook Setup, and Slack Integration"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "Hermes cron job configuration, webhook subscription setup, and Slack integration overview"
+---
+
+# Reference: Cron Config, Webhook Setup, and Slack Integration
+
+Quick-reference for Module 12 — configuring automated triggers and interfaces in Hermes.
+
+---
+
+## 1. Hermes Cron Job Configuration
+
+Cron jobs are defined in the agent's `config.yaml` under the `schedules` key.
+
+### Basic Cron Job
+
+```yaml
+schedules:
+  daily_db_health:
+    schedule: "0 7 * * *"  # Daily at 07:00 UTC
+    task: "Run daily DB health check: review slow queries from last 24 hours, identify top 5 by total_exec_time, flag any queries with execution time > 1000ms average"
+    output:
+      channel: slack
+      target: "#platform-alerts"
+      format: markdown
+      include_confidence: true
+    on_error:
+      notify: "#platform-oncall"
+      retry: false  # Don't retry on failure — wait for next scheduled run
+```
+
+### Cron Job with Conditional Alert
+
+```yaml
+schedules:
+  hourly_cost_check:
+    schedule: "0 * * * *"  # Every hour
+    task: "Check AWS cost-per-hour against yesterday's baseline. Alert only if current hour exceeds baseline by more than 20%."
+    output:
+      channel: slack
+      target: "#finops-alerts"
+      format: markdown
+      only_if: "anomaly_detected"  # Only post if agent identifies an anomaly
+    on_normal:
+      log_only: true  # Log to file, don't post to Slack when normal
+```
+
+### Cron Job Parameters
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `schedule` | Cron expression | Standard 5-field cron (minute hour day month weekday) |
+| `task` | String | Task description sent to agent |
+| `output.channel` | `slack`, `email`, `log`, `webhook` | Where output goes |
+| `output.target` | Channel name, email address, URL | Destination within channel |
+| `output.format` | `markdown`, `json`, `plain` | Output format |
+| `output.only_if` | `anomaly_detected`, `alert_triggered`, `always` | Conditional posting |
+| `on_error.notify` | Slack channel or email | Where to send error notification |
+| `on_error.retry` | `true`/`false` | Whether to retry on failure |
+
+### Common Cron Expressions
+
+| Schedule | Expression |
+|----------|-----------|
+| Daily at 07:00 UTC | `0 7 * * *` |
+| Every hour | `0 * * * *` |
+| Every 30 minutes | `*/30 * * * *` |
+| Weekdays at 08:00 UTC | `0 8 * * 1-5` |
+| Monday at 09:00 UTC | `0 9 * * 1` |
+| First of month at midnight | `0 0 1 * *` |
+
+---
+
+## 2. Webhook Subscription Configuration
+
+Webhooks are configured in Hermes to listen for specific events from external systems.
+
+### Basic Webhook
+
+```yaml
+webhooks:
+  cloudwatch_alarm:
+    path: "/webhooks/cloudwatch"
+    method: POST
+    validation:
+      type: hmac_sha256
+      secret_env_var: "CLOUDWATCH_WEBHOOK_SECRET"
+    payload_mapping:
+      alarm_name: "$.AlarmName"
+      metric_name: "$.Trigger.MetricName"
+      db_instance: "$.Trigger.Dimensions[?(@.name=='DBInstanceIdentifier')].value"
+      state: "$.NewStateValue"
+      timestamp: "$.StateChangeTime"
+    task_template: |
+      ALARM: {alarm_name} is in state {state} as of {timestamp}.
+      Investigate {db_instance} for {metric_name} issues.
+      Time window: last 30 minutes before {timestamp}.
+    route_to_agent: "rds-health-agent"
+    output:
+      channel: slack
+      target: "#db-alerts"
+```
+
+### Payload Mapping JSONPath Reference
+
+| JSONPath Expression | Purpose |
+|--------------------|---------|
+| `$.AlarmName` | CloudWatch alarm name |
+| `$.Trigger.MetricName` | Metric that triggered the alarm |
+| `$.Trigger.Dimensions[0].value` | First dimension value (e.g., instance ID) |
+| `$.NewStateValue` | New alarm state (ALARM, OK, INSUFFICIENT_DATA) |
+| `$.StateChangeTime` | ISO 8601 timestamp of state change |
+
+### PagerDuty Webhook
+
+```yaml
+webhooks:
+  pagerduty_incident:
+    path: "/webhooks/pagerduty"
+    method: POST
+    validation:
+      type: x_pagerduty_signature
+      secret_env_var: "PAGERDUTY_WEBHOOK_SECRET"
+    payload_mapping:
+      incident_id: "$.messages[0].incident.id"
+      title: "$.messages[0].incident.title"
+      severity: "$.messages[0].incident.urgency"
+      created_at: "$.messages[0].incident.created_at"
+    task_template: |
+      PagerDuty incident {incident_id}: {title}
+      Severity: {severity}, Created: {created_at}
+      Run cross-domain investigation across all infrastructure domains.
+    route_to_agent: "incident-coordinator"
+    output:
+      channel: pagerduty
+      target: "{incident_id}"  # Append findings to the PagerDuty incident
+```
+
+---
+
+## 3. Slack Integration Overview
+
+Slack integration in Hermes has two modes:
+1. **Outbound:** Agent posts findings to Slack channels (configured in cron and webhook output)
+2. **Inbound (slash command):** Humans invoke the agent via Slack slash command
+
+### Outbound Configuration
+
+```yaml
+integrations:
+  slack:
+    workspace: "your-workspace"
+    auth_env_var: "SLACK_BOT_TOKEN"
+    default_channel: "#platform-agents"
+    message_format: markdown
+    include_timestamp: true
+    include_agent_name: true
+```
+
+### Inbound (Slash Command) — Overview
+
+Slash command integration requires a Slack App with slash command configuration. This is a demo walkthrough in the lab, not hands-on configuration (requires workspace admin access):
+
+1. Create a Slack App in your workspace (requires admin)
+2. Add slash command: `/hermes` → POST to `https://your-hermes-host/slack/commands`
+3. Configure Hermes with the Slack signing secret
+4. Users can then run: `/hermes investigate db-prod-01 slow queries`
+
+**In the lab:** The facilitator demonstrates slash command usage on the training workspace. Participants observe the interaction pattern; actual slash command setup requires workspace admin access that most participants do not have in training environments.
+
+---
+
+## 4. Output Routing Reference
+
+Where agent output goes is as important as what the agent produces.
+
+| Scenario | Output Routing |
+|----------|---------------|
+| Scheduled health report | Slack channel (always post, even if no findings) |
+| Alert-triggered diagnosis | Back to the alert ticket (PagerDuty comment, CloudWatch annotation) |
+| On-call investigation | Direct Slack message to on-call user |
+| Weekly trend summary | Email distribution list |
+| Approval-required action | Slack with approval buttons (Module 13) |
+
+### Structured Output Format for Routing
+
+Agents posting to external channels should use structured output that renders well in the target medium:
+
+```markdown
+## DB Health: db-prod-01 — 2026-04-01 07:00 UTC
+
+**Status:** ELEVATED (requires monitoring)
+**Top Finding:** Slow query average exec time increased 40% vs. 7-day baseline
+
+**Evidence:**
+- Top query by exec time: `SELECT * FROM orders WHERE...` (avg 450ms, +180ms vs. baseline)
+- Connection pool: 45/100 (45%, within normal range)
+- CPU: 32% average (normal)
+
+**Recommendation:** Review query plan for orders table query. Consider adding index on `created_at` column.
+
+**Escalation:** None — monitor trend, report again tomorrow at 07:00 UTC.
+
+*Hermes DB Health Agent | Skill: rds-health-v1.2 | 14:23 elapsed*
+```
+
+This format renders correctly in Slack markdown and provides all information needed to act without clicking through to additional context.
+
+---
+
+## 5. Trigger Decision Matrix
+
+| Factor | Use Cron | Use Webhook | Use CLI |
+|--------|---------|------------|---------|
+| Human must trigger | No | No | Yes |
+| Needs to respond to events | No | Yes | No |
+| Scheduled at fixed intervals | Yes | No | No |
+| Needs human context in task | No | No | Yes |
+| Best for trending data | Yes | No | No |
+| Best for incident response | No | Yes | Yes (fallback) |

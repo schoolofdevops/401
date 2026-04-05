@@ -1,0 +1,121 @@
+---
+id: module-10-exploratory
+title: "Exploratory: Domain Agent Stretch Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for Module 10 — second-track agent, cross-track incident simulation, and agent comparison"
+---
+
+# Exploratory: Domain Agent Stretch Projects
+
+These are **exploratory stretch projects** — not required to complete Module 10. They extend the domain agent build into more advanced scenarios.
+
+---
+
+## Project 1: Second-Track Agent
+
+**Estimated time:** 60 minutes
+**Extends:** Module 10 lab (your primary track)
+**Prerequisites:** Primary track agent complete and passing evaluation checklist
+
+### What You Will Build
+
+Build a second domain agent using a different track from the one you completed in the lab. If you built Track A (DB Health), build Track C (Kubernetes Health) or Track B (FinOps). Use the reference SOUL.md and config.yaml templates from the Reference page as starting points.
+
+### Challenge
+
+Each track has a different evaluation paradigm:
+- **Track A** diagnoses point-in-time state against known thresholds
+- **Track B** analyzes time-series trends against a baseline
+- **Track C** traverses hierarchical state to identify cascading failures
+
+The challenge is noticing how the skill design changes depending on what "good" means for each domain. A DB health agent needs precise threshold definitions. A FinOps agent needs baseline definition and anomaly significance scoring. A K8s agent needs depth-first traversal with noise filtering.
+
+### Steps
+
+1. Read the lab guide for your second track in the Hermes repository
+2. Build the SOUL.md and config.yaml using the Reference page templates as starting points
+3. Write or adapt the primary skill for the second track (or use the provided reference skill)
+4. Run all simulated scenarios and apply the track-specific evaluation checklist
+5. Compare to your first track: what did you design differently and why?
+
+### Expected Deliverable
+
+A working second-track agent profile in a separate directory (`my-track-b-agent/` or similar), passing all simulated scenarios. A brief comparison note: what you did differently in skill design for the second track.
+
+---
+
+## Project 2: Cross-Track Incident Simulation
+
+**Estimated time:** 45 minutes
+**Extends:** Module 10 lab (requires two agents from different tracks)
+**Prerequisites:** Two agent profiles built (your primary track + Project 1, or two simulated agents)
+
+### What You Will Build
+
+A cross-domain incident scenario where both your agents contribute to a diagnosis. Example: "EC2 costs spiked AND database latency increased — determine whether they are related."
+
+This simulates the real-world situation where a single incident has multiple observable manifestations across domains, and no single agent sees the full picture.
+
+### Challenge
+
+The challenge is the correlation step. Each agent will produce a correct domain-specific diagnosis. The integration challenge: how do you get from "FinOps agent found cost anomaly on us-east-1 EC2" + "DB agent found latency spike on RDS instance in us-east-1" to "hypothesis: these are caused by the same event — possible EC2 type change or storage migration"?
+
+### Steps
+
+1. Craft a simulated incident using mock data that has correlated signals across two domains (example: CPU spike in CloudWatch that appears in both EC2 utilization AND RDS performance metrics at the same timestamp)
+
+2. Run each agent independently against the simulated data. Record each agent's diagnosis independently.
+
+3. Manually synthesize: given both diagnoses, what is the cross-domain hypothesis? What additional data would confirm it?
+
+4. Write the correlation logic as a cross-domain SKILL.md (from Module 7 Project 1) and test whether a single agent with both data sources can reach the cross-domain conclusion.
+
+### Expected Deliverable
+
+Two independent diagnoses + a written cross-domain analysis + a draft cross-domain skill that addresses the correlation step.
+
+---
+
+## Project 3: Agent Comparison Study
+
+**Estimated time:** 30 minutes
+**Extends:** Module 10 lab (any track)
+**Prerequisites:** Your domain agent complete
+
+### What You Will Build
+
+A structured comparison of your agent's output vs. a human engineer's diagnosis for the same simulated scenario. This is how you measure whether the agent is actually useful — not by whether it runs, but by whether its diagnosis matches (or exceeds) what an expert would produce in the same time.
+
+### Challenge
+
+Bias in self-evaluation. It is easy to unconsciously design the human comparison to favor your own agent. The challenge is honest evaluation: where does the agent produce better output (faster, more systematic, catches things humans miss)? Where does it produce worse output (wrong confidence, misses context, overly verbose)?
+
+### Steps
+
+1. Choose your most complex simulated scenario
+
+2. **Human first:** Without running the agent, write what you would diagnose given the same simulated data. Time yourself (aim for 10 minutes). Write the same structured output: Summary, Evidence, Root Cause, Recommended Actions, Escalation Decision.
+
+3. **Agent second:** Run the agent against the same scenario. Record the output verbatim.
+
+4. **Comparison:** For each output section, score 1-3: human better (1), equivalent (2), agent better (3). Write one sentence explaining each score.
+
+5. **Improvement list:** For each section where the human output was better (score 1), identify whether the gap is fixable with a skill update, or whether it requires human judgment that cannot be encoded.
+
+### Expected Deliverable
+
+Side-by-side comparison table + improvement list with at least one concrete skill update that would close a specific gap.
+
+---
+
+## Which Project Should You Do?
+
+| Your Interest | Recommended Project |
+|--------------|-------------------|
+| Building coverage across domains | Project 1 (second track) |
+| Multi-agent coordination (preview of Module 11) | Project 2 (cross-track incident) |
+| Rigorous quality evaluation | Project 3 (comparison study) |
+| Under 30 minutes available | Project 3 — highest signal-to-effort ratio |
+
+All three projects prepare you for Module 11 (fleet orchestration), where multiple agents coordinate on cross-domain incidents. Project 2 is a preview of exactly that capability.

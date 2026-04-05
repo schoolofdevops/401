@@ -1,0 +1,193 @@
+---
+id: module-13-quiz
+title: "Quiz: Agent Governance"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of the governance triad, maturity levels, and approval workflows from Module 13"
+---
+
+# Quiz: Agent Governance
+
+These questions test your understanding of the governance triad, maturity levels, and enterprise-safe agent deployment.
+
+---
+
+### Question 1: Governance Triad
+
+An agent has just diagnosed a connection pool exhaustion issue and proposes increasing the RDS max_connections parameter from 100 to 150. A database admin receives a Slack message with the proposal details and approves it 4 minutes later. The agent executes the change. Which governance triad components are active in this scenario?
+
+A) Only LOG — the human approved, so no autonomous action occurred
+B) APPROVE (human review before execution) and LOG (action recorded in audit trail)
+C) DO (agent acted autonomously) and LOG (action recorded)
+D) All three: DO (agent could execute after approval), APPROVE (DBA reviewed), LOG (action recorded)
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) APPROVE (human review before execution) and LOG (action recorded in audit trail)**
+
+The governance triad components at work:
+
+**APPROVE:** The parameter change is in the APPROVE category — the agent proposed it and waited for explicit DBA authorization before executing. The 4-minute wait is the APPROVE workflow in action.
+
+**LOG:** The entire sequence is in the audit log: proposal sent at T=0, approval received by jane.smith at T=4:00, execution at T=4:02, outcome recorded.
+
+**Why not DO?** The agent did NOT take autonomous action. It proposed and waited. DO actions are the ones the agent executes without waiting for anyone. In this scenario, the parameter change is not in the DO category — it requires APPROVE.
+
+**Why not "all three"?** The DO category is for actions the agent runs autonomously. The parameter change went through APPROVE. Unless a different action in the same session was a DO action (like reading the metrics — which is in DO), this specific action was APPROVE + LOG, not DO.
+
+The governance triad is not about what the agent is capable of doing — it is about how each specific action is classified. Classification determines the workflow.
+
+</details>
+
+---
+
+### Question 2: Maturity Level Assignment
+
+A newly deployed Kubernetes health agent has been running in production for 45 days. It has correctly diagnosed 40 of 43 incidents (93% accuracy). It has never caused an incident. It is currently at L1. The team wants to let it add diagnostic comments to PagerDuty incidents automatically. What level is appropriate and why?
+
+A) Remain at L1 — 45 days is not long enough to trust any autonomous action
+B) L2 — 45 days at L1, 93% accuracy, zero incidents caused. Adding PagerDuty comments is a safe, low-blast-radius DO action appropriate for L2
+C) L3 — 93% accuracy is high enough to warrant restart capabilities
+D) L4 — the agent has proven itself; full autonomy is justified
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) L2 — 45 days at L1, 93% accuracy, zero incidents caused. Adding PagerDuty comments is a safe, low-blast-radius DO action appropriate for L2**
+
+The L1 → L2 promotion criteria from the reference:
+- Minimum 30 days at L1: 45 days ✓
+- Accuracy rate ≥90%: 93% ✓
+- Zero false P1 escalations: satisfied (no incidents caused) ✓
+
+L2 is the right level for adding PagerDuty comments:
+- It is a safe, low-blast-radius write (adding a text comment to a ticket cannot cause infrastructure damage)
+- It is clearly within L2's autonomous action scope: "add diagnostic comments to incident tickets, update monitoring annotations"
+
+**Why not L3?** L3 requires 60 days at L2, proposals approved without modification ≥80%, and zero incidents caused by agent actions. This agent has never been at L2 — you cannot skip a level.
+
+**Why not L4?** Skipping multiple levels is not how trust is built. The promotion path exists precisely to prevent premature trust escalation based on early good performance.
+
+The analogy: a junior engineer with a strong first 45 days earns the right to do more independently — but not to take the same autonomous scope as a 5-year veteran. Trust is built incrementally.
+
+</details>
+
+---
+
+### Question 3: Governance Triad — LOG
+
+Why is audit logging required even for DO actions that the agent executes autonomously without any human approval?
+
+A) Logging is only required for APPROVE actions — DO actions are already trusted
+B) LOG provides the evidence trail needed to: verify the agent acted correctly post-incident, support the accuracy rate measurement used for promotion decisions, and create accountability when an autonomous action has unintended consequences
+C) Logging is required by Hermes internally for technical reasons but has no operational value
+D) LOG is only required at L4 where the agent has wide autonomy
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) LOG provides the evidence trail needed to verify correct action, support promotion decisions, and establish accountability**
+
+The LOG component applies to ALL agent actions — DO, APPROVE, and everything in between — for three critical reasons:
+
+**Post-incident review:** If an agent autonomously restarts a pod at 02:15 and the service is still degraded at 03:00, the incident review needs to know: What did the agent do? When? Was the restart correct? What happened after? Without audit logs, this is unknown.
+
+**Promotion measurement:** The accuracy rate metric used for L2→L3 promotion ("diagnoses verified correct ≥90%") is calculated FROM the audit log. The LOG is the evidence base for the governance system itself. No LOG = no promotion criteria measurement = no principled path to higher autonomy.
+
+**Accountability:** When an autonomous L3 action has unintended consequences, the audit log identifies: what command was run, with what parameters, at what time, based on what evidence. This is how you debug the agent's behavior and improve the skill or governance config.
+
+Option A is precisely the wrong model. The LOG is most important for DO actions because those are the actions with no human review in the workflow. The LOG is the retrospective check for actions that had no pre-execution check.
+
+</details>
+
+---
+
+### Question 4: Approval Fatigue
+
+A team has configured their L2 advisory agent to require approval for every action except reading metrics. The approval queue has 15-20 pending items per day. After 2 weeks, the team's DBA approves all items within seconds of receiving them without reviewing the proposal content. What is the governance failure here?
+
+A) The DBA is not following governance policy — they should read every proposal carefully
+B) The governance config has too many approval requirements. When approvals are routine and frequent, approvers stop engaging with the proposals meaningfully — defeating the purpose of approval gates.
+C) 15-20 approvals per day is normal — the DBA should allocate more time for governance review
+D) The agent should be upgraded to L4 since the DBA always approves
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) The governance config has too many approval requirements — approval fatigue has made the approval gate ineffective**
+
+This is the approval fatigue failure mode from the concepts reading. The DBA is not being negligent — they are responding rationally to an overwhelming approval queue. When every minor agent action requires approval, the human cognitively downgrades "approval" from "meaningful review" to "acknowledge and continue."
+
+When this happens, the approval gate provides no safety — the human will approve incorrect proposals at the same rate as correct ones.
+
+**The fix:** Categorize actions correctly:
+- Safe, routine writes (adding diagnostic comments, updating annotations) → move to DO (L2 scope)
+- Medium-impact, reversible changes (parameter tuning, pod restarts) → APPROVE with clear proposal format and reasonable frequency
+- High-impact, irreversible changes → APPROVE with more formal review process
+
+**Design principle:** Approval gates should be infrequent enough that approvers engage carefully. If you are getting 15-20 approvals per day, most of those are L2 DO actions masquerading as L3 APPROVE requirements.
+
+Option D is wrong: the DBA always approving does not mean the agent is L4-ready. It means the governance config is miscalibrated.
+
+</details>
+
+---
+
+### Question 5: Promotion Criteria
+
+An agent has been operating at L3 for 60 days. The team wants to promote it to L4. The audit log shows: 150 autonomous L3 actions, 142 successful (95%), 8 failures (5%). Of the 8 failures, 3 resulted in rollback being executed. The team lead says: "95% success rate is good enough. Let's promote." What critical step is missing?
+
+A) Nothing — 95% success meets the L3 → L4 criteria, promotion is appropriate
+B) The team needs 90 days minimum at L3 (not 60) and a formal governance board review with written sign-off, plus rollback plans for each proposed L4 autonomous action
+C) The 8 failures must be explained before any promotion is considered
+D) The promotion requires a security audit of the agent's code
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) The team needs 90 days minimum at L3, and a formal governance board review with written sign-off, plus rollback plans for each proposed L4 autonomous action**
+
+The L3 → L4 promotion checklist (from the reference):
+- **90 days minimum at L3:** 60 days fails this criterion. The time requirement exists because 90 days provides a larger sample and more operational scenarios than 60.
+- **Formal governance board review with written sign-off:** Not just a team lead's decision — L4 is enterprise-level autonomy that requires formal review
+- **Rollback plans documented for each L4 autonomous action:** L4 allows the agent to take wide autonomous action; each action in the L4 DO scope needs a documented reversal procedure
+
+**On the 95% success rate:** The number itself meets the threshold, but 60 days is not 90 days, and the 8 failures (including 3 requiring rollback) should be reviewed even if the percentage is acceptable. Understanding why 5% of L3 actions fail informs whether L4 expansion is safe.
+
+The key governance principle: promotion criteria are a minimum, not a checkbox that auto-approves. A team lead saying "good enough" is not the same as the formal governance process the L4 level requires.
+
+</details>
+
+---
+
+### Question 6: DO × APPROVE Classification
+
+A team is configuring their first L3 governance policy. They need to classify the following action: "Rollback deployment to previous version when current version has produced >10% error rate for >5 minutes." Which category should this action be in, and why?
+
+A) LOG only — rolling back is always safe, no approval needed, just record it
+B) DO (autonomous) — the condition is specific and measurable, the action is reversible, and a 10%+ error rate for 5+ minutes is urgent enough that waiting for human approval would cause unnecessary service degradation
+C) APPROVE — any change to production deployment state requires human approval, regardless of error rate
+D) This action is too high-risk for any level — humans should always perform rollbacks manually
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) DO (autonomous) — the condition is specific and measurable, the action is reversible, and a 10%+ error rate for 5+ minutes is urgent enough that waiting for human approval would cause unnecessary service degradation**
+
+This action has the characteristics of a well-designed L3 DO action:
+
+**Specific, measurable trigger:** Not "when things look bad" but "current version has produced >10% error rate for >5 minutes." The agent can evaluate this condition precisely from monitoring data.
+
+**Reversible:** Rolling back to a previous version is reversible — you can re-deploy the current version if the rollback was incorrect. The previous version exists in your registry.
+
+**Time-sensitive:** If the deployment is causing 10%+ error rate, waiting 5-10 minutes for human approval doubles the customer impact window. The value of the agent's autonomy here is precisely the speed — immediate rollback when the condition is unambiguously met.
+
+**Well-bounded:** The agent is not deciding "whether to rollback" based on judgment — it is executing a defined rollback policy when a defined condition is met. This is closer to auto-scaling rules than to autonomous decision-making.
+
+**Why not APPROVE?** Requiring human approval before rollback during an active error-rate incident is a governance overcorrection. The 10% threshold and 5-minute duration are the human's judgment encoded in the policy — the approval happened when the policy was written, not at incident time.
+
+The governance principle: encode human judgment into the policy once (DO condition); don't require re-approval at incident time when the condition is unambiguous.
+
+</details>
+

@@ -1,0 +1,176 @@
+---
+id: module-11-concepts
+title: "Concepts: Fleet Patterns and Agent Delegation"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "Fleet orchestration patterns, the manager pattern, delegation, and shared memory across agents"
+---
+
+# Concepts: Fleet Patterns and Agent Delegation
+
+One agent is useful. A team of agents is powerful. This module shows how to build a coordinator that delegates to specialists — and why that architecture produces better results than a single generalist agent trying to handle everything.
+
+---
+
+## 1. Why Single Agents Hit Limits
+
+Your Module 10 domain agent is highly effective within its domain. It has the right skills, the right tools, and a SOUL.md that keeps it focused. But consider a real-world incident:
+
+> "Overnight, API response times increased by 300%. CloudWatch shows EC2 CPU normal. RDS latency is elevated. Kubernetes shows 3 pods in CrashLoopBackOff."
+
+Which agent do you send?
+- Your DB Health agent (Track A) sees the RDS latency — but not the Kubernetes pods
+- Your K8s agent (Track C) sees the crashed pods — but not the RDS correlation
+- Your FinOps agent (Track B) might notice the cost implications — but not the immediate root cause
+
+Each specialist agent sees its own domain clearly. None sees the full picture. This is the fleet problem.
+
+**What you need:** A coordinator that understands the full incident scope and knows which specialist to ask.
+
+**DevOps analogy:** A cross-functional incident response team. The incident commander (coordinator) assesses the scope, assigns investigation tracks to domain leads (specialists), collects their findings, and synthesizes a unified incident timeline. No single engineer handles all domains; the coordinator makes sure all domains are covered and findings are integrated.
+
+---
+
+## 2. The Three Fleet Patterns
+
+### Round-Robin Distribution
+
+The coordinator sends tasks to specialists in rotation, regardless of the task's domain.
+
+**Use case:** Homogeneous tasks where any agent can handle any request. Example: a fleet of identical web scraper agents processing a queue of URLs.
+
+**Limitation:** Specialists lose their specialization advantage. If you rotate a DB health task to the K8s agent, you get a worse result than sending it to the DB specialist.
+
+**When to use:** Horizontal scaling of identical agents (not the typical DevOps agent scenario).
+
+### Skill-Based Routing
+
+The coordinator analyzes the task, identifies which domain(s) it touches, and routes to the specialist whose skills match.
+
+**How routing works:**
+1. Coordinator receives: "Investigate elevated API latency"
+2. Coordinator analyzes: "API latency could be application (K8s), database (RDS), or infrastructure (EC2). I'll check all three."
+3. Coordinator delegates: sends DB analysis to DB Health agent, pod analysis to K8s agent
+4. Coordinator collects responses, identifies the root cause from the combined evidence
+
+**Use case:** The standard DevOps fleet scenario — specialists with different domain skills covering different infrastructure layers.
+
+**DevOps analogy:** A service mesh with capability-based routing. Like Istio routing based on service capabilities and labels — not random load balancing, but targeted routing to the right service for the request type.
+
+### Hierarchical Delegation
+
+The coordinator delegates to mid-tier managers who further delegate to specialists. Multiple levels of coordination.
+
+**Use case:** Very large fleets with many domain specialists, or scenarios where the domain is itself complex enough to warrant internal coordination. Example: a "Cloud Infrastructure manager" agent that coordinates an "EC2 specialist," an "RDS specialist," and a "VPC specialist" — all three reporting to the manager, who reports to a top-level incident coordinator.
+
+**When to use:** Enterprise-scale fleets with 10+ specialist agents. Unnecessary overhead for 3-5 agent fleets.
+
+---
+
+## 3. The Manager Pattern in Hermes
+
+The manager pattern is the practical implementation of skill-based routing in Hermes. A coordinator agent has the `delegate_task` tool, which lets it send a task to a named agent profile and receive that agent's output.
+
+**Coordinator flow:**
+
+```
+Receive: "Investigate API latency spike since 02:00"
+  │
+  ├── Analyze: "Three domains involved: application, database, infrastructure"
+  │
+  ├── Delegate: send "analyze RDS latency 02:00-06:00" to rds-health-agent
+  │     └── rds-health-agent → runs skill → returns structured diagnosis
+  │
+  ├── Delegate: send "analyze K8s pod health 02:00-06:00" to k8s-health-agent
+  │     └── k8s-health-agent → runs skill → returns structured diagnosis
+  │
+  ├── Collect: both specialist responses
+  │
+  └── Synthesize: cross-domain incident timeline + root cause hypothesis
+```
+
+**What makes the coordinator effective:**
+- It does NOT need deep domain skills — it needs to know how to route and synthesize
+- Its SOUL.md defines: "I am a coordinator. My job is routing, collecting, and synthesizing."
+- Its SKILL.md defines: when to delegate, what to collect, how to synthesize
+
+**DevOps analogy:** The incident commander in a major incident response. The commander doesn't need to know how to debug Kubernetes pods — they need to know which specialist to page, what status to request, and how to synthesize the team's findings into an actionable incident timeline.
+
+---
+
+## 4. Delegation: How It Works
+
+When the coordinator calls `delegate_task`, it passes:
+- **Target agent:** the profile name of the specialist to invoke
+- **Task:** a specific, bounded task description (not the full incident — just the domain-specific question)
+- **Context:** relevant background the specialist needs (incident time window, severity, what the coordinator already knows)
+
+The specialist runs its skill against the provided context, generates a structured response, and returns it to the coordinator's context window.
+
+**The task design principle:** Good delegation is specific, bounded, and provides enough context for the specialist to start immediately.
+
+| Bad delegation | Good delegation |
+|---------------|----------------|
+| "Investigate the incident" | "Analyze RDS db-prod-01 CPU and connection pool metrics 02:00-06:00. Incident context: API latency spike began 02:15. Specifically: is connection pool exhaustion a contributing cause?" |
+| "Check everything" | "Check pod restarts in namespace=app between 02:00-06:00. Expected: identify which pods restarted and their exit codes." |
+
+The specialist's output is returned to the coordinator, which adds it to its growing synthesis. After all delegations complete, the coordinator generates the cross-domain analysis.
+
+---
+
+## 5. Shared Memory and Context Across Agents
+
+When specialists operate in parallel, they start with separate contexts. They do not automatically share what they discover — the coordinator is the integration point.
+
+**Three shared state patterns:**
+
+### Pass-Through (Simple)
+
+The coordinator collects each specialist's output and includes it in the next specialist's context. Sequential, simple, but limited: the second specialist sees the first specialist's findings, which can help (cross-domain correlation) or hurt (anchoring bias).
+
+### Shared Memory Store
+
+Agents write findings to a shared memory (key-value store or vector database). The coordinator reads from the store to synthesize. Specialists can also read each other's findings by querying the store.
+
+**When useful:** Large fleets where specialists may need to read each other's findings to avoid duplicate investigation.
+
+### Coordinator-Mediated Context
+
+The coordinator controls what context each specialist receives. It extracts relevant fragments from prior specialists' outputs and includes them in subsequent delegation task context.
+
+**Example:** DB specialist reports "connection pool at 98% utilization since 02:10." Coordinator includes this in the K8s specialist's task: "Note: DB specialist found connection pool saturation starting 02:10. Specifically check whether pod count in the API service increased around that time, which could explain the connection pressure."
+
+This is the most sophisticated but most controllable pattern — the coordinator decides what information crosses domain boundaries.
+
+---
+
+## 6. Fleet Sizing and Complexity Management
+
+More agents is not always better. Each additional specialist:
+- Adds delegation latency (each delegate_task call takes time)
+- Increases synthesis complexity (more specialist outputs to integrate)
+- Requires more coordinator context window space to hold all results
+
+**Guidelines:**
+- 2-3 specialists: coordinator synthesis is straightforward
+- 4-6 specialists: coordinator needs structured synthesis strategy (not just "summarize everything")
+- 7+ specialists: consider hierarchical delegation with manager agents per domain group
+
+For the Module 11 lab, three specialists (DB, FinOps, K8s — one per Module 10 track) is the target fleet size. This is sufficient to demonstrate fleet orchestration without the synthesis complexity of larger fleets.
+
+---
+
+## Summary
+
+| Concept | What It Is | DevOps Analogy |
+|---------|-----------|----------------|
+| Fleet | Coordinator + multiple specialist agents | Incident response team with commander + domain leads |
+| Round-robin | Distribute tasks in rotation | DNS round-robin load balancing |
+| Skill-based routing | Route to the specialist whose skills match | Service mesh capability routing |
+| Hierarchical delegation | Multi-tier coordination | Org chart with VPs, managers, ICs |
+| Manager pattern | Coordinator with delegate_task tool | Incident commander with PagerDuty escalation |
+| Shared memory | Cross-agent state sharing | Shared incident channel (Slack, PagerDuty) |
+
+**The key insight:** Fleet value comes from specialization + coordination, not from agent quantity. Three highly specialized agents coordinated by a skilled coordinator outperform ten generalist agents operating in parallel.
+
+**Next:** [Reference — Fleet Configuration and Coordinator Templates](./module-11-reference)

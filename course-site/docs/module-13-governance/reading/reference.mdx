@@ -1,0 +1,309 @@
+---
+id: module-13-reference
+title: "Reference: Governance Config Templates and Audit Logs"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "Governance configuration per maturity level, approval workflow setup, audit log format, and promotion checklist"
+---
+
+# Reference: Governance Config Templates and Audit Logs
+
+Quick-reference for Module 13 — configuring governance layers in Hermes.
+
+---
+
+## 1. Governance Config per Maturity Level
+
+### L1: Assistive
+
+```yaml
+governance:
+  level: L1
+  description: "Assistive — observe and report only"
+
+  do:  # Autonomous actions
+    - read_metrics
+    - read_logs
+    - read_configuration
+    - add_diagnostic_comment  # Low-blast-radius write
+
+  approve:  # Everything else requires approval
+    default_approver: "on-call"
+    timeout_minutes: 10
+    timeout_action: abort
+
+  log:
+    enabled: true
+    log_level: standard  # All actions, no verbose detail
+    retention_days: 90
+```
+
+### L2: Advisory
+
+```yaml
+governance:
+  level: L2
+  description: "Advisory — safe writes autonomous, state changes require approval"
+
+  do:
+    - read_metrics
+    - read_logs
+    - read_configuration
+    - add_diagnostic_comment
+    - update_monitoring_annotation
+    - post_slack_notification
+    - update_documentation
+
+  approve:
+    actions:
+      - action: restart_pod
+        approver: "service-owner"
+        timeout_minutes: 5
+        escalation_approver: "on-call"
+        escalation_timeout_minutes: 10
+      - action: modify_parameter
+        approver: "platform-lead"
+        timeout_minutes: 15
+        escalation_approver: "platform-director"
+    default_approver: "on-call"
+    timeout_action: abort
+
+  log:
+    enabled: true
+    log_level: standard
+    retention_days: 90
+```
+
+### L3: Proposal
+
+```yaml
+governance:
+  level: L3
+  description: "Proposal — reversible operations autonomous within defined scope"
+
+  do:
+    - read_metrics
+    - read_logs
+    - read_configuration
+    - add_diagnostic_comment
+    - update_monitoring_annotation
+    - post_slack_notification
+    - restart_pod  # Now autonomous at L3
+    - rollback_deployment  # Autonomous within policy
+    - scale_service:
+        max_replicas: 10
+        min_replicas: 1
+        cooldown_minutes: 10
+    - create_alert
+
+  approve:
+    actions:
+      - action: modify_rds_parameter
+        approver: "dba-team"
+        timeout_minutes: 10
+        escalation_approver: "on-call"
+        proposal_format: structured  # See proposal format below
+      - action: ec2_instance_type_change
+        approver: "platform-lead"
+        timeout_minutes: 30
+        proposal_format: structured
+    default_approver: "on-call"
+    timeout_action: abort
+
+  log:
+    enabled: true
+    log_level: verbose  # Higher detail at L3 to support audit
+    retention_days: 365
+    include_tool_outputs: true
+```
+
+### L4: Semi-Autonomous
+
+```yaml
+governance:
+  level: L4
+  description: "Semi-autonomous — wide autonomous scope, irreversible operations require approval"
+
+  do:
+    - "*"  # All actions except those in approve list
+    - parameter_tuning:
+        max_change_percent: 20  # Parameter within 20% of current value
+        allowed_parameters:
+          - max_connections
+          - shared_buffers
+          - work_mem
+
+  approve:
+    actions:
+      - action: delete_resource
+        approver: "platform-director"
+        timeout_minutes: 60
+        requires_rollback_plan: true
+      - action: terminate_instance
+        approver: "platform-director"
+        timeout_minutes: 60
+      - action: security_group_change
+        approver: "security-team"
+        timeout_minutes: 120
+      - action: cost_action_over_threshold:
+          threshold_usd: 500
+        approver: "finance-lead"
+    default_for_unlisted: do  # Trust unless specifically in approve list
+
+  log:
+    enabled: true
+    log_level: verbose
+    retention_days: 2555  # 7 years for compliance
+    include_tool_outputs: true
+    include_approval_chain: true
+```
+
+---
+
+## 2. Structured Approval Proposal Format
+
+When `proposal_format: structured` is configured, the agent generates this proposal before sending to approver:
+
+```markdown
+## Action Proposal — Hermes DB Health Agent
+
+**Action Type:** Modify RDS Parameter Group
+**Proposed Action:** Increase max_connections from 100 to 150 on db-prod-01
+
+**Evidence Supporting This Change:**
+- Connection pool utilization: 98/100 connections (98%) at 14:22 UTC
+- Active wait_event_type=Lock: 12 queries waiting on connection
+- CPU: 28% (normal — not a compute constraint)
+- p99 latency: 450ms (vs. 120ms baseline — 275% elevated)
+
+**Root Cause Assessment (High confidence):**
+Connection pool exhaustion is causing query queuing. Increasing max_connections by 50 provides immediate relief while root cause (elevated active connections) is investigated.
+
+**Expected Outcome:**
+- Connection wait queue should clear within 60 seconds of parameter application
+- p99 latency should return to near-baseline within 5 minutes
+- CPU expected to increase slightly (5-10%) due to additional connections
+
+**Rollback Plan:**
+Reduce max_connections back to 100 via:
+`aws rds modify-db-parameter-group --db-parameter-group-name prod-pg15 --parameters ParameterName=max_connections,ParameterValue=100,ApplyMethod=immediate`
+Note: decreasing max_connections requires active connections to fall first.
+
+**Risk Assessment:** Low — increasing connection limit is reversible; does not risk data loss.
+
+**Time Sensitivity:** High — current connection exhaustion is causing customer-facing latency.
+
+**To approve:** Reply APPROVE | To reject: Reply REJECT [reason] | For info: Reply INFO
+Expires in 10 minutes. If no response, action will be ABORTED.
+```
+
+---
+
+## 3. Audit Log Format
+
+Every agent action produces an audit log entry:
+
+```json
+{
+  "audit_id": "AUD-2026-04-01-0001",
+  "timestamp": "2026-04-01T14:23:11Z",
+  "agent": {
+    "profile": "rds-health-agent",
+    "version": "1.3.2",
+    "governance_level": "L3",
+    "skill": "rds-health-v1.2"
+  },
+  "trigger": {
+    "type": "webhook",
+    "source": "cloudwatch-alarm",
+    "alarm_name": "RDS-ConnectionCount-db-prod-01"
+  },
+  "actions": [
+    {
+      "sequence": 1,
+      "action_type": "read_metrics",
+      "tool": "terminal",
+      "command": "aws cloudwatch get-metric-statistics [params]",
+      "governance_category": "DO",
+      "status": "success",
+      "elapsed_ms": 1240
+    },
+    {
+      "sequence": 5,
+      "action_type": "modify_rds_parameter",
+      "governance_category": "APPROVE",
+      "proposal_sent_at": "2026-04-01T14:24:01Z",
+      "approver": "dba-team",
+      "approved_by": "jane.smith@example.com",
+      "approved_at": "2026-04-01T14:26:33Z",
+      "tool": "terminal",
+      "command": "aws rds modify-db-parameter-group [params]",
+      "status": "success",
+      "elapsed_ms": 890
+    }
+  ],
+  "outcome": {
+    "diagnosis": "Connection pool exhaustion — max_connections at capacity",
+    "confidence": "high",
+    "action_taken": "Increased max_connections 100→150 (approved)",
+    "escalation": "none"
+  }
+}
+```
+
+**Audit log retention:** Configure per your compliance requirements. Minimum recommended:
+- L1/L2: 90 days
+- L3: 365 days
+- L4: 7 years (2,555 days) for enterprise compliance
+
+---
+
+## 4. Promotion Criteria Checklist
+
+Use this checklist before promoting an agent to the next level:
+
+### L1 → L2 Promotion
+
+```
+[ ] Agent has operated at L1 for minimum 30 days
+[ ] Diagnosis accuracy rate ≥90% (verified against human outcome records)
+[ ] Zero false P1 escalations in the 30-day window
+[ ] All audit logs reviewed — no unexpected actions or access patterns
+[ ] Proposed L2 autonomous actions reviewed and approved by team lead
+[ ] L2 governance config reviewed by security team
+```
+
+### L2 → L3 Promotion
+
+```
+[ ] Agent has operated at L2 for minimum 60 days
+[ ] Proposals approved without modification ≥80% (from audit log)
+[ ] Zero incidents caused by agent autonomous actions in 60-day window
+[ ] L3 autonomous actions individually reviewed: blast radius assessed, rollback plan documented for each
+[ ] Formal governance review meeting held, decision recorded
+[ ] L3 governance config reviewed by security and platform leads
+```
+
+### L3 → L4 Promotion
+
+```
+[ ] Agent has operated at L3 for minimum 90 days
+[ ] Autonomous L3 actions successful ≥95% (from audit log)
+[ ] L4 autonomous action scope formally documented
+[ ] Each L4 action has: rollback plan, blast radius assessment, responsible human owner
+[ ] Formal governance board review with written sign-off
+[ ] Incident response plan for "agent causes an incident at L4" documented
+[ ] Security team signed off on L4 credential scope
+```
+
+---
+
+## 5. Demotion Triggers
+
+| Trigger | Automatic Demotion |
+|---------|-------------------|
+| Incident caused by autonomous agent action | Immediate demotion one level |
+| Accuracy rate < 80% over 30-day rolling window | Demotion to L2 + review |
+| False P1 escalation | Demotion review (may remain at current level with documented fix) |
+| Unapproved action detected in audit log | Immediate L1 until investigation complete |
+| Security finding in agent credential scope | Immediate L1 until remediated |

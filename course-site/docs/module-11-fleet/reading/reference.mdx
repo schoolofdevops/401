@@ -1,0 +1,212 @@
+---
+id: module-11-reference
+title: "Reference: Fleet Configuration and Coordinator Templates"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "Fleet configuration patterns, coordinator SOUL.md template, and delegation configuration"
+---
+
+# Reference: Fleet Configuration and Coordinator Templates
+
+Quick-reference for Module 11 — configuring a Hermes fleet with a coordinator and specialist agents.
+
+---
+
+## 1. Fleet Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  Coordinator Agent                   │
+│                                                      │
+│  soul.md          "I route, collect, synthesize"     │
+│  config.yaml      Has delegate_task tool enabled     │
+│  skills/          coordination-skill.md              │
+└─────────────┬───────────────┬───────────────┬───────┘
+              │               │               │
+    ┌──────��──▼──┐  ┌─────────▼──┐  ┌─────────▼──┐
+    │ DB Health  │  │  FinOps    │  │  K8s Health│
+    │  Agent     │  │  Agent     │  │  Agent     │
+    │ (Track A)  │  │ (Track B)  │  │ (Track C)  │
+    └────────────┘  └────────────┘  └────────────┘
+```
+
+---
+
+## 2. Coordinator SOUL.md Template
+
+```markdown
+# Hermes — Incident Coordinator
+
+## Identity
+You are Hermes Coordinator, the fleet orchestrator for the Platform Engineering team.
+Your role is to receive cross-domain incidents, delegate to specialist agents, and synthesize their findings into a unified diagnosis.
+
+You are NOT a domain specialist. You have no deep expertise in databases, Kubernetes, or cost analysis individually. Your expertise is in knowing which specialist to ask and how to synthesize their responses.
+
+## Specialist Agents Available
+- **rds-health-agent**: Database performance, connection pool, slow query analysis
+- **k8s-health-agent**: Kubernetes pod health, resource pressure, deployment issues
+- **finops-agent**: AWS cost anomalies, EC2 utilization, right-sizing
+
+## Coordination Procedure
+1. Analyze the incident: identify which domains are involved
+2. Delegate to each relevant specialist with a bounded, specific task
+3. Wait for all specialist responses
+4. Identify cross-domain patterns (same timestamp, correlated metrics)
+5. Generate unified incident report
+
+## Communication Style
+- Lead the output with: "Cross-Domain Incident Report"
+- Structure: Executive Summary → Domain Findings (one section per specialist) → Correlation Analysis → Root Cause Hypothesis → Recommended Actions → Escalation Decision
+- Label each domain finding with the specialist agent name that produced it
+
+## Behavioral Constraints
+- You NEVER attempt domain-specific diagnosis yourself — delegate to specialists
+- You ALWAYS include correlation analysis even if specialists found independent issues
+- You ESCALATE the entire fleet report to on-call if any specialist escalates at P1 or P2
+- You DO NOT add context that was not in the specialist outputs — your job is synthesis, not speculation
+
+## What You Do Not Do
+- Domain-specific commands (no direct kubectl, aws, psql calls — delegates handle this)
+- Recommendations without grounding in specialist evidence
+- Pretend to have domain expertise you do not have
+```
+
+---
+
+## 3. Fleet config.yaml with Delegation
+
+```yaml
+profile_name: "incident-coordinator"
+soul: "./soul.md"
+model: "claude-opus-4-5"
+
+tools:
+  delegation:
+    enabled: true
+    agents:
+      rds-health-agent:
+        profile_path: "../rds-health-agent/"
+        timeout: 60  # seconds to wait for specialist response
+      k8s-health-agent:
+        profile_path: "../k8s-health-agent/"
+        timeout: 45
+      finops-agent:
+        profile_path: "../finops-agent/"
+        timeout: 60
+    max_concurrent_delegations: 3  # all three can run in parallel
+    delegation_timeout: 90  # overall timeout if specialists don't respond
+
+skills:
+  - path: "./skills/coordination.md"
+    triggers: ["incident", "investigate", "analyze", "cross-domain", "latency", "spike", "anomaly"]
+```
+
+---
+
+## 4. Coordinator Skill Template
+
+```markdown
+# Cross-Domain Incident Coordination
+
+## Metadata
+- version: 1.0.0
+- domain: Coordination / Fleet
+- author: Platform Engineering
+- triggers: ["incident", "investigate", "cross-domain analysis"]
+
+## Inputs
+- incident_description: string — what the engineer reported
+- time_window: string — incident start and duration (e.g., "02:00-06:00 UTC April 1")
+- severity: string — P1/P2/P3 or Unknown
+
+## Procedure
+
+1. Analyze incident description to identify affected domains:
+   - Keywords suggesting DB domain: latency, query, connection, RDS, slow, database
+   - Keywords suggesting K8s domain: pod, crashloop, restart, deploy, container, OOMKilled
+   - Keywords suggesting cost domain: bill, spend, cost, charge, usage, anomaly
+
+2. For each identified domain, delegate with bounded task:
+   ```
+   delegate_task(
+     agent="[specialist-agent-name]",
+     task="[specific-domain-question]",
+     context="Incident: {incident_description}. Time window: {time_window}. Specifically: [domain-specific question]"
+   )
+   ```
+
+3. Collect all specialist responses. Note: which domains found issues, which found normal.
+
+4. Correlation analysis:
+   - Do any specialists report anomalies at the same timestamp?
+   - Does one finding explain another? (e.g., pod increase → DB connection spike)
+   - Are there independent issues that happen to coincide?
+
+5. Generate cross-domain report per format in SOUL.md.
+
+## Decision Trees
+
+### Domain Routing
+
+| Incident Keywords | Delegate To |
+|------------------|-------------|
+| RDS, database, query, latency, connection | rds-health-agent |
+| pod, crashloop, deploy, kubernetes, OOMKilled | k8s-health-agent |
+| cost, spend, bill, EC2 usage, unused | finops-agent |
+| API latency, service slow, timeout | All three (API latency crosses all domains) |
+
+### Escalation Aggregation
+
+| Specialist Escalations | Coordinator Action |
+|-----------------------|-------------------|
+| Any P1 escalation | Escalate full fleet report at P1 immediately |
+| Any P2 escalation | Escalate full fleet report at P2 |
+| All specialists: no action | Document as normal — no escalation |
+| Mixed P3 findings | Escalate at P3 with correlation analysis |
+```
+
+---
+
+## 5. Delegation Message Examples
+
+### Good Delegation (Bounded and Context-Rich)
+
+```
+To: rds-health-agent
+Task: Analyze RDS db-prod-01 connection pool and query latency for 2026-04-01 02:00-06:00 UTC.
+Context: Incident report: API service response times increased 300% starting 02:15 UTC. EC2 CPU is normal (35% average). Specifically: is RDS connection pool saturation contributing to the API latency increase?
+Expected output: Structured diagnosis with Evidence, Root Cause Hypothesis, and Escalation Decision.
+```
+
+### Poor Delegation (Too Broad)
+
+```
+To: rds-health-agent
+Task: Check if the database is okay.
+```
+
+The second form makes the specialist do the scoping work the coordinator should have done. The specialist has no time window, no incident context, and no specific question to answer.
+
+---
+
+## 6. Solo Learner Fleet Setup
+
+If completing the fleet lab solo, configure all three agents sequentially and run a simulated incident:
+
+```bash
+# Directory structure for solo fleet
+solo-fleet/
+├── coordinator/
+│   ├── soul.md
+│   ├── config.yaml
+│   └── skills/coordination.md
+├── rds-health-agent/       # From Module 10 Track A
+├── k8s-health-agent/       # From Module 10 Track C
+└── finops-agent/           # From Module 10 Track B
+
+# Run the coordinator with the cross-domain incident
+hermes --profile ./coordinator --task "Investigate: API latency spike started at 02:15. All three infrastructure domains potentially involved."
+```
+
+The coordinator will delegate to each specialist, collect their analyses of the simulated data, and produce a cross-domain synthesis. You are playing the role of all three specialists' "infrastructure" — the mock data files provide the evidence each specialist reads.

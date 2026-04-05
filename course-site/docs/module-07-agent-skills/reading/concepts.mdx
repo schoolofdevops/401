@@ -1,0 +1,188 @@
+---
+id: module-07-concepts
+title: "Concepts: Agent Skills, Memory, and RAG"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "RAG, embeddings, memory types, and why machine-readable skills beat wiki runbooks"
+---
+
+# Concepts: Agent Skills, Memory, and RAG
+
+This module's lab has you writing a SKILL.md — a machine-readable runbook your agent can execute. Here's why that format matters and the knowledge retrieval concepts behind it. Understanding these concepts will make you a better skill author and help you design agents that stay reliable under operational pressure.
+
+---
+
+## 1. The Runbook Reliability Problem
+
+Consider an AI agent given your wiki runbook as plain text. It reads it correctly. It understands the intent. And then on step 7, where the runbook says "check the usual CloudWatch metrics," the agent checks... what it thinks is usual. Maybe that matches your intent. Maybe it doesn't.
+
+This is the **ambiguity gap** — the space between what your runbook implies and what the agent executes. Experienced engineers fill this gap with institutional knowledge. AI agents fill it with prediction.
+
+**DevOps analogy:** Think of the difference between documentation for a human operator and a configuration file for a service. A human reads "configure with appropriate timeouts" and applies judgment. A service needs `timeout: 30s`. SKILL.md is the `timeout: 30s` version of your runbook.
+
+The specific problems with prose runbooks for agents:
+- **Ambiguous conditions** — "if the service is slow" requires defining slow (threshold, metric, window)
+- **Implied steps** — "verify the deployment" requires specifying which verification commands, in which order, with what success criteria
+- **Missing escalation specifics** — "escalate if needed" requires naming who, via which channel, with what information
+
+SKILL.md resolves all three by making conditions, steps, and escalation explicit.
+
+---
+
+## 2. Memory Types: State Management for Agents
+
+Agents need to remember things. Not all memory works the same way, and choosing the wrong type creates either agents that forget too quickly or agents that accumulate stale context.
+
+**DevOps analogy:** State management in distributed systems. You have in-memory state (fast, volatile), database state (persistent, queryable), and cached procedures (pre-compiled, reusable). Agents have the same architecture.
+
+### Short-Term Memory (Conversation Context)
+
+Short-term memory is the active conversation context — everything the agent has received and generated in the current session. It lives in the context window.
+
+**Characteristics:**
+- Bounded by context window size (typically 100K-200K tokens in modern models)
+- Lost when the session ends
+- Perfect for: in-session reasoning, multi-step tasks, intermediate results
+
+**Operational equivalent:** Your working memory during an incident. You hold the current log lines, the timeline, the commands you've run. When the incident closes, that context disperses. The next on-call engineer starts fresh unless you wrote a postmortem.
+
+**Failure mode:** Context window overflow. When a session accumulates too much context, older information gets truncated. An agent investigating a long-running incident may "forget" early observations by the time it reaches conclusions. Skill design must account for this — break long tasks into discrete sessions with explicit state handoffs.
+
+### Long-Term Memory (Cross-Session Storage)
+
+Long-term memory persists across sessions. The agent can store findings, learned patterns, and operational context in a database and retrieve them in future sessions.
+
+**Characteristics:**
+- Unlimited (bounded only by storage)
+- Persistent across sessions
+- Requires explicit retrieval (does not auto-appear in context)
+- Tools: vector databases, key-value stores, structured databases
+
+**Operational equivalent:** Your postmortem database, runbook wiki, incident history. Valuable knowledge that accumulated over time. The problem is the same for both humans and agents: finding the relevant piece when you need it.
+
+**In Hermes:** The `memory` tool lets agents store and retrieve long-term observations. A DB Health agent can store "this RDS instance consistently hits connection limits on Mondays at 09:00" — and retrieve that context in the next investigation session.
+
+### Procedural Memory (Skills)
+
+Procedural memory is encoded expertise — not facts to recall, but procedures to execute. For agents, this is SKILL.md files loaded at runtime.
+
+**Characteristics:**
+- Instruction-based, not fact-based
+- Loaded selectively (only the relevant skills for the current task)
+- Versioned and improvable over time
+- The agent follows the procedure, it does not recall it from training
+
+**Operational equivalent:** Ansible playbooks. You don't need to remember every step of provisioning a new server — you run the playbook and it executes the procedure correctly every time. SKILL.md is the Ansible playbook for your agent's operational expertise.
+
+**Why this matters:** An AI agent without procedural memory makes up its own procedure for every task. That procedure may be reasonable or it may miss your organization's specific safety steps, escalation paths, or conditional branches. SKILL.md replaces "AI improvises" with "AI executes your expertise."
+
+---
+
+## 3. RAG: When Skills Are Not Enough
+
+SKILL.md covers procedural knowledge. But some agent tasks require **factual retrieval** — looking up current documentation, recent incidents, pricing data, or service configurations that change frequently and cannot be hardcoded.
+
+**RAG (Retrieval-Augmented Generation)** is the pattern for giving agents access to a knowledge base they can query at runtime:
+
+```
+Query → Retrieve relevant documents → Augment context → Generate response
+```
+
+**DevOps analogy:** Incident response. A skilled SRE doesn't just remember everything — they know which dashboards to check, which runbooks to pull, and which recent tickets to review. They retrieve the relevant information for the specific incident. RAG is this retrieval pattern formalized for AI agents.
+
+### Embeddings and Semantic Search
+
+Traditional search is keyword-based. "EC2 high CPU" returns documents containing those exact words. But the document you need might use "compute instance memory pressure" or "worker node resource saturation" — the same concept, different words.
+
+Embeddings solve this. An embedding is a vector representation of text meaning — a list of numbers that encodes semantic content. Texts with similar meanings have similar vectors, regardless of word choice.
+
+**DevOps analogy:** Container image layers. Each image layer is a content hash of its contents. Images with similar contents have similar fingerprints (partial layer reuse). Embeddings do the same for text meaning — similar content, similar vector fingerprint.
+
+### Vector Databases
+
+Vector databases store embeddings and support similarity search: "find the N documents whose meaning is most similar to this query."
+
+| Database | Operational Analogy | Use Case |
+|----------|---------------------|----------|
+| ChromaDB | Local file storage | Development, small knowledge bases |
+| Pinecone | Managed S3 | Production, large knowledge bases |
+| pgvector | PostgreSQL extension | Existing Postgres infrastructure |
+| Weaviate | Elasticsearch for meaning | Hybrid keyword + semantic search |
+
+**The key operation:** Given a query embedding, find documents whose embeddings are within a similarity threshold (cosine similarity, dot product). This is "find what means the same thing" as opposed to "find what contains the same words."
+
+### Agentic RAG: The Agent Decides What to Retrieve
+
+Standard RAG retrieves once, adds results to context, generates response. Agentic RAG is more dynamic: the agent decides when and what to retrieve, mid-task, based on what it discovers.
+
+**Example flow:**
+1. Agent receives task: "Investigate high P99 latency on the payments service"
+2. Agent retrieves: recent architecture docs for payments service
+3. Agent runs diagnostic commands, discovers connection pool saturation
+4. Agent decides to retrieve: documentation on PostgreSQL connection pool tuning
+5. Agent generates structured diagnosis + recommendations
+
+**DevOps analogy:** An SRE who knows when to consult documentation and when to work from memory. They don't look everything up (too slow), and they don't rely purely on memory (too error-prone for unfamiliar situations). Agentic RAG is this calibrated retrieval — triggered by what the agent discovers, not just by the initial query.
+
+### Graph RAG: When Relationships Matter
+
+Graph RAG extends standard RAG with a knowledge graph — a network of entities and relationships. Instead of finding similar documents, the agent can traverse relationships: "this service depends on this database, which is also used by this other service, which recently had an incident."
+
+**DevOps analogy:** A service mesh dependency map. You don't just need the most similar service definition — you need to understand which services are upstream and downstream of an incident, which share infrastructure, which have correlated failure patterns.
+
+Graph RAG is more complex to set up than standard RAG and is typically introduced in advanced agent architectures. For Module 7's lab, standard RAG and procedural skills are the primary tools.
+
+---
+
+## 4. Hallucination and Why Skills Provide Guardrails
+
+AI agents hallucinate. This is not a bug — it is a property of how language models work. The model generates the most probable next token, and sometimes the most probable token is wrong.
+
+**The risk in operational contexts:**
+
+An agent without guardrails might:
+- Recommend deleting a table that "probably" isn't in use
+- Generate a kubectl command with a flag that does not exist
+- Describe a resolution step from a different service's runbook that happens to look similar
+
+**Why SKILL.md reduces hallucination risk:**
+
+Skills constrain the agent's action space. Instead of "what should I do about high CPU?", the agent reads: "for CPU > 80% sustained 5 min: run `aws cloudwatch get-metric-statistics`, check against threshold table, if confirmed: escalate via PagerDuty priority P2, do not restart the instance."
+
+The agent cannot hallucinate steps that are not in the skill. It follows the decision tree. Gaps in the skill are gaps in behavior — which is why you test skills against realistic scenarios before deploying them.
+
+**Temperature and skill execution:** Skills should be executed at low temperature (0.0-0.1). High temperature introduces variability in which branch of a decision tree the agent follows. The same incident might get different responses on different runs. For operational reliability, you want deterministic behavior — which requires both good skill design and low temperature configuration.
+
+---
+
+## 5. Skills as Procedural Memory: The Architecture Connection
+
+Skills are loaded into the agent's context window at runtime. They are not training data — the agent does not "learn" skills in the machine learning sense. It reads them the same way it reads any text in its context.
+
+This has important implications:
+
+**Skills compete for context space:** An agent with 20 loaded skills is using significant context tokens on skill definitions, leaving less space for operational data and conversation history. Selective skill loading (load only the skills relevant to the current task) is essential for context efficiency.
+
+**Skills are versionable:** Like Ansible playbooks, you can maintain multiple versions of a skill. A skill for an older RDS version can be replaced with a new one for the upgraded version. The agent picks up the new procedure without retraining.
+
+**Skills are auditable:** Every action the agent takes is grounded in a specific step in a specific skill version. When an agent recommends "increase max_connections to 200", that recommendation traces back to `rds-health-v1.2.md, step 4.b.iii`. This auditability matters for enterprise governance (Module 13).
+
+**The improvement loop:** Skills can be improved iteratively. Run the skill, observe where the agent's execution diverges from expected behavior, refine the skill, retest. This is the `Design → Validate → Version → Deploy → Improve` lifecycle.
+
+---
+
+## Summary
+
+| Concept | What It Is | Operational Analogy |
+|---------|-----------|---------------------|
+| Short-term memory | Active conversation context (context window) | Working memory during an incident |
+| Long-term memory | Cross-session persistent storage | Postmortem database, incident history |
+| Procedural memory | Skills loaded at runtime (SKILL.md) | Ansible playbooks |
+| RAG | Retrieve documents to augment context before generation | SRE checking dashboards and runbooks before diagnosis |
+| Embeddings | Vector representation of text meaning | Container image layer hashes (similar content, similar fingerprint) |
+| Agentic RAG | Agent-triggered retrieval mid-task | SRE knowing when to look something up vs. work from memory |
+| Graph RAG | Knowledge graph + RAG for relationship-aware retrieval | Service mesh dependency map |
+
+**The core principle:** Skills encode what your agent knows how to do. RAG retrieves what your agent needs to know for this specific situation. Together, they replace "AI improvises" with "AI executes expertise."
+
+**Next:** [Reference — SKILL.md Format and Skill Lifecycle](./module-07-reference)

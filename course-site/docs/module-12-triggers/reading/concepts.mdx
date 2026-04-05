@@ -1,0 +1,218 @@
+---
+id: module-12-concepts
+title: "Concepts: Interface Patterns and Trigger Design"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "Cron, webhooks, chat interfaces, and Mission Control — how agents become operational services"
+---
+
+# Concepts: Interface Patterns and Trigger Design
+
+Your agent works when you run it manually. Now it needs to work when you are not there. This module covers the four interface patterns that turn an agent from "a tool you invoke" into "an operational service."
+
+---
+
+## 1. The Four Interface Patterns
+
+Each interface pattern serves a different operational need. Most production agent deployments use multiple patterns for different interaction modes.
+
+### Pattern 1: CLI (Direct Invocation)
+
+The agent is invoked directly from the command line by a human operator.
+
+```bash
+hermes --profile ./rds-health-agent --task "Investigate connection pool saturation on db-prod-01"
+```
+
+**Best for:** Ad-hoc investigations, development and testing, debugging specific issues, scenarios where a human is actively involved in the interaction.
+
+**Limitation:** Requires a human to be present and to remember to run it. Cannot respond autonomously to events.
+
+**DevOps analogy:** Directly SSH-ing into a server to run a diagnostic command. Useful when you know what you're looking for and you're already engaged with the incident.
+
+### Pattern 2: Cron (Scheduled Execution)
+
+The agent runs on a schedule, performing periodic checks autonomously.
+
+```yaml
+schedule: "0 7 * * *"  # Daily at 07:00 UTC
+task: "Daily DB health check: review slow queries from last 24 hours and report top 5"
+output_routing: slack-alerts-channel
+```
+
+**Best for:** Regular health checks (daily, hourly), trend analysis that benefits from consistent sampling intervals, preventive diagnosis (catch issues before they become incidents), operational reporting.
+
+**DevOps analogy:** A Kubernetes CronJob for operations. Just as you schedule a CronJob to clean up old images or backup a database, you schedule an agent to perform daily health checks and generate trend reports.
+
+**Design considerations:**
+- **Idempotency:** A scheduled task should produce the same type of output every time it runs, regardless of what it finds. This makes the output comparable across runs.
+- **Output routing:** Scheduled tasks need a defined destination for their output — Slack channel, email, log file, or ticket queue. A report that has nowhere to go is useless.
+- **Alert threshold vs. report:** Decide upfront: does this task generate a periodic report (always produces output) or an alert (only produces output when something is wrong)? Design the skill accordingly.
+
+### Pattern 3: Webhooks (Event-Driven Execution)
+
+The agent is triggered by external events via HTTP webhook subscription. When a monitoring system fires an alert, or a CI/CD pipeline completes, or a deployment succeeds — the event triggers the agent automatically.
+
+**DevOps analogy:** Like a Kubernetes controller watching for events. When a controller detects a pod in CrashLoopBackOff (an event), it takes defined action. Webhook-triggered agents do the same: monitor for events, act automatically when the event occurs.
+
+**Common trigger events:**
+- PagerDuty alert fires → agent investigates and adds diagnosis to the incident
+- CloudWatch alarm triggers → agent runs the relevant diagnostic skill and posts findings
+- CI/CD pipeline fails → agent analyzes logs and suggests fixes
+- Deployment completes → agent runs post-deploy health check
+- Cost anomaly detected → FinOps agent investigates the anomaly
+
+**Event payload design:** The webhook receives a JSON payload from the triggering system. The payload is what the agent uses as its task context — the agent needs to extract: what happened, when, where, what severity. The SKILL.md should specify how to parse the incoming payload.
+
+**HMAC validation:** Webhook endpoints should validate HMAC signatures to ensure the webhook is from a trusted source. Without validation, any HTTP client can trigger your agent with arbitrary payloads.
+
+### Pattern 4: Chat Interface (Slack/Teams)
+
+The agent is accessible via a chat command in Slack or Teams, allowing conversational interaction.
+
+```
+/hermes investigate db-prod-01 slow queries last 2 hours
+```
+
+**Best for:** On-call scenarios where engineers are already in Slack during an incident, team-shared access to agent capabilities, situations where conversational follow-up is valuable ("show me the last 24 hours" → "now filter to just the high-priority items").
+
+**DevOps analogy:** An Ops bot in your incident Slack channel. When an on-call engineer receives a PagerDuty page, they go to the incident channel. If the agent is accessible via Slack command, they can run a diagnosis without switching contexts.
+
+**Design consideration:** Chat interfaces are lower-latency for human interaction (no terminal open required) but lose the precision of CLI invocation. Chat commands should map to well-defined tasks, not open-ended questions.
+
+---
+
+## 2. Choosing the Right Interface Pattern
+
+| Use Case | Pattern | Why |
+|----------|---------|-----|
+| Daily DB health report | Cron | Predictable schedule, no human trigger needed |
+| Alert-triggered investigation | Webhook | Event-driven, automatic, fast response |
+| On-call incident investigation | CLI or Slack | Human is present, conversational follow-up valuable |
+| Post-deploy health check | Webhook (CI/CD trigger) | Automatically runs after every deployment |
+| Trend analysis dashboard | Cron | Regular sampling needed for trend calculation |
+| Team-shared agent access | Slack | No terminal access required |
+| Development and testing | CLI | Precise control, fast iteration |
+
+**The right choice is almost always more than one.** A production DB health agent typically uses:
+- Cron for daily health reports
+- Webhook for alert-triggered investigation
+- CLI or Slack for on-demand investigation during incidents
+
+---
+
+## 3. Cron System Design
+
+Hermes's cron system is built on standard cron syntax but adds agent-specific features: output routing, error handling, and conditional execution.
+
+### When to Run Periodically vs. Event-Driven
+
+The key question is: does the work make sense without a triggering event, or is it only valuable in response to something that happened?
+
+**Periodic (cron) work:**
+- Health reporting (always valuable, regardless of events)
+- Trend calculation (needs consistent time intervals)
+- Preventive checks (looking for early warning signs)
+- Cleanup and optimization (not triggered by an event, triggered by time)
+
+**Event-driven work:**
+- Incident investigation (the event IS the reason to investigate)
+- Post-deploy validation (the deployment IS the trigger)
+- Alert triage (the alert IS the trigger)
+
+**Anti-pattern:** Scheduling a high-frequency cron job to "poll for events." If you check every 5 minutes whether something happened, you want a webhook, not a cron job. Polling burns context budget and agent compute for no benefit when the event does not occur.
+
+### Cron Expression Best Practices
+
+```
+# Daily report at 07:00 UTC (before US East Coast business hours)
+0 7 * * *
+
+# Hourly health check during business hours only (08:00-18:00 UTC weekdays)
+0 8-18 * * 1-5
+
+# Weekly cost report on Monday morning
+0 8 * * 1
+
+# Every 30 minutes during incident window (temporarily elevated frequency)
+*/30 * * * *
+```
+
+**Time zone consideration:** Hermes cron uses UTC. Convert your intended schedule to UTC for cross-team consistency.
+
+---
+
+## 4. Webhook Design
+
+### Webhook Payload Parsing
+
+When a webhook event arrives, the agent receives a JSON payload. The coordination skill must:
+1. Parse the payload to extract relevant fields
+2. Map those fields to agent task inputs
+3. Route to the appropriate specialist or skill
+
+**CloudWatch SNS Alarm payload extract:**
+```json
+{
+  "AlarmName": "RDS-ConnectionCount-db-prod-01",
+  "NewStateValue": "ALARM",
+  "NewStateReason": "Threshold Crossed: 1 datapoint (98.0) was greater than or equal to the threshold (95.0)",
+  "StateChangeTime": "2026-04-01T02:15:30.000Z",
+  "Trigger": {
+    "MetricName": "DatabaseConnections",
+    "Namespace": "AWS/RDS",
+    "Dimensions": [{"name": "DBInstanceIdentifier", "value": "db-prod-01"}]
+  }
+}
+```
+
+The agent extracts: `DBInstanceIdentifier` → task target, `MetricName` → which skill to trigger, `StateChangeTime` → time window for investigation.
+
+### HMAC Signature Validation
+
+Before processing a webhook payload, validate it:
+```python
+import hmac, hashlib
+
+def validate_webhook(payload: bytes, signature: str, secret: str) -> bool:
+    expected = "sha256=" + hmac.new(
+        secret.encode(), payload, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+```
+
+Rejecting invalid signatures prevents arbitrary HTTP clients from triggering your agent with crafted payloads.
+
+---
+
+## 5. Mission Control: The Dashboard Interface
+
+Mission Control is the conceptual name for a dashboard interface that provides situational awareness across an agent fleet. It is not a current Hermes feature — it is the natural evolution of fleet orchestration.
+
+**What Mission Control provides:**
+- Fleet status: which agents are active, which have been invoked recently, which have alerts outstanding
+- Task history: what tasks have been run, what were the findings, what actions were taken
+- Approval queue: tasks waiting for human approval before proceeding (Module 13)
+- Trend visualization: agent findings over time — is the system getting healthier or showing emerging patterns?
+
+**DevOps analogy:** Grafana for your agent fleet. Just as Grafana aggregates metrics from all your services into a unified dashboard, Mission Control aggregates agent activity and findings into a single operational view.
+
+This dashboard is particularly valuable as fleets grow: with 3 agents, you can mentally track their activity. With 10+ agents running daily cron schedules and responding to webhook events, you need a single pane of glass.
+
+---
+
+## Summary
+
+| Interface | Trigger | Human Present | Best Use Case |
+|-----------|---------|--------------|---------------|
+| CLI | Manual | Yes | Ad-hoc, development, debugging |
+| Cron | Schedule | No | Periodic health checks, reporting, trends |
+| Webhook | Event | No | Alert response, post-deploy validation |
+| Chat (Slack) | Manual chat command | Yes | On-call, team-shared access |
+| Mission Control | Dashboard | Optional | Fleet situational awareness |
+
+**The production pattern:** Most teams end up with: cron for scheduled reports + webhooks for event-driven alerts + Slack for on-call access. CLI is always available as the baseline.
+
+**Context engineering connection:** Interface design IS context engineering. When you configure a webhook to trigger an agent, you are engineering what context (the parsed alert payload) the agent receives when it starts working. When you configure cron, you are engineering the operational context (what time-window to analyze, what to compare against) through the scheduled task definition.
+
+**Next:** [Reference — Cron Config, Webhook Setup, Slack Integration](./module-12-reference)

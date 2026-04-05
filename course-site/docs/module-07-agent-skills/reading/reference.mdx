@@ -1,0 +1,246 @@
+---
+id: module-07-reference
+title: "Reference: SKILL.md Format and Skill Lifecycle"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "SKILL.md format reference, annotated examples, and the skill lifecycle"
+---
+
+# Reference: SKILL.md Format and Skill Lifecycle
+
+Quick-reference material for Module 7 — writing domain-specific skills for Hermes agents.
+
+---
+
+## 1. SKILL.md Structure
+
+A complete SKILL.md has five required sections:
+
+```markdown
+# [Skill Name]
+
+## Metadata
+- version: [semver, e.g., 1.0.0]
+- domain: [area, e.g., "RDS / PostgreSQL"]
+- author: [your name or team]
+- last_validated: [YYYY-MM-DD]
+- triggers: [what conditions invoke this skill]
+
+## Inputs
+- [input_name]: [type] — [description, validation rules]
+- ...
+
+## Procedure
+[Numbered steps with explicit commands, conditions, and branches]
+
+## Decision Trees
+[Structured condition → action tables or flowcharts]
+
+## Escalation
+- [condition]: [escalation target] via [channel] with [required information]
+- ...
+```
+
+---
+
+## 2. Annotated SKILL.md Example: EC2 Health Check
+
+```markdown
+# EC2 Health Check
+
+## Metadata
+- version: 1.2.0
+- domain: SRE / EC2
+- author: Platform Engineering
+- last_validated: 2026-03-15
+- triggers: ["ec2 health check", "instance unreachable", "high cpu alert"]
+
+## Inputs
+- instance_id: string — AWS EC2 instance ID (format: i-[17 hex chars])
+- region: string — AWS region (default: us-east-1)
+- alert_threshold_cpu: number — CPU % threshold that triggered investigation (default: 80)
+
+## Procedure
+
+1. Verify instance state:
+   ```
+   aws ec2 describe-instances --instance-ids {instance_id} --region {region} \
+     --query 'Reservations[0].Instances[0].{State:State.Name,Type:InstanceType,AZ:Placement.AvailabilityZone}'
+   ```
+   Expected: State = "running". If "stopped" or "terminated": escalate immediately (see Escalation section, case A).
+
+2. Check system status checks:
+   ```
+   aws ec2 describe-instance-status --instance-ids {instance_id} --region {region} \
+     --query 'InstanceStatuses[0].{SystemStatus:SystemStatus.Status,InstanceStatus:InstanceStatus.Status}'
+   ```
+   Expected: both = "ok". If either = "impaired": this is a hardware issue, escalate (case B).
+
+3. Retrieve CPU metrics (last 30 minutes):
+   ```
+   aws cloudwatch get-metric-statistics \
+     --namespace AWS/EC2 --metric-name CPUUtilization \
+     --dimensions Name=InstanceId,Value={instance_id} \
+     --start-time $(date -u -v-30M +%Y-%m-%dT%H:%M:%SZ) \
+     --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+     --period 300 --statistics Average,Maximum \
+     --region {region}
+   ```
+
+4. Evaluate CPU data — see Decision Tree below.
+
+5. Check network throughput and disk I/O:
+   ```
+   aws cloudwatch get-metric-statistics \
+     --namespace AWS/EC2 --metric-name NetworkPacketsOut \
+     --dimensions Name=InstanceId,Value={instance_id} \
+     --start-time $(date -u -v-30M +%Y-%m-%dT%H:%M:%SZ) \
+     --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+     --period 300 --statistics Sum --region {region}
+   ```
+
+6. Generate diagnosis report with: instance ID, current state, CPU trend (last 30 min), top anomaly finding, recommended action, escalation decision.
+
+## Decision Trees
+
+### CPU Evaluation
+
+| CPU Average (30 min) | CPU Peak | Action |
+|---------------------|---------|--------|
+| under 50% | under 80% | Normal — no action. Document in report. |
+| 50-80% | under 90% | Elevated — recommend investigation. Check application logs. |
+| over 80% | any | High — proceed to Step 5. Check network + disk correlation. |
+| over 80% | sustained over 95% for 10+ min | Critical — escalate (case C). Do not restart without approval. |
+
+### Root Cause Routing
+
+| Finding | Likely Cause | Recommended Action |
+|---------|-------------|-------------------|
+| CPU high + network low | Application processing issue | Check application logs, JVM heap, query patterns |
+| CPU high + network high | Traffic spike or DDoS | Check ALB metrics, WAF logs, enable CloudWatch detailed monitoring |
+| CPU high + disk I/O high | I/O bound workload | Check EBS throughput, consider IOPS-optimized volume type |
+| Status checks impaired | Hardware failure | Escalate immediately — AWS may need to retire instance |
+
+## Escalation
+
+- **Case A (instance stopped/terminated):** Escalate to on-call via PagerDuty P2. Include: instance ID, state, time discovered, last known healthy time.
+- **Case B (status check impaired):** Escalate to on-call via PagerDuty P1. Include: instance ID, impaired check name, region. Do not attempt remediation.
+- **Case C (CPU critical sustained):** Escalate to on-call via PagerDuty P2. Include: full CPU metrics dump, network metrics, application service name. Do not restart.
+```
+
+---
+
+## 3. Runbook Wiki vs. SKILL.md Comparison
+
+| Property | Wiki Runbook | SKILL.md |
+|----------|-------------|---------|
+| **Reader** | Human operator | AI agent |
+| **Ambiguity** | Human fills gaps with judgment | Gaps cause agent errors |
+| **Conditions** | "If high CPU" (implied threshold) | `if cpu_avg > 80: step 4a` (explicit) |
+| **Commands** | "Check CloudWatch" (general direction) | Exact command with parameters |
+| **Escalation** | "Escalate if needed" | Named target, channel, required info |
+| **Versioning** | Updated in place, history unclear | Semantic versioning, changelog |
+| **Testing** | Tested by running through incidents | Tested against simulated scenarios |
+| **Context cost** | Irrelevant | Matters — verbose runbooks consume context budget |
+| **Improvement** | Updated by whoever edited it last | Structured improvement cycle |
+
+---
+
+## 4. Skill Lifecycle
+
+```
+Design → Validate → Version → Deploy → Improve
+```
+
+### Design
+
+Define: domain, inputs, procedure steps, decision trees, escalation paths.
+
+Key questions to answer:
+- What triggers this skill? (What does the agent see that makes it select this skill?)
+- What are the typed inputs? (What information must be available before execution begins?)
+- What are the step-by-step commands? (Exact shell commands, not general descriptions)
+- What are the failure modes? (What does the agent do when a step produces unexpected output?)
+- What are the escalation conditions? (When does the agent stop and hand off to a human?)
+
+### Validate
+
+Test the skill against realistic scenarios before deploying. Methods:
+- **Simulated data run:** Execute the skill against mock CLI responses — verify the agent follows the correct decision tree branches
+- **Dry-run on real infra:** Execute the skill with `read-only` tool constraints — verify commands are correct, verify output parsing
+- **Edge case table:** Define 5-10 realistic inputs (normal, high-load, impaired, missing data) and verify the agent produces the expected action
+
+### Version
+
+Use semantic versioning: `MAJOR.MINOR.PATCH`
+- MAJOR: Breaking change to inputs or procedure structure
+- MINOR: New decision tree branch, new escalation case, new step
+- PATCH: Clarification, command syntax fix, threshold update
+
+Maintain a changelog at the top of the file:
+```markdown
+## Changelog
+- 1.2.0 (2026-03-15): Added disk I/O evaluation step and root cause routing table
+- 1.1.0 (2026-02-01): Added network throughput check in Step 5
+- 1.0.0 (2026-01-15): Initial version
+```
+
+### Deploy
+
+Place the skill file in your Hermes agent's `skills/` directory. Reference it in your agent's `config.yaml`:
+
+```yaml
+skills:
+  - path: skills/ec2-health-check.md
+    triggers:
+      - "ec2 health check"
+      - "instance unreachable"
+      - "high cpu"
+    load_strategy: trigger  # Only load when triggered, not on every request
+```
+
+`load_strategy: trigger` is critical for context efficiency — skills are only added to the context window when a matching trigger phrase is detected.
+
+### Improve
+
+After each real-world execution:
+1. Review agent output against expected behavior
+2. Identify where the agent deviated from the decision tree (or where the decision tree was ambiguous)
+3. Update the skill to eliminate the ambiguity
+4. Increment MINOR or PATCH version
+5. Re-validate against the updated edge case table
+
+The improvement loop is the mechanism by which your agent gets better over time — not by retraining the model, but by refining the procedural context it reads.
+
+---
+
+## 5. Skill Context Budget
+
+Skills consume context tokens. Each skill loaded into the context window reduces the space available for operational data, conversation history, and reasoning.
+
+**Approximate token costs:**
+
+| Skill Complexity | Approximate Tokens |
+|-----------------|-------------------|
+| Simple skill (3-5 steps, 1 decision tree) | 500-800 tokens |
+| Medium skill (5-10 steps, 2-3 decision trees) | 1,200-2,000 tokens |
+| Complex skill (10+ steps, multiple trees, full escalation matrix) | 2,500-4,000 tokens |
+
+**Context budget guidelines:**
+- Load at most 3-4 skills concurrently for a standard 100K context window
+- Use `load_strategy: trigger` to prevent all skills loading on every request
+- Split large skills into focused sub-skills (e.g., `rds-health-diagnosis.md` + `rds-health-remediation.md`)
+- Compress verbose skills: eliminate prose, keep only commands, conditions, and escalation data
+
+---
+
+## 6. Skill Anti-Patterns
+
+| Anti-Pattern | Problem | Fix |
+|-------------|---------|-----|
+| `"Check the usual metrics"` | Undefined — agent will hallucinate "usual" | List exact metric names and thresholds |
+| `"Escalate if needed"` | No condition — agent never knows when "needed" | Define explicit escalation conditions |
+| `"Restart the service"` | No context — which service, which command? | Full command: `systemctl restart nginx --host {host}` |
+| `"See runbook section 4"` | Cross-reference not loadable at runtime | Inline the referenced content |
+| 1000-line skill covering all scenarios | Context budget exceeded | Split into domain-specific sub-skills |
+| No version or date | No auditability | Always include version and last_validated |

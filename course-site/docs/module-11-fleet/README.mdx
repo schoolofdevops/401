@@ -1,0 +1,58 @@
+---
+id: module-11-readme
+title: "Module 11: Fleet Orchestration"
+sidebar_label: "Overview"
+sidebar_position: 0
+---
+
+# Module 11: Fleet Orchestration
+
+**Duration:** 60 minutes
+**Day:** Day 3, Session 5
+
+:::info Lab Location
+The hands-on lab for this module lives in the **Hermes repository**. The lab is designed as a team exercise for the live workshop. See the Solo Learner callout below if you are completing this course independently. Read the [Concepts](./reading/module-11-concepts) page first, then open the Hermes lab guide.
+:::
+
+:::info Solo Learner
+If you are completing this course independently (Udemy or self-paced), the team lab can be adapted: build all three track agents from Module 10 (A, B, C) sequentially, then wire them with a coordinator. You play the role of each domain specialist. The coordinator receives the cross-domain incident and delegates to whichever specialist agent covers that domain. This gives you the same architectural experience as the team lab — it just takes longer (allow 90 minutes total instead of 60).
+:::
+
+## What This Module Is About
+
+One agent is useful. A team of agents is powerful.
+
+Your Module 10 domain agent is excellent within its domain. But real incidents cross domain boundaries: a cost spike may trace to a Kubernetes deployment that caused EC2 scaling, which triggered RDS connection exhaustion. No single domain agent sees the full picture.
+
+Fleet orchestration is the pattern for wiring specialized agents together: a coordinator agent receives a task, analyzes which domain it touches, delegates to the appropriate specialists, collects their diagnoses, and synthesizes a cross-domain response.
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. **Combine agents into a coordinated fleet** with a manager (coordinator) agent and specialist (domain) agents
+2. **Configure delegation** between agents using the Hermes `delegate_task` mechanism
+3. **Explain three fleet patterns** (round-robin, skill-based, hierarchical) and when each is appropriate
+4. **Handle a cross-domain incident scenario** where the coordinator synthesizes inputs from multiple specialists
+
+## Prerequisites
+
+- Module 10 completed (you have at least one working domain agent)
+- Hermes with `delegate_task` tool enabled
+- **Team lab:** Three team members, each with a different Module 10 track agent
+
+## Module Contents
+
+| Section | Content | Time |
+|---------|---------|------|
+| Reading | [Concepts: Fleet Patterns and Delegation](./reading/module-11-concepts) | 15 min |
+| Reading | [Reference: Fleet Configuration and Coordinator Templates](./reading/module-11-reference) | 10 min |
+| Lab | Fleet Orchestration — Team Exercise (Hermes repo) | 25 min |
+| Quiz | [Module 11 Assessment](./quiz/module-11-quiz) | 10 min |
+| Exploratory | [Stretch Projects](./exploratory/module-11-exploratory) | Optional |
+
+## Key Insight: Coordination Without Retraining
+
+Fleet orchestration does not require a more capable AI model. It requires better architecture. A coordinator that delegates "Kubernetes pod analysis" to a specialist with a K8s skill and correct tool access will produce better results than a general-purpose agent that handles all domains at once — not because the coordinator is smarter, but because the specialist has the right context, tools, and procedural memory for its domain.
+
+This is the microservices principle applied to agents: do one thing well, coordinate through well-defined interfaces.

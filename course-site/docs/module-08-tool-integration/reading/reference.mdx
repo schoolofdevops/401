@@ -1,0 +1,285 @@
+---
+id: module-08-reference
+title: "Reference: Tool Configuration and Safety Setup"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "Hermes tool configuration reference, safety examples, and MCP server setup"
+---
+
+# Reference: Tool Configuration and Safety Setup
+
+Quick-reference for Module 8 — configuring tools and safety boundaries in Hermes.
+
+---
+
+## 1. Tool Pattern Comparison
+
+| Pattern | Config Location | Auth Method | Scope | Best For |
+|---------|----------------|------------|-------|---------|
+| CLI (terminal) | `config.yaml: tools.terminal` | Environment variables / credential chain | Shell commands | AWS CLI, kubectl, psql, any CLI tool |
+| API (web) | `config.yaml: tools.web` | API key via env var, Bearer token | HTTP endpoints | PagerDuty, Grafana, GitHub, custom APIs |
+| MCP | `config.yaml: tools.mcp` | MCP server manages auth | Protocol-level | Shared team tools, multi-AI environments |
+
+---
+
+## 2. Hermes config.yaml Tool Configuration Reference
+
+### Terminal (CLI) Toolset
+
+```yaml
+tools:
+  terminal:
+    enabled: true
+    timeout: 30  # seconds per command
+    allowed_commands:
+      # AWS read-only operations
+      - "aws ec2 describe-*"
+      - "aws cloudwatch get-metric-*"
+      - "aws cloudwatch describe-*"
+      - "aws rds describe-*"
+      - "aws ce get-cost-*"
+      # Kubernetes read-only operations
+      - "kubectl get *"
+      - "kubectl describe *"
+      - "kubectl logs *"
+      - "kubectl top *"
+      # PostgreSQL read-only
+      - "psql -h * -U readonly_user -c SELECT *"
+      - "psql -h * -U readonly_user -c \\d*"
+    blocked_commands:
+      # Destructive AWS operations
+      - "aws ec2 terminate-instances *"
+      - "aws ec2 stop-instances *"
+      - "aws rds delete-db-instance *"
+      # Destructive Kubernetes operations
+      - "kubectl delete *"
+      - "kubectl exec *"
+      - "kubectl port-forward *"
+      # Filesystem operations
+      - "rm *"
+      - "chmod *"
+      - "chown *"
+    environment:
+      # Injected env vars — agent never sees values
+      AWS_PROFILE: "${AWS_PROFILE}"
+      AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION}"
+      KUBECONFIG: "${KUBECONFIG}"
+```
+
+### Web (API) Toolset
+
+```yaml
+tools:
+  web:
+    enabled: true
+    timeout: 15  # seconds per request
+    allowed_domains:
+      - "api.pagerduty.com"
+      - "grafana.your-org.internal"
+      - "api.github.com"
+    api_clients:
+      pagerduty:
+        base_url: "https://api.pagerduty.com"
+        headers:
+          Authorization: "Token token=${PAGERDUTY_TOKEN}"
+          Accept: "application/vnd.pagerduty+json;version=2"
+      grafana:
+        base_url: "https://grafana.your-org.internal"
+        headers:
+          Authorization: "Bearer ${GRAFANA_API_KEY}"
+```
+
+### MCP Toolset
+
+```yaml
+tools:
+  mcp:
+    enabled: true
+    servers:
+      kubernetes:
+        transport: stdio
+        command: "mcp-server-kubernetes"
+        args: ["--kubeconfig", "${KUBECONFIG}"]
+      filesystem:
+        transport: stdio
+        command: "mcp-server-filesystem"
+        args: ["--root", "/workspace/logs"]
+        # Constrains file access to /workspace/logs only
+```
+
+---
+
+## 3. Safety Configuration Examples
+
+### Read-Only Agent (Most Restrictive)
+
+Appropriate for: diagnostic agents, agents used by junior team members, agents in production environments.
+
+```yaml
+tools:
+  terminal:
+    enabled: true
+    allowed_commands:
+      - "aws * describe-*"
+      - "aws * list-*"
+      - "aws * get-*"
+      - "kubectl get *"
+      - "kubectl describe *"
+      - "kubectl logs --tail=100 *"
+    blocked_commands:
+      - "*"  # Block everything not in allowed list
+    environment:
+      AWS_PROFILE: "${AWS_PROFILE}"
+```
+
+### Proposal Agent (Can Recommend, Not Execute)
+
+Appropriate for: agents that generate remediation plans reviewed by humans before execution.
+
+```yaml
+tools:
+  terminal:
+    enabled: true
+    allowed_commands:
+      - "aws * describe-*"
+      - "aws * list-*"
+      - "kubectl get *"
+      - "kubectl describe *"
+    # Note: no write operations in allowed_commands
+    # Agent can only observe and propose — actual changes require human execution
+```
+
+### Remediation Agent (Tightly Scoped Write Access)
+
+Appropriate for: trusted agents performing specific, well-tested remediation operations.
+
+```yaml
+tools:
+  terminal:
+    enabled: true
+    allowed_commands:
+      - "aws ec2 describe-*"
+      - "aws cloudwatch *"
+      # Single write operation, tightly scoped
+      - "kubectl rollout restart deployment/${DEPLOYMENT_NAME} -n ${NAMESPACE}"
+    blocked_commands:
+      - "kubectl delete *"
+      - "kubectl exec *"
+      - "aws ec2 terminate-instances *"
+    require_approval_for:
+      - "kubectl rollout restart *"  # Human approval required before execution
+```
+
+---
+
+## 4. SOUL.md Templates
+
+### SRE Diagnostic Agent
+
+```markdown
+# Hermes — SRE Diagnostics
+
+## Identity
+You are Hermes, an SRE diagnostic agent for the Platform Engineering team.
+Your primary domain is infrastructure health: EC2, RDS, Kubernetes, CloudWatch.
+
+## Expertise
+- Diagnose EC2 health issues using CloudWatch metrics and status checks
+- Identify RDS performance bottlenecks using pg_stat_statements and CloudWatch
+- Detect Kubernetes pod issues using kubectl and container logs
+- Cross-reference symptoms across infrastructure layers
+
+## Communication Style
+- Always produce a structured diagnosis with sections: Summary, Evidence, Root Cause (hypothesis), Recommended Actions, Escalation Decision
+- Include confidence level (High / Medium / Low) for root cause hypothesis
+- Use exact metric values and timestamps from retrieved data — never estimate
+- Keep recommendations numbered and actionable (not general)
+
+## Behavioral Constraints
+- You DIAGNOSE — you do not execute remediation without explicit user approval
+- You ALWAYS include escalation decision (Escalate / Monitor / No action)
+- You NEVER assume silence is normal — if data is missing, say so explicitly
+- You ESCALATE immediately if: instance terminated, status checks impaired, P99 latency > 5x baseline
+
+## What You Do Not Do
+- You do not make infrastructure changes without human review and explicit approval
+- You do not access credentials files or environment variable dumps
+- You do not speculate about root cause without evidence from retrieved data
+```
+
+### FinOps Advisory Agent
+
+```markdown
+# Hermes — FinOps Advisor
+
+## Identity
+You are Hermes, a FinOps advisory agent for the Cloud Finance team.
+Your domain is AWS cost analysis, anomaly detection, and resource right-sizing.
+
+## Expertise
+- Analyze AWS Cost Explorer data for trend anomalies
+- Identify unused or underutilized resources (EC2, RDS, EBS volumes)
+- Generate right-sizing recommendations based on utilization metrics
+- Estimate monthly savings from recommended changes
+
+## Communication Style
+- Lead with the cost impact: "This change could save approximately $X/month"
+- Always separate: Observed (data), Analysis (your interpretation), Recommendation (action), Risk (downside of changing vs. not changing)
+- Include the confidence range for cost estimates (point estimate is misleading without range)
+
+## Behavioral Constraints
+- Recommendations are ADVISORY — you do not modify resources
+- You ALWAYS flag the risk of a recommendation alongside the benefit
+- You DO NOT recommend terminating reserved instances without confirming coverage impact
+- You ESCALATE to the account owner if anomaly exceeds $500/month unexpected spend
+
+## What You Do Not Do
+- You do not execute cost changes — only recommend
+- You do not access billing outside the AWS Cost Explorer API scope in your tools config
+```
+
+---
+
+## 5. MCP Server Setup Reference
+
+### Installing a Local MCP Server
+
+```bash
+# Kubernetes MCP server (example)
+npm install -g @modelcontextprotocol/server-kubernetes
+
+# Filesystem MCP server (included in reference implementations)
+npm install -g @modelcontextprotocol/server-filesystem
+
+# Verify server is runnable
+mcp-server-kubernetes --help
+```
+
+### Testing an MCP Server Manually
+
+```bash
+# Stdio transport: send a JSON-RPC list request via stdin
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | mcp-server-kubernetes
+# Expected: JSON response listing available tools with their schemas
+```
+
+### Debugging MCP Connections in Hermes
+
+```bash
+hermes --profile ./agent-profile --mcp-debug
+# Outputs MCP protocol messages to stderr for debugging tool discovery and calls
+```
+
+---
+
+## 6. Safety Checklist Before Deployment
+
+Before connecting your agent to a real environment:
+
+- [ ] `allowed_commands` list is reviewed and as narrow as possible for the agent's purpose
+- [ ] `blocked_commands` includes all destructive operations in the domain (delete, terminate, drop, rm)
+- [ ] Credentials are injected via env vars or credential chain — no raw secrets in config
+- [ ] `allowed_domains` is set if using web toolset — no open web access
+- [ ] SOUL.md includes explicit behavioral constraints ("you do not make changes without approval")
+- [ ] Agent has been tested in a non-production environment first
+- [ ] You can name the highest-blast-radius command the agent could run and confirm it is blocked

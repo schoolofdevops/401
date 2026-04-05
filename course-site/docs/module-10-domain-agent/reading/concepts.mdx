@@ -1,0 +1,203 @@
+---
+id: module-10-concepts
+title: "Concepts: Domain Agent Anatomy and Build Strategy"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "Agent anatomy, track selection, simulated vs real data, and output quality evaluation"
+---
+
+# Concepts: Domain Agent Anatomy and Build Strategy
+
+This is the build module — everything from Modules 7-9 converges into a working agent. Before you start assembling components, here is the conceptual framework for how a domain agent is structured, how to choose your track, and how to know when your agent is "good enough."
+
+---
+
+## 1. Domain Agent Anatomy
+
+A domain agent is not a monolith — it is a composition of purpose-built components that work together:
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Agent Profile                      │
+│                                                      │
+│  SOUL.md          Identity, constraints, tone        │
+│  config.yaml      Tools, skills, model, triggers     │
+│  skills/          Domain-specific SKILL.md files     │
+│  data/            Simulated infra data (for testing) │
+└─────────────────────────────────────────────────────┘
+```
+
+### SOUL.md — The Identity Layer
+
+SOUL.md defines who the agent is and what it will not do. It is the persistent identity that shapes every interaction. Without SOUL.md, the agent defaults to being generically helpful — which is usually too broad for operational safety.
+
+**What SOUL.md provides:**
+- Role scope: "I am an RDS health diagnostic agent" — not a general infrastructure assistant
+- Communication contract: "I produce structured diagnoses with Evidence, Root Cause, and Escalation Decision sections"
+- Behavioral guardrails: "I diagnose and propose, I do not make infrastructure changes without approval"
+- Escalation calibration: "I escalate P1 when I detect status check failure; P2 when I detect sustained critical metrics"
+
+### config.yaml — The Operational Configuration
+
+config.yaml wires the agent together: which model to use, which tools to enable, which skills to load, what credentials to inject. It is the deployment configuration for your agent — the same role that a Kubernetes Deployment manifest plays for a service.
+
+**Key sections:**
+```yaml
+model: "claude-opus-4-5"  # or another model
+profile_name: "rds-health-agent"
+soul: "./soul.md"
+tools:
+  terminal:
+    enabled: true
+    allowed_commands: [...]
+skills:
+  - path: "./skills/rds-health.md"
+    triggers: ["slow queries", "connection pool", "rds performance"]
+```
+
+### skills/ — The Procedural Memory Layer
+
+This is where your Module 7 work lives. Each SKILL.md file encodes a specific operational procedure. Skills are loaded selectively when triggers match — only the relevant expertise is added to the context for a given task.
+
+**DevOps analogy:** The skills/ directory is your Ansible roles directory. Just as you have `roles/nginx/`, `roles/postgres/`, `roles/monitoring/` — each encapsulating configuration logic for one domain — you have `skills/rds-health.md`, `skills/query-analysis.md`, `skills/connection-pool.md`.
+
+### data/ — The Simulation Layer
+
+For testing when real infrastructure is unavailable. The simulated data files mimic exact CLI output format, allowing the agent to execute its full diagnostic procedure against realistic (but controlled) inputs.
+
+**This is not a workaround.** Simulation is a first-class engineering practice:
+- Reproducible test scenarios (same data, same expected output)
+- Safe iteration (no risk of reading production data during development)
+- Edge case testing (you can craft data that triggers specific decision tree branches)
+
+---
+
+## 2. Track Selection Strategy
+
+All three tracks produce a working agent. The right choice depends on your environment and your capstone goal.
+
+### Track A: DB Health and Tuning Agent
+
+**Best for:** Database administrators, backend engineers, SREs whose on-call rotation includes database incidents
+
+**What makes it interesting:** Database performance is a classic "hard to see" problem. CPU and memory metrics tell you something is wrong; pg_stat_statements tells you what. The agent must chain multiple data sources and apply decision logic that would otherwise require 15 minutes of manual investigation.
+
+**What you learn about agent design:** How to handle multi-source correlation — the agent must correlate CloudWatch metrics (visible) with PostgreSQL statistics (requires direct access) and draw conclusions across both.
+
+### Track B: Cost Anomaly and FinOps Agent
+
+**Best for:** DevOps engineers, platform engineers, anyone with cost responsibility
+
+**What makes it interesting:** Cost anomaly detection requires both pattern recognition (is this week's spend significantly different from baseline?) and causal analysis (which services changed?). The agent must interpret trend data, not just current state.
+
+**What you learn about agent design:** How to work with time-series data and establish what "normal" means before flagging anomalies. A cost agent that cries wolf (false positives) is worse than no agent.
+
+### Track C: Kubernetes Health Agent
+
+**Best for:** Platform engineers, SREs, anyone running Kubernetes clusters
+
+**What makes it interesting:** Kubernetes state is observable entirely through kubectl — no cloud credentials required. The agent uses the local KIND cluster from your setup, which means the feedback loop is fast.
+
+**What you learn about agent design:** How to interpret hierarchical state (namespace → pod → container → log) and when to go deeper vs. surface-level. Not every pod restart is worth investigating.
+
+---
+
+## 3. Simulated vs. Real Infrastructure: The Testing Hierarchy
+
+For the Module 10 lab, all three tracks have simulated fallback data. Understanding when to use each mode matters for post-course deployment.
+
+### Simulation Mode (Lab Default)
+
+- Uses mock JSON files that mimic exact CLI output format
+- No cloud credentials required
+- Fully reproducible — run the same scenario multiple times, get consistent results
+- Catches most skill and logic errors before touching real infrastructure
+
+**Appropriate for:** Development, testing, training, validating skill logic, reproducing specific scenarios
+
+**What it cannot catch:**
+- IAM permission errors (agent needs read access you haven't granted)
+- Real data format edge cases (live systems produce outputs that mock data may not cover)
+- Latency characteristics (real APIs have variable response times)
+
+### Real Infrastructure Mode
+
+- Agent executes commands against actual AWS or Kubernetes
+- Real credential chain required (AWS_PROFILE, KUBECONFIG)
+- Non-reproducible (infrastructure state changes between runs)
+- Catches real permission and format issues
+
+**Appropriate for:** Pre-production validation, production deployment, post-training deployment
+
+**The transition protocol:** Before moving to real infrastructure mode:
+1. All simulated scenarios pass
+2. All SKILL.md decision trees tested against edge cases
+3. All tool configurations reviewed for blast radius
+4. Agent deployed in read-only mode on real infrastructure first
+
+---
+
+## 4. Output Quality Evaluation
+
+A working agent is not the same as a good agent. After the lab, you will have an agent that produces output. Here is how to evaluate whether that output is operationally useful.
+
+### The Four Quality Dimensions
+
+**Accuracy:** Does the agent correctly identify the issue from the evidence?
+
+Test this by running the agent against simulated scenarios where you know the ground truth. If the CPU high + I/O high scenario should produce "root cause: I/O bound workload", and the agent produces "root cause: application processing issue" — it is reading the same data but drawing the wrong conclusion. This is a skill decision-tree problem.
+
+**Completeness:** Does the agent cover all relevant evidence?
+
+An agent that only checks CPU metrics and ignores disk I/O is incomplete. Review the evidence section of its diagnosis: does it cite every data source that the skill requires? Missing evidence is a sign the skill is not loading correctly or that a step is being skipped.
+
+**Confidence calibration:** Does the agent know what it does not know?
+
+A well-calibrated agent says "Root cause hypothesis: I/O bound workload (Medium confidence — disk IOPS data not available, using proxy metric)" rather than asserting a root cause it cannot fully support. Overconfidence in agent output is an operational hazard — humans treat high-confidence AI output with less scrutiny.
+
+**Actionability:** Can a human act on the agent's recommendations?
+
+Recommendations like "investigate the database" are not actionable. Recommendations like "run `SELECT * FROM pg_stat_activity WHERE wait_event_type = 'Lock'` to identify lock contention — expected result if lock waits exceed 10 connections" are actionable. Review the Recommended Actions section: would an on-call engineer be able to follow them without additional context?
+
+### The Evaluation Checklist
+
+Use this after every significant skill change or agent update:
+
+```
+[ ] Agent correctly classifies 5 simulated scenarios (expected action matches actual action)
+[ ] Evidence section cites all data sources the skill specifies
+[ ] Root cause hypothesis includes confidence level
+[ ] Recommended actions include exact commands and expected output format
+[ ] Escalation decision matches the skill's escalation conditions
+[ ] Agent handles "data unavailable" gracefully (does not hallucinate missing data)
+```
+
+---
+
+## 5. Agentic RAG in Practice
+
+Your Track A or B agent may need to retrieve documentation at runtime — for example, looking up current AWS parameter group limits before recommending a parameter change.
+
+This is agentic RAG applied to the domain agent:
+1. Agent runs diagnostic step, discovers a specific PostgreSQL parameter is at default
+2. Agent decides: "I need current RDS parameter group documentation for this parameter"
+3. Agent retrieves documentation from a knowledge base or web source
+4. Agent incorporates retrieved information into its recommendation
+
+**The implementation consideration:** For the lab, web retrieval is available through the web toolset. For production, a curated internal knowledge base (vector database with your runbooks, documentation, and previous incident reports) produces more reliable retrieval than open web search — the retrieved content is your organization's specific knowledge, not generic internet documentation.
+
+---
+
+## Summary
+
+| Component | Role | Analogy |
+|-----------|------|---------|
+| SOUL.md | Identity and behavioral constraints | Team charter / job description |
+| config.yaml | Operational wiring | Kubernetes Deployment manifest |
+| skills/ | Domain procedures | Ansible roles directory |
+| data/ | Simulation layer | Mock data for testing |
+| Quality eval | Output validation | SRE runbook acceptance test |
+
+**The build principle:** Start with a narrow, high-quality agent that does one thing well — not a broad agent that does many things poorly. A DB health agent that accurately diagnoses slow query issues for one RDS instance is more valuable than a general "infrastructure agent" that gives confident but unreliable output across many domains.
+
+**Next:** [Reference — Agent Profile Structure and Output Evaluation](./module-10-reference)

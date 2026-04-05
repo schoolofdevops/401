@@ -1,0 +1,192 @@
+---
+id: module-10-quiz
+title: "Quiz: Building Domain Agents"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of agent anatomy, track design, and output evaluation from Module 10"
+---
+
+# Quiz: Building Domain Agents
+
+These questions test your understanding of domain agent composition, track selection, and output quality evaluation.
+
+---
+
+### Question 1: Agent Anatomy
+
+An SRE team is deploying a Kubernetes health agent. During an incident, the agent correctly identifies pod restarts but recommends a `kubectl delete pod` command that should require human approval. Which component of the agent anatomy is misconfigured?
+
+A) The SOUL.md — the agent's identity file does not include the behavioral constraint against autonomous destructive commands
+B) The SKILL.md — the pod health skill should not include `kubectl delete` in its procedure steps
+C) The skills/ directory — wrong skill loaded for this scenario
+D) Both A and B — SOUL.md sets behavioral constraints; SKILL.md should also not include destructive commands in its procedure
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: D) Both A and B — SOUL.md sets behavioral constraints; SKILL.md should also not include destructive commands in its procedure**
+
+Operational safety for agents requires defense in depth:
+
+1. **SOUL.md behavioral constraints:** "I do not make infrastructure changes without human review and explicit approval." This prevents the agent from recommending any write operation autonomously.
+
+2. **SKILL.md procedure design:** Skills should separate diagnosis (what to observe, what to conclude) from remediation (what to do about it). A pod health skill should stop at "Recommended action: `kubectl delete pod pod-name -n namespace` — requires human execution." Not "Execute: `kubectl delete pod...`"
+
+3. **config.yaml tool configuration:** `kubectl delete *` should be in `blocked_commands`. (The immediate safety layer.)
+
+The question says the command is "recommended" — which means it appeared in the agent's output. This means both SOUL.md (which should prevent autonomous destructive recommendations) and the skill design (which should separate diagnosis from autonomous action) need attention.
+
+Defense in depth: tool configuration blocks execution; SKILL.md keeps procedures in the diagnostic lane; SOUL.md enforces the behavioral stance.
+
+</details>
+
+---
+
+### Question 2: Track Selection
+
+A DevOps engineer's primary on-call responsibility is managing a team's AWS spending and responding to unexpected cost spikes. Their capstone goal is a "cost guardian" agent. Which track best aligns with this goal?
+
+A) Track A (DB Health) — cost issues often trace to inefficient database queries
+B) Track B (FinOps) — directly addresses cost monitoring, trend analysis, and anomaly detection
+C) Track C (Kubernetes) — Kubernetes workloads are the primary cost driver for most teams
+D) All tracks equally — cost issues span all infrastructure domains
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Track B (FinOps) — directly addresses cost monitoring, trend analysis, and anomaly detection**
+
+Track B is specifically designed for cost intelligence: AWS Cost Explorer integration, spending trend analysis, anomaly detection against baseline, and right-sizing recommendations. The agent built in Track B understands cost as a primary metric, not a secondary one.
+
+**Why not the others:**
+- Track A addresses database performance, not cost optimization. While inefficient queries DO cost money (more compute, more I/O), the diagnostic focus is health, not spending.
+- Track C is a Kubernetes health agent, not a cost agent. While you can calculate Kubernetes compute costs, Track C's skill set is about pod health and resource utilization, not cost trend analysis.
+
+**The practical implication:** Your choice of track shapes your agent's skill set, data sources, and evaluation criteria. Choosing Track B means you will build skills around `aws ce get-cost-and-usage` patterns and Cost Explorer interpretation — directly applicable to the "cost guardian" capstone.
+
+After Module 10, extending a Track B agent toward the capstone is a shorter path than starting with a different track and pivoting.
+
+</details>
+
+---
+
+### Question 3: Simulation Mode
+
+Why should every domain agent be validated against simulated data before being pointed at real infrastructure?
+
+A) Simulated data is always more accurate than real infrastructure data
+B) Real infrastructure data is too sensitive to be used in testing
+C) Simulated data provides reproducible, controlled scenarios that validate skill logic without risk — real infrastructure state changes between runs and carries blast radius
+D) Cloud providers charge for every API call — simulation avoids these costs during development
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) Simulated data provides reproducible, controlled scenarios that validate skill logic without risk — real infrastructure state changes between runs and carries blast radius**
+
+Simulation-first testing is a core engineering discipline for agent development:
+
+**Reproducibility:** A simulated scenario runs identically every time. If your agent misclassifies "CPU high + I/O high" in the simulated scenario, you can iterate on the skill decision tree and re-run the exact same scenario until it classifies correctly. Real infrastructure changes between runs — you cannot reproduce the exact same state.
+
+**Controlled edge cases:** You can craft simulated data that triggers specific decision tree branches (e.g., status check impaired, borderline CPU threshold, missing metric data). Real infrastructure rarely produces these edge cases on demand.
+
+**No blast radius:** An agent with a SKILL.md bug that causes it to recommend destructive operations is a development problem when tested against simulated data. It is an operational incident when tested against real infrastructure.
+
+**What simulation cannot catch:** IAM permission errors, real API response format variations, latency characteristics. These require a real-infrastructure validation phase after simulation passes.
+
+Option D is partially true (API calls do have costs) but is not the primary reason. Options A and B are incorrect — real data can be more accurate, and real data can be used in testing with appropriate access controls.
+
+</details>
+
+---
+
+### Question 4: Output Quality
+
+An agent produces the following root cause conclusion: "The database is experiencing performance issues due to resource constraints." What quality dimension does this diagnosis fail?
+
+A) Accuracy — the diagnosis is wrong
+B) Completeness — the evidence section is missing
+C) Actionability — "resource constraints" and "performance issues" are not specific enough for an on-call engineer to act on
+D) Confidence calibration — the agent should express uncertainty
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) Actionability — "resource constraints" and "performance issues" are not specific enough for an on-call engineer to act on**
+
+An actionable diagnosis names the specific metric, the specific value, the specific symptom, and the specific next step:
+
+**Not actionable:** "The database is experiencing performance issues due to resource constraints."
+
+**Actionable:** "Root cause hypothesis: Connection pool exhaustion (High confidence). Evidence: max_connections=100, active_connections=98 (98% utilization), wait_event_type=Lock in 12 of 100 active queries. Recommended action: Temporarily increase max_connections to 150 by running `aws rds modify-db-parameter-group --db-parameter-group-name prod-pg15 --parameters ParameterName=max_connections,ParameterValue=150,ApplyMethod=immediate`. Expected result: Wait times should decrease within 5 minutes of parameter propagation."
+
+The difference: an on-call engineer receiving the first diagnosis still has 15 minutes of investigation to do. The second diagnosis gives them the exact evidence, exact command, and expected outcome. That's the value the agent provides.
+
+This is not necessarily an accuracy failure (the diagnosis might be right) or a completeness failure (the evidence might be there but poorly surfaced). The problem is that the output is not specific enough to drive action.
+
+</details>
+
+---
+
+### Question 5: Agent Anatomy — SOUL.md vs. SKILL.md
+
+A Kubernetes health agent is asked: "What is the maximum number of pods per node in Kubernetes?" The agent answers with the default value from its training data. What is the problem, and which component should be updated?
+
+A) This is fine — general Kubernetes knowledge is appropriate agent behavior
+B) The agent should not answer general questions — update SOUL.md to restrict responses to operational tasks only
+C) The question requires a definitive answer about the current cluster configuration — the agent should retrieve the actual value using kubectl, not answer from training memory. Update the SKILL.md to include a "cluster configuration lookup" step.
+D) The agent's training data is outdated — fine-tune the model with current Kubernetes documentation
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) The question requires a definitive answer about the current cluster configuration — the agent should retrieve the actual value using kubectl, not answer from training memory. Update the SKILL.md to include a "cluster configuration lookup" step.**
+
+The Kubernetes default for max pods per node is 110, but it is commonly overridden in production clusters (`--max-pods` flag on kubelet). An agent answering from training data might say "110" — which is wrong for the specific cluster the engineer is asking about.
+
+For operational questions, training data is a baseline, not an authority. The agent should retrieve current state:
+
+```bash
+kubectl get node -o json | jq '.items[].status.capacity.pods'
+# Returns the actual configured limit per node
+```
+
+The SKILL.md should include a "cluster configuration" section that uses kubectl to retrieve actual limits, not assume defaults. This is the hallucination prevention principle from Module 7 applied to agent knowledge: ground answers in retrieved evidence, not training memory.
+
+SOUL.md (Option B) could add a behavioral constraint ("for configuration questions, retrieve current state before answering"), but the specific procedure belongs in the skill, not the identity file.
+
+Option D (fine-tuning) is expensive, slow, and still produces stale results — cluster configurations change constantly. Retrieval at query time is always more accurate than training data for current state questions.
+
+</details>
+
+---
+
+### Question 6: Agent Testing
+
+After running your Track A agent against simulated data for the "connection pool saturation" scenario, you observe that the agent correctly identifies the root cause but generates a recommended action that differs from what your SKILL.md specifies. The agent recommends `ALTER SYSTEM SET max_connections = 200;` but the skill specifies using AWS RDS parameter groups. What does this indicate?
+
+A) The skill is wrong — ALTER SYSTEM is the correct PostgreSQL command for this change
+B) The agent is hallucinating — it is generating plausible but incorrect recommendations by overriding the skill with general knowledge
+C) The simulation data is causing the discrepancy
+D) The model needs to be fine-tuned on your specific SKILL.md
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) The agent is hallucinating — it is generating plausible but incorrect recommendations by overriding the skill with general knowledge**
+
+`ALTER SYSTEM SET max_connections = 200;` is a valid PostgreSQL command — but it requires restart and does not persist through RDS instance replacements. For RDS, the correct path is always parameter groups (`aws rds modify-db-parameter-group`). The agent is generating technically plausible but operationally incorrect output by defaulting to general PostgreSQL knowledge rather than following the RDS-specific SKILL.md procedure.
+
+This is the hallucination failure mode the SKILL.md is designed to prevent: the agent's general training knowledge overrides the specific procedural instruction. It "knows" `ALTER SYSTEM` from PostgreSQL documentation it was trained on; it should be following the SKILL.md step that specifies parameter group modification.
+
+**The fix:** Make the SKILL.md recommendation more explicit:
+```markdown
+Recommended action for max_connections increase on RDS:
+- Use parameter group modification (NOT ALTER SYSTEM — this does not persist on RDS)
+- Command: aws rds modify-db-parameter-group --db-parameter-group-name {pg_name} ...
+```
+
+Explicit is better than implicit. The skill must say "NOT ALTER SYSTEM" because the agent's training knowledge knows that command and will use it if the skill is ambiguous.
+
+</details>
+

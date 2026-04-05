@@ -1,0 +1,138 @@
+---
+id: module-07-exploratory
+title: "Exploratory: Agent Skills Stretch Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for Module 7 — cross-domain skills, validation harnesses, and memory-augmented skill design"
+---
+
+# Exploratory: Agent Skills Stretch Projects
+
+These are **exploratory stretch projects** — not required to complete Module 7. They are for participants who finish the main lab early or want to push the skill-writing discipline further.
+
+---
+
+## Project 1: Cross-Domain Skill
+
+**Estimated time:** 45 minutes
+**Extends:** Module 7 lab (any track)
+**Prerequisites:** Your track's SKILL.md completed and loading in Hermes
+
+### What You Will Build
+
+Write a SKILL.md that crosses domain boundaries — for example, a "deployment health check" skill that covers both application metrics AND infrastructure state. Most real incidents involve multiple layers, but most skills are single-domain. A cross-domain skill must handle the coordination explicitly.
+
+### Challenge
+
+The challenge is scope management. Cross-domain skills get long fast. You need to decide: which sub-domains are in scope, where to draw the boundary (and escalate to a specialist), and how to structure the decision tree so the agent knows when it has "enough" to diagnose versus when it needs to go deeper.
+
+### Steps
+
+1. Choose a cross-domain scenario relevant to your environment (examples: "service degradation — check both K8s pod health and RDS connection pool", "cost anomaly — check both EC2 utilization and data transfer charges")
+
+2. Map the domain boundary: define which tools belong to each domain and what information must cross the boundary (e.g., an EC2 instance ID that appears in both the K8s node pool and the CloudWatch metrics)
+
+3. Write the cross-domain SKILL.md, explicitly handling the boundary: what does the agent conclude at the infrastructure layer, what does it pass to the application layer
+
+4. Identify the escalation condition: at what point does the agent determine it needs a human specialist rather than escalating between its own sub-domains
+
+5. Test with Hermes against simulated data from both domains
+
+### Expected Deliverable
+
+A SKILL.md covering two domains with an explicit handoff section and clear escalation criteria. The skill should be under 2,000 tokens (context budget discipline).
+
+---
+
+## Project 2: Skill Validation Harness
+
+**Estimated time:** 30 minutes
+**Extends:** Module 7 lab (any track)
+**Prerequisites:** Your SKILL.md from the lab
+
+### What You Will Build
+
+A test harness — a set of 5-8 simulated scenarios with expected agent outputs — that validates your skill against realistic edge cases before deploying to a real environment.
+
+### Challenge
+
+Skills fail at edges. The happy path (normal input, expected output) rarely reveals problems. Edge cases reveal ambiguity: missing data, threshold boundary conditions, contradictory signals (high CPU but low network AND low disk — what's the cause?). A validation harness forces you to specify expected behavior before running the agent, which reveals ambiguity in the skill definition itself.
+
+### Steps
+
+1. Create a file `skill-test-scenarios.md` with 5-8 test cases in this format:
+
+```markdown
+## Scenario 1: Normal Operation
+**Inputs:** instance_id=i-0abc123, cpu_avg=45, cpu_peak=60, network_packets=normal, status_checks=ok
+**Expected agent action:** Document as normal, no escalation
+**Expected report sections:** State=running, CPU=normal, recommendation=monitor
+
+## Scenario 2: CPU Critical with Disk I/O Spike
+**Inputs:** instance_id=i-0def456, cpu_avg=92, cpu_peak=98, disk_read_ops=high, network=normal
+**Expected agent action:** Identify I/O bound workload, recommend EBS optimization check, escalate P2
+**Expected report sections:** Root cause = I/O bound, recommendation = IOPS-optimized volume
+```
+
+2. Run each scenario through Hermes with your skill loaded. Compare actual agent output to expected output.
+
+3. For each deviation: determine whether the skill is ambiguous (fix the skill) or the expected output was wrong (update the scenario).
+
+4. Iterate until all scenarios match.
+
+### Expected Deliverable
+
+`skill-test-scenarios.md` with 5-8 scenarios, actual vs. expected comparison notes, and at least one skill update you made based on a discovered ambiguity.
+
+---
+
+## Project 3: Memory-Augmented Skill
+
+**Estimated time:** 45 minutes
+**Extends:** Module 7 lab (any track)
+**Prerequisites:** Your SKILL.md from the lab, Hermes memory tool enabled
+
+### What You Will Build
+
+Extend your skill to use Hermes's long-term memory tool — storing key findings after each execution and retrieving relevant history at the start of future executions. This turns a stateless diagnostic skill into a skill that accumulates operational intelligence over time.
+
+### Challenge
+
+Memory retrieval adds latency and context cost. The challenge is deciding what to store (valuable patterns, not noise) and what to retrieve (relevant history for this specific instance or domain, not all stored memory). A poorly designed memory-augmented skill stores everything and retrieves everything — this bloats the context and reduces response quality.
+
+### Steps
+
+1. Add two sections to your existing SKILL.md:
+
+```markdown
+## Memory Retrieval (Start of Execution)
+- Query long-term memory for: previous findings for {instance_id}
+- If found: include prior incident summary in Step 1 context
+- If not found: proceed without historical context
+
+## Memory Storage (End of Execution)
+- Store: {instance_id}, {timestamp}, {diagnosis_summary}, {action_taken}, {escalation_decision}
+- Tag with: domain="ec2-health", instance_id={instance_id}
+- Do NOT store: raw metric dumps, full command output (too verbose for recall value)
+```
+
+2. Run the skill twice on the same simulated instance. Verify the second run includes the first run's context.
+
+3. Test the retrieval quality: does the agent's second-run diagnosis benefit from the first-run context, or is the retrieved memory adding noise?
+
+### Expected Deliverable
+
+An updated SKILL.md with memory sections, plus notes on what you stored vs. what you decided not to store and why.
+
+---
+
+## Which Project Should You Do?
+
+| Your Focus | Recommended Project |
+|-----------|-------------------|
+| Breadth — multiple services in your domain | Project 1 (cross-domain) |
+| Quality and reliability | Project 2 (validation harness) |
+| Stateful agents | Project 3 (memory augmentation) |
+| Under 30 minutes available | Project 2 — most focused and highest skill-quality impact |
+
+All three projects extend the skill-writing discipline from the lab. The goal is to experience the edges: where does your SKILL.md fail, and how do you fix it?

@@ -1,0 +1,106 @@
+---
+id: module-11-exploratory
+title: "Exploratory: Fleet Orchestration Stretch Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for Module 11 — incident response fleet and auto-routing coordinator"
+---
+
+# Exploratory: Fleet Orchestration Stretch Projects
+
+These are **exploratory stretch projects** — not required to complete Module 11. They extend fleet orchestration concepts into more realistic operational scenarios.
+
+---
+
+## Project 1: Incident Response Fleet
+
+**Estimated time:** 60 minutes
+**Extends:** Module 11 lab (fleet with coordinator)
+**Prerequisites:** Fleet lab completed, coordinator and three specialists running
+
+### What You Will Build
+
+A complete incident response simulation: the coordinator receives a multi-signal incident, delegates to all three specialists in parallel, receives their findings, performs correlation analysis, and generates an executive-level incident report in the format your organization uses for P2 postmortems.
+
+### Challenge
+
+The challenge is synthesis quality. With three specialists producing separate findings, the coordinator must identify: which findings are independent (separate issues that coincidentally coincided), which findings are causally linked (one finding explains another), and which findings are correlated but not causal (happening at the same time, same root cause, different symptoms).
+
+These three cases produce different incident conclusions and different recommended actions.
+
+### Steps
+
+1. Design a realistic cross-domain incident scenario using simulated data that has a clear causal chain across domains. Example:
+   - EC2 autoscaling added 5 new instances at 02:10 (FinOps data: cost spike)
+   - 5 new instances were added to the K8s node pool at 02:12 (K8s data: new nodes)
+   - New pods were scheduled on the new nodes at 02:14 (K8s data: pod events)
+   - RDS received 50 new connections from new pods at 02:15 (DB data: connection count spike)
+   - API latency increased at 02:16 as new pods initialized (K8s data: pod readiness)
+
+2. Run the coordinator against the simulated data — observe whether it reconstructs the causal chain
+
+3. Write a "postmortem format" SOUL.md constraint: the coordinator's output must match your organization's postmortem format (Timeline, Root Cause, Contributing Factors, Recommendations, Action Items)
+
+4. If the coordinator misses the causal chain, update the coordination skill to include a "timestamp correlation" step that explicitly checks for events occurring within 2-minute windows across all specialist findings
+
+### Expected Deliverable
+
+A simulated incident scenario (mock data files), coordinator output in postmortem format, and notes on whether the coordinator correctly identified the causal chain vs. treated each finding as independent.
+
+---
+
+## Project 2: Auto-Routing Coordinator
+
+**Estimated time:** 45 minutes
+**Extends:** Module 11 lab (coordinator skill)
+**Prerequisites:** Fleet lab completed
+
+### What You Will Build
+
+Improve the coordinator's routing decision: instead of routing based on keyword matching in the incident description, build a routing skill that uses structured triage questions to determine which specialists to engage.
+
+### Challenge
+
+Keyword routing is fragile. "Latency spike" might be a database issue, a Kubernetes scheduling issue, a network issue, or a cost-related instance degradation. Better routing asks: "What is observable? What time window? What scale?" and then decides which specialists can contribute based on the answers.
+
+### Steps
+
+1. Write a triage questionnaire that the coordinator runs before delegating:
+
+```markdown
+## Triage (Step 0 — before delegation)
+
+Ask user (if information is not in the incident report):
+1. What is the primary observable symptom? (high latency / error rate / cost spike / pod failures / etc.)
+2. What time did it start?
+3. What is the affected scope? (specific service, all services, a region, all regions)
+4. Is this P1 (customer-facing SLA breach), P2 (degraded service), or P3 (internal only)?
+
+Based on answers, route to:
+- High latency → all three specialists (API latency is multi-domain)
+- Pod failures only → k8s-health-agent only
+- Cost spike, no user impact → finops-agent only
+- DB slow queries + latency → rds-health-agent + k8s-health-agent (confirm no pod pressure causing connection load)
+```
+
+2. Update the coordinator's coordination SKILL.md to include the triage step before delegation
+
+3. Test with 3 different incident descriptions: one that routes to single specialist, one to two specialists, one to all three
+
+4. Measure: does triage-based routing produce faster, more focused specialist responses than routing all incidents to all specialists?
+
+### Expected Deliverable
+
+Updated coordination SKILL.md with triage step, test results for three incident types, and a comparison: triage routing vs. broadcast-to-all routing in terms of synthesis quality.
+
+---
+
+## Which Project Should You Do?
+
+| Your Interest | Recommended Project |
+|--------------|-------------------|
+| Incident response realism | Project 1 (incident simulation) |
+| Routing intelligence | Project 2 (auto-routing) |
+| Under 30 minutes available | Project 2 — skill update is focused and measurable |
+
+Both projects prepare you for Module 13 governance work: Project 1 produces a postmortem format that can be incorporated into audit logging; Project 2 produces routing logic that can be extended with approval gates for high-severity incidents.

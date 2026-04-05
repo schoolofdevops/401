@@ -1,0 +1,165 @@
+---
+id: module-11-quiz
+title: "Quiz: Fleet Orchestration"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of fleet patterns, delegation, and coordinator design from Module 11"
+---
+
+# Quiz: Fleet Orchestration
+
+These questions test your understanding of fleet architecture, delegation patterns, and coordinator design.
+
+---
+
+### Question 1: Fleet Pattern Selection
+
+A team manages a large microservices architecture with 12 separate services. They want to deploy agents that can diagnose issues across all services. Each service has unique technology characteristics. Which fleet pattern is most appropriate?
+
+A) Round-robin — distribute all diagnostic tasks equally across 12 identical agents
+B) Skill-based routing — deploy specialist agents per technology domain, with a coordinator that routes to the right specialist based on the incident domain
+C) Hierarchical delegation — add another tier of management between the coordinator and specialists
+D) Single generalist agent — 12 specialists is too complex to coordinate
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Skill-based routing — deploy specialist agents per technology domain, with a coordinator that routes to the right specialist based on the incident domain**
+
+With 12 services of varied technology, the key insight is that specialization matters. A Postgres specialist will diagnose database issues more reliably than a generalist. A Kubernetes specialist will diagnose pod issues more reliably than a generalist.
+
+Skill-based routing captures this advantage: the coordinator understands which domain each service's issues fall into, routes to the appropriate specialist, and synthesizes the findings. You do not need 12 specialist agents — you likely need 3-5 domain specialists (database, kubernetes, networking, cost) that cover all 12 services.
+
+**Why not round-robin?** Round-robin assumes homogeneous tasks and homogeneous agents. 12 specialized services require specialized diagnosis.
+
+**Why not hierarchical?** With 5 or fewer domain specialists, the overhead of a hierarchical tier is not justified. Hierarchical delegation makes sense at 10+ specialists.
+
+**Why not single generalist?** A generalist agent handling 12 specialized services will produce lower-quality diagnoses than specialists. The problem is not coordination complexity — it is diagnostic quality.
+
+</details>
+
+---
+
+### Question 2: Coordinator Role
+
+A coordinator agent is handling a cross-domain incident. The DB Health specialist responds with "I found the root cause: connection pool exhaustion." The K8s specialist responds with "All pods are healthy, no issues found." The FinOps specialist responds with "No cost anomalies in the last 24 hours." What should the coordinator do next?
+
+A) Adopt the DB specialist's conclusion as the final answer and close the incident
+B) Ask the DB specialist to provide remediation steps and execute them autonomously
+C) Synthesize: confirm the root cause from DB evidence, note that K8s and FinOps found no related issues, generate cross-domain report with correlation analysis (did the connection pool issue occur in isolation, or is there upstream context?)
+D) Escalate to all three on-call teams since each specialist responded with a different finding
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) Synthesize: confirm the root cause from DB evidence, note that K8s and FinOps found no related issues, generate cross-domain report with correlation analysis**
+
+The coordinator's job is synthesis, not delegation only. Even when one specialist finds the issue and others find nothing, the "nothing found" responses are part of the synthesis:
+
+- "K8s shows healthy pods" means the connection pool issue is not caused by application scaling
+- "FinOps shows no anomalies" means this is not a cost-driven event
+
+Together: "Root cause is connection pool exhaustion in isolation — not associated with pod scaling (K8s normal) or unusual cost patterns (FinOps normal). Likely cause: application query pattern change or parameter configuration."
+
+This is more valuable than just reporting the DB finding. The coordinator adds value by confirming what did NOT happen — eliminating alternative explanations.
+
+**Why not Option A?** Adopting only the DB finding loses the cross-domain context. The absence of issues in other domains is also evidence.
+
+**Why not Option B?** The coordinator's SOUL.md says: "I never attempt domain-specific diagnosis or remediation myself." Remediation belongs to the specialist + human review chain.
+
+**Why not Option D?** Finding the root cause in one domain and confirming it in isolation is not a reason to escalate all three on-call teams.
+
+</details>
+
+---
+
+### Question 3: Delegation Quality
+
+A coordinator delegates this task to the K8s specialist: "Check the Kubernetes environment." The specialist returns a generic report covering all pods across all namespaces. What is wrong with the delegation?
+
+A) The coordinator should not delegate to the K8s specialist at all — Kubernetes is a general skill all agents should have
+B) The delegation task is too broad — it lacks the incident time window, specific namespace or service, and the specific question being answered. The specialist had no bounded scope and produced an unfocused report.
+C) The coordinator should have used round-robin instead of skill-based routing
+D) The K8s specialist's SOUL.md is misconfigured — it should reject broad tasks
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) The delegation task is too broad — it lacks the incident time window, specific namespace or service, and the specific question being answered**
+
+Good delegation from the coordinator specifies:
+1. **Scope:** Which namespace, service, or component to inspect
+2. **Time window:** When the incident started and how long to look back
+3. **Context:** What the coordinator already knows (from other specialists or the original incident report)
+4. **Specific question:** What the coordinator needs this specialist to answer
+
+"Check the Kubernetes environment" is the equivalent of waking up your on-call engineer and saying "look at the cluster." They will look at everything, find things to mention, and return a generic report that doesn't answer the question.
+
+A better delegation: "Check pod health in namespace=app for the period 02:00-06:00 UTC April 1. Incident context: API latency increased 300% starting 02:15. Specifically: did any pods in app namespace restart, crash, or become unhealthy around 02:15? Include exit codes for any crashed pods."
+
+The specialist now knows exactly what question to answer and what time period to examine.
+
+</details>
+
+---
+
+### Question 4: Shared Context
+
+In a fleet with three specialists running in parallel, the DB specialist discovers connection pool exhaustion at 02:15. The K8s specialist is simultaneously analyzing the same time period. Should the K8s specialist have the DB specialist's finding in its context?
+
+A) Never — specialists should work independently to avoid anchoring bias
+B) Always — all specialists should see all other specialists' findings in real-time
+C) It depends — if the connection pool finding could change what the K8s specialist looks for (e.g., look for pod count increase that caused the connection pressure), include it. If it risks anchoring the K8s specialist away from independent findings, keep it separate.
+D) The coordinator should run specialists sequentially, always passing prior findings to the next specialist
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) It depends — include the finding if it changes what the K8s specialist should look for; keep separate if it risks anchoring bias**
+
+This is the coordinator-mediated context pattern from the concepts reading. The coordinator decides what information crosses domain boundaries based on whether it is helpful or introduces bias.
+
+**Include the DB finding if:**
+- "Connection pool exhaustion starting 02:15" — tells K8s specialist to look for pod count increases around 02:10-02:15 that might have created additional connections
+- The causal hypothesis is: pod scaling → more connections → exhaustion. K8s data can confirm or refute this.
+
+**Keep separate if:**
+- The coordinator wants to know what the K8s specialist finds independently, without the DB finding biasing their analysis
+- The coordinator can compare independent findings afterward to assess whether they converge or diverge
+
+In the Module 11 lab, the coordinator includes relevant cross-domain context in its delegation messages — the "Note:" section in the good delegation example. This is the most common pattern for 2-3 specialist fleets where the coordinator has enough context to know what's useful to share.
+
+Option D (always sequential, always pass findings) loses the parallelism benefit — it takes 3x longer than parallel operation with coordinator-mediated context.
+
+</details>
+
+---
+
+### Question 5: Fleet Value Proposition
+
+A team says: "Instead of a three-specialist fleet, we'll use one general-purpose agent and give it all three skill files (DB health, K8s health, FinOps)." What is the primary limitation of this approach compared to the fleet architecture?
+
+A) A single agent cannot use three skill files simultaneously — Hermes has a skill limit of one per session
+B) Loading three full skill files into one agent's context window consumes significant context budget, leaves less space for operational data, and the agent lacks tool specialization (DB agent needs psql access; K8s agent needs kubectl; one agent with all three expands the blast radius of each)
+C) A generalist agent is always less accurate than a specialist — this is a fundamental property of AI models
+D) There is no limitation — the single-agent approach is preferable for small teams
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Loading three full skill files into one agent's context window consumes significant context budget, leaves less space for operational data, and the agent lacks tool specialization**
+
+The single-agent approach has three real trade-offs:
+
+**Context budget:** Three full SKILL.md files (each 1,200-2,000 tokens for medium complexity) use 3,600-6,000 tokens of context window before the agent has seen any operational data. The fleet architecture loads only the relevant skill into each specialist's context — the K8s specialist only carries the K8s skill, not all three.
+
+**Tool specialization:** The DB health agent needs psql access; the K8s agent needs kubectl; the FinOps agent needs AWS Cost Explorer. Giving one agent all three tool sets expands the blast radius: an error in the generalist agent's configuration could affect all three infrastructure domains simultaneously. Specialist agents have narrow, domain-appropriate tool access.
+
+**Safety boundaries:** Giving one agent read access to RDS + kubectl + Cost Explorer + potentially more creates a wider attack surface for prompt injection or misconfiguration.
+
+**When the single-agent approach is acceptable:** For simple scenarios where the domains rarely overlap, or for agents handling sequential (not parallel) investigations, one agent with selective skill loading can work. But the fleet architecture scales better as complexity grows.
+
+Option C is partially true (specialists often produce better output) but is not the primary architectural reason to use fleets.
+
+</details>
+

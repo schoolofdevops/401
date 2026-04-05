@@ -1,0 +1,129 @@
+---
+id: module-12-exploratory
+title: "Exploratory: Triggers and Interfaces Stretch Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for Module 12 — multi-trigger workflow and alert-to-agent pipeline"
+---
+
+# Exploratory: Triggers and Interfaces Stretch Projects
+
+These are **exploratory stretch projects** — not required to complete Module 12. They extend the trigger and interface patterns into more realistic operational workflows.
+
+---
+
+## Project 1: Multi-Trigger Workflow
+
+**Estimated time:** 45 minutes
+**Extends:** Module 12 lab
+**Prerequisites:** Cron and webhook configuration from the lab completed
+
+### What You Will Build
+
+A single agent that responds to the same infrastructure from multiple trigger types — demonstrating that the agent adapts its scope and depth based on how it was triggered.
+
+**The scenario:** Your DB health agent should:
+- Run a **brief** daily summary at 07:00 (cron trigger) — top 3 findings, 2 sentences each
+- Run a **deep investigation** when a CloudWatch alarm fires (webhook trigger) — full diagnostic procedure, all decision tree branches
+- Respond to **on-demand requests** via CLI with configurable depth
+
+### Challenge
+
+The challenge is configuring the agent to scope its analysis differently based on the trigger type. The same agent, same skill, different depth based on trigger context. This requires adding trigger-type context to the task template.
+
+### Steps
+
+1. Define three task templates in your cron/webhook configuration, each indicating the expected depth:
+
+```yaml
+schedules:
+  daily_summary:
+    schedule: "0 7 * * *"
+    task: "Daily DB summary (brief mode): Report top 3 findings only. Maximum 3 sentences per finding. Do not run full diagnostic procedure."
+    ...
+
+webhooks:
+  cloudwatch_alarm:
+    task_template: "ALERT (deep investigation mode): {alarm_name} triggered. Run full diagnostic procedure including all decision tree branches. Include all evidence."
+    ...
+```
+
+2. Run both triggers against simulated data and compare the output depth
+
+3. Verify that the daily summary is concise (3-5 sentences total) and the alert investigation is comprehensive (full structured diagnosis)
+
+4. Add a `--depth` flag to your CLI invocation that passes scope context:
+
+```bash
+hermes --profile ./rds-health-agent --task "Investigate db-prod-01" --context "depth=brief"
+hermes --profile ./rds-health-agent --task "Investigate db-prod-01" --context "depth=full"
+```
+
+### Expected Deliverable
+
+Three working trigger configurations (cron daily summary, webhook deep investigation, CLI with depth flag) plus output comparison showing different scope based on trigger type.
+
+---
+
+## Project 2: Alert-to-Agent Pipeline
+
+**Estimated time:** 45 minutes
+**Extends:** Module 12 lab (webhook configuration)
+**Prerequisites:** Webhook configuration from the lab, PagerDuty or simulated alert system
+
+### What You Will Build
+
+A complete alert-to-diagnosis pipeline: an alert fires → webhook triggers the agent → agent diagnoses → agent posts findings directly to the alert ticket (PagerDuty incident or Jira ticket), reducing mean time to diagnosis (MTTD) without requiring on-call engineer intervention.
+
+### Challenge
+
+The challenge is closing the loop: the agent's output must be written back to the alert ticket in a format that is immediately useful for the on-call engineer. This requires configuring the output routing to POST to the alert API (PagerDuty incident notes API, Jira comment API) rather than to Slack.
+
+### Steps
+
+1. Set up a simulated alert trigger (you can use `curl` to simulate the webhook):
+
+```bash
+# Simulate a CloudWatch alarm webhook
+curl -X POST http://localhost:8080/webhooks/cloudwatch \
+  -H "Content-Type: application/json" \
+  -H "X-Amz-SNS-Message-Type: Notification" \
+  --data-binary @test-alarm-payload.json
+```
+
+2. Configure the webhook output to route back to an external system:
+
+```yaml
+webhooks:
+  cloudwatch_alarm:
+    ...
+    output:
+      channel: http
+      target: "https://api.pagerduty.com/incidents/{incident_id}/notes"
+      headers:
+        Authorization: "Token token=${PAGERDUTY_TOKEN}"
+      format: |
+        **Hermes Agent Diagnosis:**
+        {agent_output}
+        *Skill: {skill_name} v{skill_version} | Elapsed: {elapsed_ms}ms*
+```
+
+3. Verify end-to-end: simulated alarm → agent diagnosis → finding posted to incident
+
+4. Measure MTTD: how long from alarm trigger to useful diagnosis in the incident ticket?
+
+### Expected Deliverable
+
+End-to-end pipeline demonstration with timing measurement (alert sent → diagnosis posted). Screenshot or log showing the agent's diagnosis appearing in the alert ticket.
+
+---
+
+## Which Project Should You Do?
+
+| Your Interest | Recommended Project |
+|--------------|-------------------|
+| Context-aware responses | Project 1 (multi-trigger) |
+| Incident response automation | Project 2 (alert pipeline) |
+| Under 30 minutes available | Project 2 — more focused, higher operational impact |
+
+Both projects model the most common production deployment patterns: multi-trigger agents (most mature agent deployments) and alert-to-diagnosis pipelines (highest-ROI first deployment).

@@ -1,0 +1,113 @@
+---
+id: module-13-exploratory
+title: "Exploratory: Governance Stretch Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for Module 13 — governance audit and promotion readiness assessment"
+---
+
+# Exploratory: Governance Stretch Projects
+
+These are **exploratory stretch projects** — not required to complete Module 13. They extend governance concepts into practical enterprise readiness assessments.
+
+---
+
+## Project 1: Governance Audit of Your Existing Agent
+
+**Estimated time:** 30 minutes
+**Extends:** Module 13 lab (governance configuration)
+**Prerequisites:** Your domain agent from Module 10, Module 13 lab completed
+
+### What You Will Build
+
+A governance audit document for your existing agent — a structured review of every autonomous action it currently takes and every decision it could make, assessed against the DO × APPROVE × LOG framework.
+
+### Challenge
+
+Most teams over-classify actions in DO (the agent can do more than it should) or under-classify them (the agent is overly restricted and loses value). The challenge is calibrating: which actions genuinely warrant autonomous execution, which need approval, and which are currently in the wrong category?
+
+### Steps
+
+1. List every tool call your agent can make (from your config.yaml allowed_commands list)
+
+2. For each tool call, assess:
+   - **Blast radius:** If this runs incorrectly, what is the worst-case impact? (scale: low/medium/high/critical)
+   - **Reversibility:** Can the action be undone? (easy/complex/impossible)
+   - **Urgency:** Is delay for approval acceptable? (yes = hours, sometimes = minutes, no = immediate)
+
+3. Based on your assessment, classify each action:
+   - DO: low blast radius OR urgent + reversible
+   - APPROVE: medium/high blast radius AND not time-critical
+   - LOG: all of the above
+
+4. Compare your current governance config (from the lab) to your assessment. Where are they misaligned?
+
+5. Update the governance config to reflect your calibrated assessment.
+
+### Expected Deliverable
+
+A governance audit table with every allowed action assessed across blast radius, reversibility, and urgency dimensions, plus your rationale for each DO/APPROVE classification. Identify one action you moved from APPROVE to DO or from DO to APPROVE based on the analysis.
+
+---
+
+## Project 2: Promotion Readiness Assessment
+
+**Estimated time:** 30 minutes
+**Extends:** Module 13 lab (maturity levels)
+**Prerequisites:** Your agent from Module 10 running at L1 in the lab
+
+### What You Will Build
+
+A promotion readiness assessment: a structured document that defines the specific, measurable criteria your agent must meet to earn promotion from L1 to L2, and from L2 to L3. This is the governance roadmap for your agent's post-course deployment.
+
+### Challenge
+
+Promotion criteria sound straightforward from the reference, but the specifics depend on your environment. "Accuracy rate ≥90%" means nothing without defining: what is an accurate diagnosis in your domain, how do you measure it, and who validates the human ground truth?
+
+### Steps
+
+1. Define "accuracy" for your domain:
+   - What does a correct diagnosis look like for your agent?
+   - Who verifies it (the on-call engineer who resolves the incident, the team lead, a dedicated reviewer)?
+   - How is the verification recorded (PagerDuty incident resolution notes, Jira ticket closure comment)?
+
+2. Define the measurement process:
+   - How will you extract the accuracy rate from audit logs? (What query or dashboard?)
+   - What is the review cadence? (Weekly review, monthly report?)
+
+3. Write custom promotion criteria for your specific agent (using the reference criteria as baseline, adjusted for your domain):
+
+```markdown
+## Promotion Criteria: [Your Agent Name]
+
+### L1 → L2
+- [ ] 30 days operation (calendar days from deployment)
+- [ ] Accuracy rate ≥90% verified by [role] in [system]
+- [ ] Zero cases of [specific false positive or harmful action for your domain]
+- [ ] Proposed L2 autonomous actions reviewed by [who]: [list specific actions]
+
+### L2 → L3
+- [ ] 60 days at L2
+- [ ] Proposals approved without modification ≥80% (from audit log query: [SQL or filter])
+- [ ] Zero incidents caused by agent actions (verified in [incident tracking system])
+- [ ] Rollback plans documented for each L3 DO action: [list them here]
+- [ ] Formal review by: [names or roles]
+```
+
+4. Identify the single highest-value L3 action for your agent (the one that would most reduce your team's manual workload if automated) and document its rollback plan.
+
+### Expected Deliverable
+
+A promotion readiness document with custom criteria for L1→L2 and L2→L3 specific to your agent and environment, plus a documented rollback plan for the highest-value L3 action.
+
+---
+
+## Which Project Should You Do?
+
+| Your Focus | Recommended Project |
+|-----------|-------------------|
+| Getting current governance config right | Project 1 (governance audit) |
+| Post-course deployment planning | Project 2 (promotion roadmap) |
+| Both are high value — if you have 60 minutes | Do Project 2 first (strategic), then Project 1 (tactical) |
+
+These two projects together produce the governance artifacts you will bring back to your organization: a calibrated action classification and a principled roadmap for earning the agent's trust over time.

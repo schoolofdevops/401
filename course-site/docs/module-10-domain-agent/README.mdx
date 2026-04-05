@@ -1,0 +1,70 @@
+---
+id: module-10-readme
+title: "Module 10: Build Your Domain Agent"
+sidebar_label: "Overview"
+sidebar_position: 0
+---
+
+# Module 10: Build Your Domain Agent
+
+**Duration:** 120 minutes
+**Day:** Day 3, Session 4
+
+:::info Lab Location
+The hands-on lab for this module lives in the **Hermes repository**. This is the primary build module of Day 3 — everything from Modules 7, 8, and 9 converges here into a working agent. Read the [Concepts](./reading/module-10-concepts) page first, choose your track, then open the Hermes lab guide.
+:::
+
+## What This Module Is About
+
+This is where you stop learning about agents and start building one. Everything converges: your SKILL.md from Module 7, your tool configuration from Module 8, the design patterns from Module 9, and your impact assessment from Module 4.
+
+The output is a working domain agent — deployed on Hermes, connected to real or simulated infrastructure, capable of executing your operational runbooks autonomously.
+
+## Choose Your Track
+
+| Track | Domain | Key Skills | Infrastructure |
+|-------|--------|-----------|----------------|
+| **Track A: DB Health and Tuning** | RDS PostgreSQL | Slow query analysis, parameter tuning, connection pool monitoring | Real or simulated RDS (mock data provided) |
+| **Track B: Cost Anomaly and FinOps** | AWS Cost Explorer | Cost trend analysis, right-sizing, unused resource detection | Real or simulated Cost Explorer (mock data provided) |
+| **Track C: Kubernetes Health** | Kubernetes | Pod restart analysis, resource pressure, image pull issues | Local KIND cluster (no cloud needed) |
+
+All three tracks produce the same type of artifact: a complete Hermes agent profile (SOUL.md + config.yaml + skills/) with simulated data for testing when real infrastructure is not available.
+
+**If you completed your Module 4 impact assessment** — choose the track closest to your capstone candidate. You will extend this agent in Module 13 for your capstone.
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. **Build a complete domain agent from scratch** by combining skills, tools, and configuration into a working Hermes profile
+2. **Test against simulated infrastructure data** using the provided mock datasets when real infrastructure is not available
+3. **Evaluate agent output quality** using a structured checklist: accuracy, completeness, confidence calibration, and actionability
+4. **Identify what your agent cannot reliably do** — the boundary conditions where it needs human judgment rather than autonomous action
+
+## Prerequisites
+
+- Modules 7 and 8 completed (you have a SKILL.md and understand tool configuration)
+- Module 9 completed (you understand design patterns)
+- Hermes installed and running
+- **Track C only:** KIND cluster running (`kubectl cluster-info --context kind-lab`)
+
+## Module Contents
+
+| Section | Content | Time |
+|---------|---------|------|
+| Reading | [Concepts: Agent Anatomy and Build Strategy](./reading/module-10-concepts) | 20 min |
+| Reading | [Reference: Agent Profile Structure and Output Evaluation](./reading/module-10-reference) | 10 min |
+| Lab | Build Your Domain Agent — Track A, B, or C (Hermes repo) | 80 min |
+| Quiz | [Module 10 Assessment](./quiz/module-10-quiz) | 10 min |
+| Exploratory | [Stretch Projects](./exploratory/module-10-exploratory) | Optional |
+
+## What "Done" Looks Like
+
+At the end of the lab, your agent can receive a task like "Investigate the connection pool saturation on our RDS instance" and:
+
+1. Load the relevant skill automatically based on the trigger
+2. Execute the diagnostic procedure against real or simulated data
+3. Reason about the evidence using the decision trees in the skill
+4. Generate a structured diagnosis with root cause hypothesis, supporting evidence, recommended actions, and escalation decision
+
+That is a working domain agent. It will not be perfect — and the concepts reading covers what "good enough" means and how to improve from here.

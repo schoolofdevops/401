@@ -1,0 +1,186 @@
+---
+id: module-07-quiz
+title: "Quiz: Agent Skills and Memory"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of SKILL.md, memory types, and RAG from Module 7"
+---
+
+# Quiz: Agent Skills and Memory
+
+These questions test your understanding of procedural memory, retrieval patterns, and skill design. Focus on operational reasoning, not trivia.
+
+---
+
+### Question 1: Memory Types
+
+An AI agent investigating a multi-hour database incident needs to remember that it detected connection pool saturation at 10:00 AM when generating a summary at 4:00 PM in the same session. Which memory type handles this?
+
+A) Long-term memory stored in a vector database
+B) Short-term memory (active context window)
+C) Procedural memory loaded from a SKILL.md
+D) Embedded memory fine-tuned into the model
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Short-term memory (active context window)**
+
+The observation at 10:00 AM and the summary at 4:00 PM are within the same session. As long as the conversation has not exceeded the context window limit, everything from the current session is available in short-term memory — no external storage required.
+
+**When each type applies:**
+- **Short-term (context window):** Current session only. Lost when session ends. Good for: multi-step tasks, intermediate results, in-session reasoning.
+- **Long-term (vector DB or key-value store):** Persists across sessions. Requires explicit storage and retrieval. Good for: incident history, learned patterns, cross-session operational context.
+- **Procedural (SKILL.md):** Not facts to recall — instructions to follow. Loaded at runtime, not stored from conversation.
+
+The key distinction: if the information was generated in this session and the context window has not overflowed, short-term memory holds it without any explicit storage step.
+
+</details>
+
+---
+
+### Question 2: RAG Purpose
+
+A DevOps agent needs to look up the current pricing for EC2 instance types to generate a cost comparison. This information changes quarterly and was not in the agent's training data. What pattern addresses this?
+
+A) Procedural memory — add an EC2 pricing section to the agent's SKILL.md
+B) RAG — retrieve current pricing documentation at query time from a knowledge base
+C) Fine-tuning — retrain the model with updated pricing data
+D) Prompt engineering — ask the agent to estimate prices from general knowledge
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) RAG — retrieve current pricing documentation at query time from a knowledge base**
+
+Pricing data changes frequently (quarterly or more often). Training cutoffs mean the model's internal knowledge is stale. Fine-tuning is expensive, slow, and does not stay current. Adding pricing to a SKILL.md creates a maintenance burden every time prices change.
+
+RAG is the right pattern here: the agent queries a knowledge base (or performs a web retrieval) at runtime to get current pricing data before generating the cost comparison. The retrieved data is added to the context, the agent generates with accurate numbers.
+
+**DevOps analogy:** An SRE checking current on-call rates or cloud billing pages before quoting costs in a capacity planning doc — not guessing from memory, retrieving current data.
+
+Option D is specifically wrong in an operational context — "estimate from general knowledge" is how agents generate confident but wrong numbers (hallucination). Operational decisions require accurate data, not estimates.
+
+</details>
+
+---
+
+### Question 3: SKILL.md Design
+
+You are writing a SKILL.md for an RDS slow query investigation. The current step says: "If queries are slow, investigate the usual suspects." What is wrong with this step?
+
+A) Nothing — this is a reasonable instruction for an experienced agent
+B) "Slow" and "usual suspects" are ambiguous — an agent will fill these gaps with prediction, not your team's operational knowledge
+C) The step should be removed — agents should not investigate slow queries without human approval
+D) The language is too technical — SKILL.md should use plain English that non-engineers can understand
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) "Slow" and "usual suspects" are ambiguous — an agent will fill these gaps with prediction, not your team's operational knowledge**
+
+This is the core problem with prose runbooks for agents: ambiguity forces prediction. "Slow" needs a threshold: `latency_p99 > 200ms for over 5 minutes`. "Usual suspects" needs enumeration: `pg_stat_statements top 5 by total_exec_time, missing index detection via EXPLAIN ANALYZE, lock wait analysis via pg_locks`.
+
+An experienced human engineer brings institutional knowledge to fill these gaps. An AI agent brings training data — which may or may not match your environment, your thresholds, or your team's preferred remediation order.
+
+The fix is to make the conditions and steps explicit:
+```markdown
+3. Evaluate latency:
+   - If p99 > 200ms sustained 5+ min: query pg_stat_statements (Step 4)
+   - If p99 100-200ms: flag as elevated, continue monitoring (Step 7)
+   - If p99 < 100ms: baseline normal, document and close
+```
+
+SKILL.md is written for agents, not humans. The more explicit, the more reliable.
+
+</details>
+
+---
+
+### Question 4: Embeddings
+
+Why does semantic search with embeddings find relevant documentation even when the query uses different words than the document?
+
+A) Embeddings tokenize text into identical subword units regardless of synonyms
+B) Semantic search uses a thesaurus to expand query terms before searching
+C) Embeddings represent text as vectors capturing meaning — similar meanings produce similar vectors, so similarity search finds conceptually related content
+D) The AI model translates all queries to a canonical vocabulary before comparing
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) Embeddings represent text as vectors capturing meaning — similar meanings produce similar vectors, so similarity search finds conceptually related content**
+
+An embedding model converts text into a high-dimensional vector (e.g., 1536 numbers). The key property: texts with similar semantic content produce vectors that are close together in that high-dimensional space (measured by cosine similarity or dot product).
+
+**Example:** The query "EC2 instance running slow" and the document "compute node performance degradation" have different words but similar meaning. Their embedding vectors will be close together — the similarity search returns the document even though no keywords matched.
+
+**DevOps analogy:** Container image layer deduplication. Different images that share a layer have the same layer hash — the storage system recognizes them as identical without comparing file names. Embeddings recognize semantically identical content without comparing word tokens.
+
+Options A, B, and D describe keyword-based or rule-based approaches that do not capture meaning. Semantic search with embeddings is fundamentally different from keyword search — it measures conceptual proximity, not word overlap.
+
+</details>
+
+---
+
+### Question 5: Skill Versioning
+
+After deploying a SKILL.md for EC2 health checks, you discover that the agent consistently misses a critical step: checking disk I/O when CPU is high, which has been a leading indicator of impending instance failure in your environment. You add a new step and a new decision tree entry. What version change is appropriate?
+
+A) PATCH (1.0.0 → 1.0.1) — adding a step is a small change
+B) MAJOR (1.0.0 → 2.0.0) — any change to agent behavior requires a major version
+C) MINOR (1.0.0 → 1.1.0) — new capability added (new step, new decision tree), no breaking change
+D) No version change — the skill file is internal documentation, not versioned software
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) MINOR (1.0.0 → 1.1.0) — new capability added (new step, new decision tree), no breaking change**
+
+Skill versioning follows semantic versioning conventions:
+- **PATCH (1.0.x):** Non-functional changes — clarifying wording, fixing a command syntax error, updating a threshold. No new steps, no new decision branches.
+- **MINOR (1.x.0):** New capability — new step, new decision tree branch, new escalation case. Backward compatible: agents using 1.0.0 can safely upgrade to 1.1.0.
+- **MAJOR (x.0.0):** Breaking change — inputs renamed, procedure structure changed, escalation paths restructured. Agents configured for 1.x may need updates.
+
+Adding a disk I/O step and a new decision tree entry is a MINOR change. It adds capability without breaking the existing procedure. Any agent currently using the 1.0 skill will benefit from upgrading to 1.1.
+
+Versioning skills matters because: multiple agents may run the same skill, you need audit trails for what procedure was running during an incident, and improvements should be tracked and deliberate.
+
+</details>
+
+---
+
+### Question 6: Agentic RAG vs. Standard RAG
+
+What distinguishes agentic RAG from standard RAG?
+
+A) Agentic RAG uses larger language models, which retrieve more information automatically
+B) In standard RAG, retrieval happens once before generation. In agentic RAG, the agent decides when and what to retrieve mid-task, triggered by what it discovers during execution
+C) Agentic RAG requires vector databases, while standard RAG uses keyword search
+D) Agentic RAG is a faster version of RAG that reduces latency by pre-fetching documents
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) In standard RAG, retrieval happens once before generation. In agentic RAG, the agent decides when and what to retrieve mid-task, triggered by what it discovers during execution**
+
+**Standard RAG flow:**
+1. User query arrives
+2. Query is embedded, similar documents retrieved from vector DB
+3. Retrieved documents added to context
+4. Model generates response
+5. Done — one retrieval cycle
+
+**Agentic RAG flow:**
+1. Agent receives task
+2. Agent decides: "I need the service architecture docs" — retrieves them
+3. Agent executes diagnostic steps, discovers connection pool issue
+4. Agent decides: "I need PostgreSQL connection pool tuning docs" — retrieves them
+5. Agent generates structured diagnosis with evidence from both retrievals
+
+The key difference: the agent decides what to retrieve based on what it discovers, not just the initial query. This is dynamic, multi-step retrieval versus single-shot retrieval.
+
+**DevOps analogy:** An SRE who knows when to look something up versus when to work from memory, and knows which specific documentation is relevant to what they're seeing right now — not just what was relevant at the start of the incident.
+
+</details>
+

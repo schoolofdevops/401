@@ -1,0 +1,59 @@
+---
+id: module-13-readme
+title: "Module 13: Governance — Enterprise-Safe Agents"
+sidebar_label: "Overview"
+sidebar_position: 0
+---
+
+# Module 13: Governance — Enterprise-Safe Agents
+
+**Duration:** 60 minutes
+**Day:** Day 3, Session 7
+
+:::info Lab Location
+The hands-on lab for this module lives in the **Hermes repository**. This is the final technical module before the capstone. Read the [Concepts](./reading/module-13-concepts) page to understand the governance triad and maturity levels — the lab builds on both. Then open the Hermes lab guide.
+:::
+
+## What This Module Is About
+
+Your agent can diagnose, recommend, and act. The question is: should it? Governance is where you draw the lines.
+
+Enterprise deployment of AI agents requires answering three questions:
+- **What can it do autonomously?** (scope of action)
+- **What needs sign-off before it acts?** (approval requirements)
+- **What gets recorded for audit?** (accountability trail)
+
+These three questions form the governance triad: DO × APPROVE × LOG. This module gives you the framework and the configuration to answer all three — and to change the answers as the agent earns trust over time.
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. **Assign a maturity level** (L1 Assistive through L4 Semi-autonomous) to your domain agent based on the trust it has earned
+2. **Configure approval workflows** with escalation paths and timeouts for operations that require human sign-off
+3. **Implement audit logging** that captures what the agent did, when, with what authorization, and what the outcome was
+4. **Define promotion criteria** — the measurable conditions under which an agent earns a higher autonomy level
+
+## Prerequisites
+
+- Module 10 completed (you have a working domain agent)
+- Modules 11-12 completed (agent is deployed with fleet and trigger configuration)
+- Basic understanding of your organization's change management process
+
+## Module Contents
+
+| Section | Content | Time |
+|---------|---------|------|
+| Reading | [Concepts: Governance Triad and Maturity Levels](./reading/module-13-concepts) | 15 min |
+| Reading | [Reference: Governance Config Templates and Audit Logs](./reading/module-13-reference) | 10 min |
+| Lab | Add Governance Layer to Your Agent (Hermes repo) | 25 min |
+| Quiz | [Module 13 Assessment](./quiz/module-13-quiz) | 10 min |
+| Exploratory | [Stretch Projects](./exploratory/module-13-exploratory) | Optional |
+
+## Key Concept: Trust Must Be Earned, Not Assumed
+
+Every agent starts at L1 (Assistive): it can observe and advise, but not act. Trust is earned through demonstrated accuracy, safety, and reliability. As the agent proves itself — through consistent correct diagnoses, no false positives, no unexpected actions — it earns more autonomy.
+
+This is the same principle as progressive delivery: canary deployments, blue-green, gradual rollout. You don't trust a new deployment with 100% traffic on day one. You observe, verify, and increase trust incrementally.
+
+Your domain agent should follow the same path.

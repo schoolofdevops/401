@@ -1,0 +1,73 @@
+---
+id: module-07-readme
+title: "Module 7: Agent Skills — Teaching Agents Runbooks"
+sidebar_label: "Overview"
+sidebar_position: 0
+---
+
+# Module 7: Agent Skills — Teaching Agents Runbooks
+
+**Duration:** 90 minutes
+**Day:** Day 3, Session 1
+
+:::info Lab Location
+The hands-on lab for this module lives in the **Hermes repository**. This page covers the conceptual foundation you need before running the lab. Read the [Concepts](./reading/module-07-concepts) and [Reference](./reading/module-07-reference) pages first, then open the Hermes lab guide.
+:::
+
+## What This Module Is About
+
+You've been writing runbooks for years. Great runbooks have decision trees, escalation paths, exact CLI commands, and conditional steps based on what you find. The problem is that runbooks are written for humans — they rely on implied context, organizational memory, and judgment that humans accumulate over time.
+
+SKILL.md is a machine-readable runbook. It encodes the same operational expertise in a structured format that an AI agent can read, follow, and apply at runtime. This module teaches you how to write one — and why the format matters.
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. **Write a domain-specific SKILL.md** with decision trees, conditional steps, and escalation rules that an AI agent can execute reliably
+2. **Explain Retrieval-Augmented Generation (RAG)** using operational analogies — and understand when agents need retrieved knowledge versus when skills are sufficient
+3. **Distinguish the three memory types** (short-term conversation, long-term cross-session, procedural skills) and explain which problems each solves
+4. **Articulate why machine-readable skills beat wiki runbooks** for AI agent reliability — and what specifically makes them more reliable
+
+## Choose Your Track
+
+The lab has four track options — pick the one closest to your domain:
+
+| Track | Focus | Primary Tools |
+|-------|-------|--------------|
+| **SRE Track** | EC2 health check skill | `aws ec2`, CloudWatch metrics, escalation paths |
+| **DevOps Track** | Deployment safety check | Pre-deploy validation, rollback criteria, canary checks |
+| **DBA Track** | RDS slow query investigation | `psql`, `pg_stat_statements`, index recommendations |
+| **Observability Track** | Alert noise analysis | Dedup detection, correlation scoring, snooze recommendations |
+
+All four tracks produce the same artifact: a domain-specific SKILL.md your agent can execute.
+
+## Prerequisites
+
+- Modules 1-6 completed
+- Hermes installed and running (from Module 3)
+- Familiarity with at least one of the four track domains
+
+## Module Contents
+
+| Section | Content | Time |
+|---------|---------|------|
+| Reading | [Concepts: RAG, Memory Types, and Procedural Skills](./reading/module-07-concepts) | 20 min |
+| Reading | [Reference: SKILL.md Format and Skill Lifecycle](./reading/module-07-reference) | 10 min |
+| Lab | Write Your Domain-Specific SKILL.md (Hermes repo) | 50 min |
+| Quiz | [Module 7 Assessment](./quiz/module-07-quiz) | 10 min |
+| Exploratory | [Stretch Projects](./exploratory/module-07-exploratory) | Optional |
+
+## Key Insight: The Runbook Reliability Problem
+
+A well-written wiki runbook gets followed accurately by an experienced engineer. The same runbook, given to an AI agent as plain text, produces inconsistent results — because the agent fills in gaps with reasoning rather than executing specified steps.
+
+SKILL.md solves this by making the runbook unambiguous:
+
+- Inputs are typed and validated
+- Steps are numbered with exact commands
+- Conditions are explicit (`if latency > 200ms: step 4a, else step 4b`)
+- Escalation paths are named, not implied
+- Success and failure criteria are measurable
+
+This is not prompt engineering. This is context engineering — encoding your operational expertise in a format your agent reads as structured knowledge, not prose to interpret.
