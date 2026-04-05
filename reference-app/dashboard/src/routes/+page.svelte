@@ -8,14 +8,16 @@
 		formatTime,
 		fetchCatalogItems,
 		fetchRecentEvents,
+		fetchDatabaseStatus,
 		timeAgo
 	} from '$lib/health.js';
-	import type { CatalogItem, ServiceHealth, SystemStatus, WorkerEvent } from '$lib/types.js';
+	import type { CatalogItem, ServiceHealth, ServiceStatus, SystemStatus, WorkerEvent } from '$lib/types.js';
 
 	// ----- Svelte 5 runes state -----
 	let services: ServiceHealth[] = $state(initialServiceStates());
 	let catalogItems: CatalogItem[] = $state([]);
 	let recentEvents: WorkerEvent[] = $state([]);
+	let dbStatus: ServiceStatus = $state('unknown');
 	let countdown: number = $state(30);
 	// Plain let — isPolling is a concurrency guard, not displayed in the UI
 	let isPolling = false;
@@ -31,13 +33,15 @@
 			if (isPolling) return;
 			isPolling = true;
 			try {
-				const [updated, items, events] = await Promise.all([
+				const [updated, items, events, dbSt] = await Promise.all([
 					pollServices('', services),
 					fetchCatalogItems(),
-					fetchRecentEvents()
+					fetchRecentEvents(),
+					fetchDatabaseStatus()
 				]);
 				if (!cancelled) {
 					services = updated;
+					dbStatus = dbSt;
 					if (items.length > 0) catalogItems = items;
 					if (events.length > 0) recentEvents = events;
 				}
@@ -152,26 +156,39 @@
 		}
 	}
 
-	// Topology: compute node colour from live service health
+	// Topology: compute node colour from a ServiceStatus value
+	function statusStroke(status: ServiceStatus): string {
+		if (status === 'healthy') return '#22c55e'; // green-500
+		if (status === 'degraded' || status === 'error') return '#f59e0b'; // amber-400
+		return '#4b5563'; // gray-600 (unknown)
+	}
+
+	function statusFill(status: ServiceStatus): string {
+		if (status === 'healthy') return '#052e16'; // green-950
+		if (status === 'degraded' || status === 'error') return '#451a03'; // amber-950
+		return '#1f2937'; // gray-800 (unknown)
+	}
+
+	function statusLine(status: ServiceStatus): string {
+		if (status === 'healthy') return '#166534'; // green-800
+		if (status === 'degraded' || status === 'error') return '#92400e'; // amber-800
+		return '#374151'; // gray-700 (unknown)
+	}
+
+	// Helpers: look up live status for a named service then map to colour
 	function nodeStroke(serviceName: string): string {
 		const svc = services.find((s) => s.name === serviceName);
-		if (!svc || svc.status === 'unknown') return '#4b5563'; // gray-600
-		if (svc.status === 'healthy') return '#22c55e'; // green-500
-		return '#f59e0b'; // amber-400
+		return statusStroke(svc?.status ?? 'unknown');
 	}
 
 	function nodeFill(serviceName: string): string {
 		const svc = services.find((s) => s.name === serviceName);
-		if (!svc || svc.status === 'unknown') return '#1f2937'; // gray-800
-		if (svc.status === 'healthy') return '#052e16'; // green-950
-		return '#451a03'; // amber-950
+		return statusFill(svc?.status ?? 'unknown');
 	}
 
 	function lineStroke(fromService: string): string {
 		const svc = services.find((s) => s.name === fromService);
-		if (!svc || svc.status === 'unknown') return '#374151'; // gray-700
-		if (svc.status === 'healthy') return '#166534'; // green-800
-		return '#92400e'; // amber-800
+		return statusLine(svc?.status ?? 'unknown');
 	}
 
 	function payloadSummary(payload: Record<string, unknown>): string {
@@ -250,10 +267,10 @@
 					<line x1="395" y1="138" x2="505" y2="168" stroke={lineStroke('worker')} stroke-width="1.5" />
 
 					<!-- Catalog → Postgres -->
-					<line x1="175" y1="198" x2="300" y2="228" stroke="#374151" stroke-width="1.5" />
+					<line x1="175" y1="198" x2="300" y2="228" stroke={statusLine(dbStatus)} stroke-width="1.5" />
 
 					<!-- Worker → Postgres -->
-					<line x1="505" y1="198" x2="380" y2="228" stroke="#374151" stroke-width="1.5" />
+					<line x1="505" y1="198" x2="380" y2="228" stroke={statusLine(dbStatus)} stroke-width="1.5" />
 
 					<!-- ── Dashboard node (static — no health poll) ── -->
 					<rect x="260" y="14" width="160" height="38" rx="6" fill="#1f2937" stroke="#4b5563" stroke-width="1.5" />
@@ -284,10 +301,11 @@
 						{services.find(s => s.name === 'worker')?.version ?? ':8082'}
 					</text>
 
-					<!-- ── PostgreSQL node (always neutral — storage tier) ── -->
-					<rect x="260" y="218" width="160" height="38" rx="6" fill="#111827" stroke="#374151" stroke-width="1.5" stroke-dasharray="5 3" />
-					<text x="340" y="234" text-anchor="middle" fill="#6b7280" font-size="11" font-family="monospace">postgresql</text>
-					<text x="340" y="248" text-anchor="middle" fill="#4b5563" font-size="9" font-family="monospace">:5432  storage</text>
+					<!-- ── PostgreSQL node (status via /catalog/health/ready) ── -->
+					<rect x="260" y="218" width="160" height="38" rx="6" fill={statusFill(dbStatus)} stroke={statusStroke(dbStatus)} stroke-width="1.5" />
+					<circle cx="275" cy="237" r="4" fill={statusStroke(dbStatus)} />
+					<text x="295" y="233" fill="#e5e7eb" font-size="11" font-family="monospace">postgresql</text>
+					<text x="295" y="247" fill="#9ca3af" font-size="9" font-family="monospace">:5432  storage</text>
 				</svg>
 			</div>
 		</section>

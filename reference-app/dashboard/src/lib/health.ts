@@ -200,3 +200,23 @@ export async function fetchRecentEvents(): Promise<WorkerEvent[]> {
 		return [];
 	}
 }
+
+/**
+ * Probe PostgreSQL reachability via the catalog's readiness endpoint.
+ *
+ * The catalog's GET /health/ready acquires a connection from the DB pool:
+ *   200 {"status":"ready"}          → DB is reachable
+ *   503 {"status":"degraded", ...}  → DB pool exhausted or DB unreachable
+ *   network error                   → catalog itself is down (DB status unknown)
+ *
+ * Returns 'unknown' when catalog is unreachable (can't distinguish from DB down).
+ */
+export async function fetchDatabaseStatus(): Promise<ServiceStatus> {
+	try {
+		const res = await fetch('/catalog/health/ready', { signal: AbortSignal.timeout(5000) });
+		return res.ok ? 'healthy' : 'degraded';
+	} catch {
+		// Catalog unreachable — can't determine DB status
+		return 'unknown';
+	}
+}
