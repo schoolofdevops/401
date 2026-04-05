@@ -84,12 +84,12 @@ Plans:
   3. Module 14 capstone templates (presentation template, 30-day roadmap template, rubric) are complete and a solo participant can use them without a facilitator
   4. Day 1, Day 2, and Day 3 instructor facilitator guides exist with timing, transitions, and debrief prompts
   5. A vocabulary grep across all content returns zero instances of "prompt engineering" after Module 1 — context engineering language is enforced throughout
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: Modules 9 and 14 specific content (design patterns reading, capstone templates, rubric)
-- [ ] 04-02: All-module content sweep (concepts.md, reference.md, QUIZ.md, PROJECTS.md, README.md for modules 1-14)
-- [ ] 04-03: Format overlays (instructor facilitator guides Day 1/2/3, Udemy section outline, solo fallbacks, vocabulary audit)
+- [ ] 04-01-PLAN.md — Module 9 (design patterns, autonomy spectrum) and Module 14 (capstone templates, rubric, roadmap) complete content
+- [ ] 04-02-PLAN.md — Modules 7-13 reading/quiz/exploratory content + gap-fill PROJECTS.mdx for Modules 1-5a + fix stale README tables
+- [ ] 04-03-PLAN.md — Instructor facilitator guides (Day 1/2/3), Udemy section outline, solo fallbacks, lab format audit, vocabulary audit
 
 ## Progress
 
