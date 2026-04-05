@@ -58,9 +58,9 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 - [x] **MOD5-05**: Memory systems lab — Cross-session persistence: claude-mem for Claude Code, MCP-based memory for OpenCode/Crush. When to use memory vs context vs plans
 - [x] **MOD5-06**: Plan modes lab — Structured reasoning before execution: Claude Code plan mode, GSD plan-phase. When to plan vs when to just execute, reviewing and approving plans
 - [x] **MOD5-07**: Superpowers workflow (exploratory) — TDD, systematic debugging, code review, brainstorming skills as examples of extending Claude Code with disciplined workflows
-- [ ] **MOD5-08**: Reading — Why unstructured prompting fails for production infrastructure
-- [ ] **MOD5-09**: Reading — GSD workflow reference, plan modes, memory systems, context engineering techniques
-- [ ] **MOD5-10**: Quiz covering structured coding concepts, context engineering, AI workflow patterns
+- [x] **MOD5-08**: Reading — Why unstructured prompting fails for production infrastructure
+- [x] **MOD5-09**: Reading — GSD workflow reference, plan modes, memory systems, context engineering techniques
+- [x] **MOD5-10**: Quiz covering structured coding concepts, context engineering, AI workflow patterns
 
 ### Module 6 — AI-Assisted IaC
 
@@ -166,9 +166,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOD5-05 | Phase 3 | Complete |
 | MOD5-06 | Phase 3 | Complete |
 | MOD5-07 | Phase 3 | Complete |
-| MOD5-08 | Phase 3 | Pending |
-| MOD5-09 | Phase 3 | Pending |
-| MOD5-10 | Phase 3 | Pending |
+| MOD5-08 | Phase 3 | Complete |
+| MOD5-09 | Phase 3 | Complete |
+| MOD5-10 | Phase 3 | Complete |
 | MOD6-01 | Phase 3 | Complete |
 | MOD6-02 | Phase 3 | Complete |
 | MOD6-03 | Phase 3 | Pending |
