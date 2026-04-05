@@ -73,15 +73,15 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 
 ### Module 9 — Agent Design Patterns (partial — this repo)
 
-- [ ] **MOD9-01**: Reading — Pattern taxonomy: advisor, investigator, proposal, guardian — each mapped to Hermes capabilities
-- [ ] **MOD9-02**: Reading — Autonomy spectrum L1 (Assistive) → L4 (Semi-autonomous) with concrete examples
-- [ ] **MOD9-03**: Quiz covering design patterns, autonomy levels
+- [x] **MOD9-01**: Reading — Pattern taxonomy: advisor, investigator, proposal, guardian — each mapped to Hermes capabilities
+- [x] **MOD9-02**: Reading — Autonomy spectrum L1 (Assistive) → L4 (Semi-autonomous) with concrete examples
+- [x] **MOD9-03**: Quiz covering design patterns, autonomy levels
 
 ### Module 14 — Capstone (partial — this repo)
 
-- [ ] **MOD14-01**: Presentation template — what teams should cover in their demo
-- [ ] **MOD14-02**: 30-day deployment roadmap template — post-workshop implementation plan
-- [ ] **MOD14-03**: Evaluation rubric — problem statement, agent design quality, live demo, governance spec, plan realism
+- [x] **MOD14-01**: Presentation template — what teams should cover in their demo
+- [x] **MOD14-02**: 30-day deployment roadmap template — post-workshop implementation plan
+- [x] **MOD14-03**: Evaluation rubric — problem statement, agent design quality, live demo, governance spec, plan realism
 
 ### All Modules — Reading & Assessment
 
@@ -175,12 +175,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOD6-04 | Phase 3 | Complete |
 | MOD6-05 | Phase 3 | Complete |
 | MOD6-06 | Phase 3 | Complete |
-| MOD9-01 | Phase 4 | Pending |
-| MOD9-02 | Phase 4 | Pending |
-| MOD9-03 | Phase 4 | Pending |
-| MOD14-01 | Phase 4 | Pending |
-| MOD14-02 | Phase 4 | Pending |
-| MOD14-03 | Phase 4 | Pending |
+| MOD9-01 | Phase 4 | Complete |
+| MOD9-02 | Phase 4 | Complete |
+| MOD9-03 | Phase 4 | Complete |
+| MOD14-01 | Phase 4 | Complete |
+| MOD14-02 | Phase 4 | Complete |
+| MOD14-03 | Phase 4 | Complete |
 | CONTENT-01 | Phase 4 | Pending |
 | CONTENT-02 | Phase 4 | Pending |
 | CONTENT-03 | Phase 4 | Pending |

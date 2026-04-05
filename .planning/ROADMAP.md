@@ -87,7 +87,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Module 9 (design patterns, autonomy spectrum) and Module 14 (capstone templates, rubric, roadmap) complete content
+- [x] 04-01-PLAN.md — Module 9 (design patterns, autonomy spectrum) and Module 14 (capstone templates, rubric, roadmap) complete content
 - [ ] 04-02-PLAN.md — Modules 7-13 reading/quiz/exploratory content + gap-fill PROJECTS.mdx for Modules 1-5a + fix stale README tables
 - [ ] 04-03-PLAN.md — Instructor facilitator guides (Day 1/2/3), Udemy section outline, solo fallbacks, lab format audit, vocabulary audit
 
@@ -101,4 +101,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation | 4/4 | Complete   | 2026-04-04 |
 | 2. Day 1 Modules | 1/3 | In Progress|  |
 | 3. Day 2 Modules | 4/5 | In Progress|  |
-| 4. Remaining Content | 0/3 | Not started | - |
+| 4. Remaining Content | 1/3 | In Progress|  |
