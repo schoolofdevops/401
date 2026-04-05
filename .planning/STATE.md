@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 03-day-2-modules 03-01-PLAN.md
-last_updated: "2026-04-04T20:34:52.896Z"
+stopped_at: Completed 03-day-2-modules 03-04-PLAN.md
+last_updated: "2026-04-05T02:47:36.127Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 03 (day-2-modules) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Plan: 3 of 5
 | Phase 02-day-1-modules P03 | 13 | 3 tasks | 16 files |
 | Phase 03-day-2-modules P02 | 20min | 2 tasks | 6 files |
 | Phase 03-day-2-modules P01 | 20min | 2 tasks | 5 files |
+| Phase 03-day-2-modules P04 | 17min | 2 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ Recent decisions affecting current work:
 - [Phase 03-day-2-modules]: claude-mem and Crush MCP memory as parallel paths in Section 3 — participants follow one based on tool choice
 - [Phase 03-day-2-modules]: Track A/B labs use gap analysis (Step 0) before AI — establishes baseline understanding before guided generation
 - [Phase 03-day-2-modules]: 5-phase structured workflow pattern (Brainstorm/Design/Blueprint/Implement/Validate) established for all Module 5a IaC lab content
+- [Phase 03-day-2-modules]: D-41 honored in Module 6: No Track C (Argo Workflows) content — descoped per plan, README.mdx names the descoping explicitly
+- [Phase 03-day-2-modules]: mock_provider chosen over LocalStack for Track A fallback — LocalStack community EOL March 2026, mock_provider built into Terraform 1.7+
+- [Phase 03-day-2-modules]: ArgoCD memory patches mandatory in setup-argocd.sh — pitfall 2 prevention: standard install requests 1.3GB total, causes OOM on laptop KIND clusters
 
 ### Pending Todos
 
@@ -106,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T20:34:52.894Z
-Stopped at: Completed 03-day-2-modules 03-01-PLAN.md
+Last session: 2026-04-05T02:47:36.124Z
+Stopped at: Completed 03-day-2-modules 03-04-PLAN.md
 Resume file: None

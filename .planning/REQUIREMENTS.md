@@ -64,10 +64,10 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 
 ### Module 6 — AI-Assisted IaC
 
-- [ ] **MOD6-01**: Lab Track A — Terraform module for real AWS resources (free tier): EC2/RDS with CloudWatch alarms + SNS notifications. Mock fallback documented for non-AWS participants
-- [ ] **MOD6-02**: Lab Track B — Kubernetes manifests + Helm charts + ArgoCD GitOps config for reference app on KIND — fully real, local
+- [x] **MOD6-01**: Lab Track A — Terraform module for real AWS resources (free tier): EC2/RDS with CloudWatch alarms + SNS notifications. Mock fallback documented for non-AWS participants
+- [x] **MOD6-02**: Lab Track B — Kubernetes manifests + Helm charts + ArgoCD GitOps config for reference app on KIND — fully real, local
 - [ ] **MOD6-03**: Lab Track C — CI/CD pipeline with Argo Workflows + GitHub Actions for reference app — fully real
-- [ ] **MOD6-04**: Each track: starter files, solution files, expected outputs, validation steps
+- [x] **MOD6-04**: Each track: starter files, solution files, expected outputs, validation steps
 - [ ] **MOD6-05**: Reading — AI failure modes in infrastructure generation, common AI errors in IaC
 - [ ] **MOD6-06**: Quiz covering IaC validation, AI error patterns in infrastructure code
 
@@ -169,10 +169,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOD5-08 | Phase 3 | Pending |
 | MOD5-09 | Phase 3 | Pending |
 | MOD5-10 | Phase 3 | Pending |
-| MOD6-01 | Phase 3 | Pending |
-| MOD6-02 | Phase 3 | Pending |
+| MOD6-01 | Phase 3 | Complete |
+| MOD6-02 | Phase 3 | Complete |
 | MOD6-03 | Phase 3 | Pending |
-| MOD6-04 | Phase 3 | Pending |
+| MOD6-04 | Phase 3 | Complete |
 | MOD6-05 | Phase 3 | Pending |
 | MOD6-06 | Phase 3 | Pending |
 | MOD9-01 | Phase 4 | Pending |
