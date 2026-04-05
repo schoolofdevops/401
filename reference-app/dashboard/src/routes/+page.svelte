@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import '../app.css';
 	import {
 		pollServices,
@@ -11,23 +12,34 @@
 	// ----- Svelte 5 runes state -----
 	let services: ServiceHealth[] = $state(initialServiceStates());
 	let countdown: number = $state(30);
-	let isPolling: boolean = $state(false);
+	// Plain let — isPolling is a concurrency guard, not displayed in the UI
+	let isPolling = false;
 
 	// Derived system-wide status (synchronous transform — NOT async)
 	let systemStatus: SystemStatus = $derived(deriveSystemStatus(services));
 
-	// ----- Polling effect -----
-	$effect(() => {
+	// ----- Polling setup -----
+	// Use onMount (not $effect) so the polling loop runs once on mount and never
+	// re-triggers due to reactive state changes. $effect re-runs whenever its
+	// tracked dependencies change, which would cancel in-flight polls via the
+	// cleanup function before services = updated can fire.
+	onMount(() => {
 		let cancelled = false;
 
 		async function poll() {
 			if (isPolling) return;
 			isPolling = true;
+			console.log('[poll] starting');
 			try {
 				const updated = await pollServices('', services);
+				console.log('[poll] got results:', updated.map(s => s.status));
 				if (!cancelled) {
+					console.log('[poll] assigning services, cancelled=', cancelled);
 					services = updated;
+					console.log('[poll] services assigned, first status=', services[0]?.status);
 				}
+			} catch (e) {
+				console.error('[poll] error:', e);
 			} finally {
 				if (!cancelled) isPolling = false;
 			}
