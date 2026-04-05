@@ -1,0 +1,54 @@
+---
+id: module-09-readme
+title: "Module 9: Agent Design Patterns"
+sidebar_label: "Overview"
+sidebar_position: 0
+---
+
+# Module 9: Agent Design Patterns
+
+**Duration:** 60 minutes
+**Day:** Day 3, Session 3
+
+## What This Module Is About
+
+You have built a working agent. You have given it skills, wired it to tools, and set safety boundaries. Now the question changes: what *kind* of agent are you building, and how much should it do on its own?
+
+This module introduces two frameworks that answer those questions. The four design patterns (advisor, investigator, proposal, guardian) define what role an agent plays in your operational workflow. The autonomy spectrum (L1 through L4) defines how much latitude it has to act without human approval. Together, these frameworks let you reason systematically about agent architecture — not just build one.
+
+:::info No Lab in This Repository
+
+This module has no hands-on lab in this repository. The Hermes repository contains concrete examples of each design pattern implemented as agent profiles. Reading and quiz content here provide the conceptual foundation you need before working with those examples.
+
+:::
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. **Name and define the four agent design patterns** — advisor, investigator, proposal, guardian — and describe the operational role each one fills
+2. **Match DevOps team roles to agent patterns** — recognize that pattern selection is a mapping exercise from your existing operational model
+3. **Explain the L1-L4 autonomy spectrum** — articulate what each level means, what DevOps practice it parallels, and what justifies moving from one level to the next
+4. **Evaluate promotion criteria** — assess whether an agent has earned the right to operate at a higher autonomy level
+
+## Prerequisites
+
+- Module 8 completed (you have wired tools to an agent and set safety boundaries)
+- Familiarity with Hermes profile configuration (SOUL.md + config.yaml)
+
+## Module Contents
+
+| Section | Content | Time |
+|---------|---------|------|
+| Reading: Concepts | Four patterns + autonomy spectrum + pattern-level combinations | 30 min |
+| Reading: Reference | Pattern decision flowchart + Hermes config examples | 10 min |
+| Quiz | Pattern identification, autonomy level application, anti-pattern recognition | 15 min |
+| Exploratory | Stretch projects for pattern migration and guardian design | Self-paced |
+
+## Why These Patterns Matter
+
+Without a pattern vocabulary, agent design is improvised: you build what seems right and hope it fits your operational model. With these patterns, design decisions become deliberate — you can state why an agent is an investigator and not a proposal agent, what would have to change to promote it from L2 to L3, and what guardrails a guardian must enforce.
+
+The patterns also communicate intent to teammates. Saying "this is an L2 advisory agent using the investigator pattern for RDS diagnosis" conveys the role, the autonomy level, the operational domain, and the approval requirement — in one sentence. That precision matters when you are proposing agent deployment to a team that will operate it in production.
+
+**Continue to:** [Concepts — The Four Patterns and Autonomy Spectrum](./reading/module-09-concepts)

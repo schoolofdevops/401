@@ -1,0 +1,232 @@
+---
+id: module-09-reference
+title: "Reference: Agent Design Patterns"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "Pattern decision flowchart, Hermes configuration examples, and quick-reference table for all four agent design patterns"
+---
+
+# Reference: Agent Design Patterns
+
+Use this page when selecting a pattern for a new agent or reviewing an existing configuration.
+
+---
+
+## Pattern Decision Flowchart
+
+Use these questions in order when choosing a design pattern.
+
+```
+START: What should the agent do with its findings?
+
+├─ Report findings only — never take action
+│   └─ Does it trace a causal chain, or give a single recommendation?
+│       ├─ Single recommendation → ADVISOR
+│       └─ Causal chain (root cause analysis) → INVESTIGATOR
+│
+├─ Prepare an action plan and execute on approval
+│   └─ Does it enforce policy, or propose changes?
+│       ├─ Enforce policy, block violations → GUARDIAN
+│       └─ Propose changes, execute on approval → PROPOSAL
+│
+└─ Unsure what it should do?
+    └─ Start with ADVISOR at L1. Add autonomy after you have operational evidence.
+```
+
+**Quick test:** If you cannot answer "what does this agent do when it finds a problem?" in one sentence, start with the Advisor pattern and read-only tools. Build complexity after you understand the domain.
+
+---
+
+## Autonomy Level Selection
+
+After selecting a pattern, choose the starting autonomy level.
+
+```
+What is your confidence in the agent's accuracy in this domain?
+
+├─ No track record yet → L1 (Assistive)
+│   └─ Start here regardless of target level
+│
+├─ 30+ days of verified correct diagnoses → L2 (Advisory)
+│   └─ Team has reviewed and signed off
+│
+├─ 90+ days at L2, change management reviewed → L3 (Proposal)
+│   └─ Rollback procedure documented
+│
+└─ 180+ days at L3, SRE confidence vote, incident plan → L4 (Semi-autonomous)
+    └─ Regulated environments: also need security/compliance sign-off
+```
+
+**Rule of thumb:** When in doubt, start one level lower. The cost of starting at L1 instead of L2 is a few weeks of observation time. The cost of starting at L3 before the agent is ready is a production incident.
+
+---
+
+## Hermes Configuration Examples
+
+These are minimal configuration snippets illustrating how each pattern is expressed in Hermes config files. They are starting points, not complete configurations.
+
+### Advisor Pattern — Hermes Config
+
+```yaml
+# config.yaml
+autonomy_level: L1
+
+toolsets:
+  terminal:
+    enabled: true
+    allowed_commands:
+      - "aws ec2 describe-*"
+      - "aws cloudwatch get-metric-*"
+      - "kubectl get *"
+      - "kubectl describe *"
+      - "psql -c SELECT*"
+    blocked_commands:
+      - "*"   # block everything not explicitly allowed
+
+approval:
+  required: false   # advisor never reaches approval — read-only only
+
+output:
+  format: recommendation
+  route: slack-channel
+```
+
+```markdown
+# SOUL.md (excerpt)
+You are an operations advisor. You observe, analyze, and recommend.
+You NEVER execute commands that modify state.
+Every response ends with: RECOMMENDATION: [specific action for the operator]
+```
+
+---
+
+### Investigator Pattern — Hermes Config
+
+```yaml
+# config.yaml
+autonomy_level: L1
+
+toolsets:
+  terminal:
+    enabled: true
+    allowed_commands:
+      - "aws logs filter-log-events*"
+      - "aws cloudwatch get-metric-statistics*"
+      - "kubectl logs *"
+      - "kubectl describe *"
+      - "kubectl get events *"
+  web:
+    enabled: true
+    allowed_domains:
+      - docs.aws.amazon.com
+      - kubernetes.io/docs
+
+approval:
+  required: false   # investigation is read-only
+
+output:
+  format: investigation_report
+  sections:
+    - symptoms_observed
+    - data_retrieved
+    - causal_chain
+    - root_cause
+    - recommended_next_steps
+```
+
+The multi-step reasoning in the investigator pattern comes from the SKILL.md, not from the config. The config enables the retrieval tools; the skill specifies what to retrieve and in what sequence.
+
+---
+
+### Proposal Pattern — Hermes Config
+
+```yaml
+# config.yaml
+autonomy_level: L3
+
+toolsets:
+  terminal:
+    enabled: true
+    allowed_commands:
+      - "aws rds describe-*"           # read: diagnosis
+      - "aws rds modify-db-parameter*" # write: behind approval gate
+      - "kubectl get *"                # read: diagnosis
+      - "kubectl set *"                # write: behind approval gate
+    blocked_commands:
+      - "aws rds delete-*"
+      - "kubectl delete *"
+      - "DROP *"
+
+approval:
+  required: true
+  gate: before_write    # approval required before any write command executes
+  template: |
+    PROPOSED ACTION: {action_summary}
+    COMMANDS TO RUN:
+    {command_list}
+    EXPECTED OUTCOME: {outcome}
+    ROLLBACK PROCEDURE: {rollback}
+    APPROVE? [yes/no]
+```
+
+The `gate: before_write` setting means the agent can run read commands freely but must call the approval tool before any write command. The approval template determines what the operator sees.
+
+---
+
+### Guardian Pattern — Hermes Config
+
+```yaml
+# config.yaml
+autonomy_level: L1
+
+toolsets:
+  # Guardian has no execution tools
+  review:
+    enabled: true   # reviews proposed actions from other agents
+
+policy:
+  blocked_commands:
+    - "aws iam *"              # IAM changes always blocked
+    - "aws rds delete-*"       # Database deletion always blocked
+    - "kubectl delete namespace*"  # Namespace deletion always blocked
+    - "terraform destroy*"     # Destruction always blocked
+  allowed_resource_patterns:
+    - "arn:aws:rds:us-east-1:*:db:dev-*"    # only dev-prefixed DBs
+    - "arn:aws:rds:us-east-1:*:db:staging-*"
+  escalation_targets:
+    - security-team@example.com  # blocked actions route here for human review
+
+audit:
+  log_all_decisions: true
+  log_format: structured_json
+  retention_days: 90
+```
+
+The guardian is deployed alongside a proposal agent. When the proposal agent generates an execution plan, the guardian reviews it before any commands run.
+
+---
+
+## Quick Reference Table
+
+| Pattern | Autonomy Range | Typical Tools | Approval Required | Key Config |
+|---------|---------------|---------------|-------------------|------------|
+| Advisor | L1 only | Read-only terminal | No | `allowed_commands: describe/get/select` |
+| Investigator | L1 or L2 | Read-only terminal + web | No | Multi-step skill with retrieval loop |
+| Proposal | L2-L4 | Read + write (gated) | Yes — before write | `approval: required: true, gate: before_write` |
+| Guardian | L1 only | Review tool only | N/A (guardian never executes) | `blocked_commands`, `policy`, `audit` |
+
+---
+
+## Common Misconfigurations
+
+| Mistake | Symptom | Correct Approach |
+|---------|---------|-----------------|
+| Advisor with write tools | Agent recommends an action and then executes it without being asked | Remove write tools; advisor output must be read-only |
+| Investigator without skill termination conditions | Investigation loops forever or returns "inconclusive" | Add terminal conditions to SKILL.md decision tree |
+| Proposal without readable approval template | Operators approve blindly without reviewing the plan | Write `approval_template` as human-readable text, not raw JSON |
+| Guardian with no blocked commands | False safety — guardian deployed but enforcing nothing | Define explicit blocked patterns before deploying guardian |
+| Promoting before track record | Agent at L3 before 90-day L2 evidence | Enforce the promotion criteria; track record is not optional |
+
+---
+
+**Back to:** [Concepts — The Four Patterns and Autonomy Spectrum](./module-09-concepts)

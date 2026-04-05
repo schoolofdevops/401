@@ -1,0 +1,161 @@
+---
+id: module-09-exploratory
+title: "Exploratory: Agent Design Pattern Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for pattern migration planning, guardian policy design, and multi-pattern fleet architecture"
+---
+
+# Exploratory: Agent Design Pattern Projects
+
+These are **exploratory stretch projects** — not required to complete Module 9. They are for participants who want to apply the pattern and autonomy frameworks at a deeper level before the Module 10 build.
+
+Each project is completable independently — no Hermes running required for Projects 1 and 2. Project 3 is more involved and assumes you have a working Hermes agent from an earlier module.
+
+---
+
+## Project 1: Pattern Migration Plan
+
+**Estimated time:** 30 minutes
+**Prerequisites:** Module 9 concepts reading complete
+**Tool required:** Text editor only — this is a design document exercise
+
+### What You Will Build
+
+Take an existing L1 advisor agent — a real one you have built in this course, or a hypothetical one you design — and write the full promotion criteria document to move it to L2, then to L3.
+
+### Challenge
+
+The challenge is making the criteria *specific and measurable*, not vague and aspirational. "The agent is accurate enough" is not a promotion criterion. "The agent has produced 30 consecutive correct diagnoses in the production RDS domain with zero false positives, reviewed and signed off by the RDS operations lead" is a criterion.
+
+### What to Write
+
+**Section 1: Agent Profile**
+- What does this agent do? (domain, pattern, current autonomy level)
+- What operational problem does it solve?
+- What tools does it currently have?
+
+**Section 2: L1 → L2 Promotion Criteria**
+Write specific, measurable criteria for:
+- Track record requirement (how many correct, over how long, with what accuracy threshold)
+- Team review requirement (who reviews, what they are reviewing, what sign-off looks like)
+- Edge case documentation (which failure scenarios have been observed, how SKILL.md was updated)
+
+**Section 3: L2 → L3 Promotion Criteria**
+Write specific, measurable criteria for:
+- Track record at L2 (duration, accuracy threshold, sample scenarios)
+- Change management review (what the review covers, who is involved)
+- Rollback procedure documentation (what happens if the agent executes something wrong)
+- Any domain-specific requirements (data sensitivity, regulatory constraints)
+
+**Section 4: What Would Disqualify Promotion**
+Describe three specific scenarios where you would *not* promote this agent, even if it met the quantitative track record criteria.
+
+### Expected Outcome
+
+A 1-2 page document that you could hand to a team lead or manager as a formal promotion proposal. If they can read it and say "yes, these are the right criteria" or "no, I want you to add X" — the document is doing its job.
+
+---
+
+## Project 2: Guardian Policy Audit
+
+**Estimated time:** 45 minutes
+**Prerequisites:** Module 9 reference reading complete, familiarity with kubectl
+**Tool required:** Text editor only — policy design exercise
+
+### What You Will Build
+
+Design a complete guardian agent policy for a production Kubernetes cluster. The guardian will review all proposed actions from a proposal agent before they execute on the cluster.
+
+### Challenge
+
+A guardian policy must be specific enough to block genuinely dangerous actions without blocking routine operations. A policy that blocks everything makes the proposal agent useless. A policy that blocks nothing is theater. The challenge is drawing the right line for your operational context.
+
+### The Scenario
+
+Your team has deployed a Kubernetes health agent (the investigator/proposal pattern) that can diagnose pod issues and propose fixes. You need to design the guardian policy that will review its proposals before execution.
+
+The agent has these tools: `kubectl get`, `kubectl describe`, `kubectl logs`, `kubectl rollout restart`, `kubectl scale`, `kubectl delete pod` (for stuck pods only), `kubectl apply` (for config map updates only).
+
+### What to Write
+
+**Section 1: Always Block (no exceptions)**
+List 5-10 kubectl and Helm commands that the guardian should always block, regardless of context. For each: write the specific blocked pattern AND the reason.
+
+Example format:
+```
+kubectl delete namespace [*]
+Reason: Namespace deletion is irreversible and could take down an entire
+service boundary. No automated agent should delete namespaces —
+this must always be a human action with explicit change management approval.
+```
+
+**Section 2: Conditional Allow (context-dependent)**
+List 3-5 operations that are allowed *only under specific conditions* — and describe exactly what those conditions are.
+
+Example: "`kubectl scale deployment` is allowed only when target replica count is greater than current count (scale up). Scale-down is blocked."
+
+**Section 3: Escalation Targets**
+For actions that are not clearly allowed or blocked, who should the guardian escalate to? Define two escalation tiers: (1) team lead review (for medium-risk actions), (2) change management (for high-risk actions).
+
+**Section 4: Audit Requirements**
+What must be logged for every guardian decision (allow, block, escalate)? Define the minimum audit record fields.
+
+### Expected Outcome
+
+A complete guardian policy document that could be translated directly into Hermes `config.yaml` `policy` section. Someone else on your team should be able to read it and implement it without asking you clarifying questions.
+
+---
+
+## Project 3: Multi-Pattern Fleet for Incident Response
+
+**Estimated time:** 60 minutes
+**Prerequisites:** Modules 7-9 completed, working Hermes setup
+**Tool required:** Hermes agent + text editor
+
+### What You Will Build
+
+Design and (optionally) configure a three-agent fleet for a single incident response workflow: an advisor + investigator + proposal agent working together on a single incident scenario. Each agent has a specific role; the proposal agent only acts after the investigator has completed its analysis.
+
+### Challenge
+
+The challenge is the *handoff*: how does output from the investigator become input to the proposal agent? In a real fleet, this is a delegation pattern — the coordinator routes the investigator's analysis to the proposal agent with the analysis as context. In this project, you will design the handoff explicitly, even if you do not have a full fleet orchestration layer.
+
+### The Incident Scenario
+
+Use this as your scenario: *An alert fires at 02:15 UTC: RDS CPU 97% for 15 minutes in production database `orders-db`. Two engineers are on-call. What should your three agents do?*
+
+### What to Design (or Build)
+
+**Agent 1: Advisor**
+- Domain: CloudWatch metric monitoring
+- Role: Receives the alert, identifies which metrics are breached, surfaces the context that defines the incident scope
+- Output format: incident_context (not root cause — that is the investigator's job)
+
+**Agent 2: Investigator**
+- Domain: RDS performance analysis
+- Role: Takes incident_context from Advisor, runs root cause analysis (pg_stat_statements, Performance Insights, CloudWatch correlations)
+- Output format: investigation_report with root_cause, evidence, recommended_actions
+
+**Agent 3: Proposal**
+- Domain: RDS operational changes
+- Role: Takes investigation_report from Investigator, prepares execution plan for the top recommended action, presents for approval
+- Output format: approval_request with commands, expected outcome, rollback procedure
+
+**For each agent, document:**
+1. The SOUL.md identity statement (1-2 sentences)
+2. The toolset (which tools, what allowed/blocked commands)
+3. The autonomy level and justification
+4. The SKILL.md section relevant to this workflow (the decision tree for this agent's part)
+5. The output format — specifically what the next agent in the chain needs to receive
+
+**Optional: Configure and run it**
+If you have a KIND cluster running, configure the three agents in Hermes and run a simulated incident using mock CloudWatch and RDS metric data. Observe how the advisor's output shapes the investigator's retrieval, and how the investigator's root cause shapes the proposal.
+
+### Expected Outcome
+
+A complete design document for the three-agent fleet. If you ran it: terminal output showing each agent's response, the handoff between them, and the final approval request.
+
+### Teaching Point
+
+This project demonstrates that agent design patterns are not just individual agent decisions — they define how agents compose. The advisor narrows the context, the investigator provides the root cause, the proposal operationalizes the fix. Each pattern does exactly one thing, which is why three specialized agents often outperform a single general-purpose agent trying to do all three roles.

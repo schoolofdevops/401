@@ -1,0 +1,204 @@
+---
+id: module-09-quiz
+title: "Quiz: Agent Design Patterns"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of the four agent design patterns and L1-L4 autonomy spectrum"
+---
+
+# Quiz: Agent Design Patterns
+
+These questions test your understanding of pattern selection, autonomy level application, and the promotion framework. Questions are scenario-based — the goal is operational judgment, not vocabulary recall.
+
+---
+
+### Question 1: Pattern Identification — Cost Anomaly
+
+Your team receives a daily Slack message: "AWS spend for the last 24 hours was $847 — $312 above your 7-day average. Likely cause: EC2 data transfer in us-east-1 increased 4x after 14:00. No changes were deployed — check for unintended data export." The agent sends this message and takes no other action.
+
+Which design pattern does this agent implement?
+
+A) Guardian — it is blocking high-cost actions
+B) Proposal — it has already prepared a cost-reduction plan
+C) Advisor — it observes, analyzes, and reports; a human will investigate and act
+D) Investigator — it traced cost to root cause through multi-step retrieval
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) Advisor — it observes, analyzes, and reports; a human will investigate and act**
+
+The agent observes cost metrics, analyzes the pattern (4x increase, specific service, specific time), and reports its finding to a human channel. It takes no further action. This is the advisor pattern at L1.
+
+Note why D is wrong despite the causal-sounding output: the advisor can include a single-sentence hypothesis ("likely cause: EC2 data transfer") without becoming an investigator. The investigator pattern involves multi-step retrieval — the agent pulling logs, querying metrics, reading documentation — to construct a causal chain. This agent delivered its analysis in one Slack message without iterating through multiple data sources. If the agent had pulled Cost Explorer data, then queried VPC Flow Logs, then cross-referenced CloudTrail for unusual API calls, and constructed a causal chain from those sources — that would be investigator behavior.
+
+The practical test: did the agent run more than one retrieval query to produce its output? If yes, investigator. If it analyzed pre-aggregated data in a single step, advisor.
+
+</details>
+
+---
+
+### Question 2: Pattern Identification — Production Incident
+
+During an incident, a Hermes agent is given this task: "RDS CPU is at 98% and climbing. Identify the root cause." The agent executes: (1) queries `pg_stat_activity` for active connections, (2) queries `pg_stat_statements` for top queries by total time, (3) looks up the query plan for the top query in AWS Performance Insights, (4) checks CloudWatch for any correlated metrics in the same time window, (5) returns: "Root cause: a full table scan on `orders` introduced at 14:32 by migration `0042_add_index.sql` — the index was not created concurrently and is locking the table. Rollback the migration."
+
+Which design pattern does this agent implement?
+
+A) Advisor — it reports a finding and recommends an action
+B) Investigator — it traces root cause through multi-step retrieval
+C) Proposal — it has prepared a rollback plan for human approval
+D) Guardian — it is blocking the problematic migration
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Investigator — it traces root cause through multi-step retrieval**
+
+The agent executed four distinct retrieval steps (pg_stat_activity, pg_stat_statements, Performance Insights, CloudWatch) to construct a causal chain: migration at 14:32 → full table scan → lock → CPU saturation. It returned a root cause with evidence, not just a hypothesis.
+
+Why not C (Proposal)? The agent returned a recommendation ("rollback the migration") but did not prepare an execution plan, did not call the approval tool, and did not execute anything. It analyzed and recommended — classic investigator output. If the agent had then called `hermes approval` with the specific rollback commands staged for execution, it would be a proposal agent.
+
+Why not A (Advisor)? The distinction is the *depth* of retrieval. An advisor produces a one-step analysis from pre-aggregated data. This agent executed a multi-step retrieval loop, each step informed by the previous finding. That is the investigator's defining characteristic.
+
+</details>
+
+---
+
+### Question 3: Autonomy Level Application
+
+A team has been running an investigator agent for 90 days. It has produced 200 root cause analyses. Reviewing the log: 192 were correct, 6 were partially correct (right symptom, wrong cause), 2 were wrong. The team wants to promote it from L1 to L2.
+
+Which statement is correct about this promotion?
+
+A) The promotion is straightforward — 192/200 is above the 100-correct threshold
+B) The promotion requires the 6 partial-correct and 2 wrong cases to be documented, the SKILL.md updated, and those edge cases verified — before promotion
+C) 90 days is too short — the L2 promotion requires 180-day track record
+D) Investigator agents cannot be promoted to L2 — only proposal agents can operate at L2
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) The promotion requires the 6 partial-correct and 2 wrong cases to be documented, the SKILL.md updated, and those edge cases verified — before promotion**
+
+The L1→L2 promotion criteria are: 30-day track record with consistent accuracy, team review and sign-off, and documented edge cases where the agent was wrong with confirmation those cases are now handled.
+
+This team has 90 days of data (more than enough for the track record) and 192/200 correct analyses. But the 8 cases where the agent was wrong or partially wrong are the gate. The promotion requires: (1) each failure case documented — what did the agent miss and why? (2) the SKILL.md updated to handle those cases, (3) the team verifying the fixes work against the failure scenarios.
+
+Why not A? The 100-correct threshold in L1 criteria is about establishing an initial track record, not an ongoing accuracy score. Reaching 100 correct does not automatically qualify for L2 — the team review and documented-exceptions requirements also apply.
+
+Why not C? The 180-day requirement applies to the L3→L4 promotion, not L1→L2. L1→L2 requires 30 days minimum.
+
+Why not D? All four patterns can operate at L2. An investigator at L2 means its analysis is trusted enough that the team acts on it without re-verifying the root cause each time.
+
+</details>
+
+---
+
+### Question 4: Autonomy Level Application — Semi-Autonomous
+
+You are proposing to run a cost optimization agent at L4 (Semi-autonomous) on your production AWS account. It would identify and delete unused EC2 snapshots older than 90 days without human approval, alerting your Slack channel with a summary of what was deleted. Your manager asks: "What evidence do we need before deploying this at L4?"
+
+Which answer matches the L4 promotion criteria from the autonomy spectrum?
+
+A) A working demo and manager approval — L4 just needs executive sign-off
+B) 180-day track record at L3, SRE team confidence vote, documented incident response plan if the agent takes a wrong action, and (for regulated environments) security/compliance sign-off
+C) 30-day track record at L1 with zero false positives — if it got read-only right, it can handle write operations
+D) L4 is not appropriate for production environments — use L3 with approval gates instead
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) 180-day track record at L3, SRE team confidence vote, documented incident response plan if the agent takes a wrong action, and (for regulated environments) security/compliance sign-off**
+
+L4 Semi-autonomous is the highest level this course teaches. The promotion criteria are intentionally demanding because L4 agents take action without explicit per-action approval. For a snapshot deletion agent, a wrong action means permanently deleted snapshots — potentially the only copy of certain data. The 180-day L3 requirement ensures the agent has been executing approved plans long enough to surface all the edge cases before removing the approval gate.
+
+Why not A? "Manager approval" is not a substitute for operational evidence. A demo shows the agent works in a controlled scenario. The 180-day requirement ensures it has been tested against the real operational environment at scale.
+
+Why not C? Jumping from L1 (read-only) to L4 (fully autonomous execution) skips L2 and L3 entirely. The purpose of the intermediate levels is to surface edge cases gradually — when the blast radius of errors is low (L2: human executes; L3: human approves) — before giving the agent unilateral execution authority.
+
+Why not D? L4 is appropriate for well-understood, repetitive operations with defined blast radius — snapshot cleanup is a good candidate. The question is whether the team has met the promotion criteria, not whether L4 is philosophically valid.
+
+</details>
+
+---
+
+### Question 5: Anti-Pattern Recognition
+
+A team has deployed a "proposal agent" for Kubernetes pod restarts. The agent: (1) detects CrashLoopBackOff pods, (2) determines the restart is needed, (3) sends an approval request: `{"action": "restart", "resource": "pod/api-gateway-7d8f9b-xz4p2", "namespace": "production", "reason": "CrashLoopBackOff detected"}`, (4) operators approve because they trust the agent, (5) the agent restarts the pod.
+
+After six months, a post-incident review finds that operators approved 47 consecutive requests without reading them. What is the core anti-pattern here?
+
+A) The agent is running at L4 when it should be at L3
+B) The approval template is machine-readable JSON, not human-readable — operators cannot efficiently review it, so they approve blindly, defeating the approval gate
+C) Pod restarts should use the guardian pattern, not the proposal pattern
+D) The agent should not restart pods — it should only report that a restart is needed
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) The approval template is machine-readable JSON, not human-readable — operators cannot efficiently review it, so they approve blindly, defeating the approval gate**
+
+This is the proposal pattern's most common failure mode: an approval gate that exists technically but provides no practical oversight. When operators cannot quickly parse what they are approving, they either approve blindly (zero safety value) or refuse to use the system (agent becomes useless). Either outcome defeats the purpose.
+
+The fix is an approval template designed for human review. Something like:
+
+```
+PROPOSED: Restart pod api-gateway-7d8f9b-xz4p2 in namespace production
+REASON: Pod has been in CrashLoopBackOff for 4 minutes (12 restart attempts)
+COMMAND: kubectl rollout restart deployment/api-gateway -n production
+EXPECTED: Pod restarts, exits CrashLoopBackOff within 2 minutes
+ROLLBACK: If pod does not stabilize, escalate to on-call SRE
+```
+
+This takes 10 seconds to read and gives the operator everything they need to make an informed decision.
+
+Why not A? The agent is correctly at L3 — it proposes and executes on approval. L4 would mean it restarts pods automatically. The problem is not the autonomy level; it is the quality of the approval presentation.
+
+Why not C? Pod restarts are appropriate for the proposal pattern. The guardian pattern reviews proposed actions against a policy — it does not itself propose or execute actions.
+
+</details>
+
+---
+
+### Question 6: Promotion Criteria
+
+An advisor agent has been running for 45 days. It has produced 120 correct diagnoses with zero false positives. The team lead wants to promote it directly to L3 (Proposal) because "it's obviously working — let's skip L2 and give it execution capability now."
+
+What is wrong with this approach?
+
+A) Nothing — 120 correct diagnoses exceeds the 100-correct threshold, and L3 is appropriate
+B) Skipping L2 means the team has no track record of trusting and acting on the agent's recommendations before they allow it to execute autonomously — edge cases that would surface at L2 will now surface at L3 when the blast radius is higher
+C) The agent needs a 90-day track record before L2 promotion — 45 days is insufficient
+D) Direct promotion to L3 requires SRE team vote and incident response plan
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Skipping L2 means the team has no track record of trusting and acting on the agent's recommendations before they allow it to execute autonomously — edge cases that would surface at L2 will now surface at L3 when the blast radius is higher**
+
+The autonomy spectrum is designed to surface failure modes at progressively higher blast radius. At L1, the agent analyzes but takes no action — failures show up as incorrect recommendations, which a human catches before acting. At L2, humans act on recommendations without deep re-verification — failures show up as wrong actions taken by humans who trust the agent. At L3, the agent executes approved plans — failures show up as wrong actions taken by the agent, potentially in production.
+
+Skipping L2 means the team has no experience of trusting the agent's recommendations under production load, over enough time to surface edge cases. The 45 days of L1 evidence shows the agent is accurate at analysis. It does not show how the agent handles edge cases when its reasoning is trusted enough to drive execution.
+
+Why not C? The L1→L2 promotion requires 30 days minimum — 45 days meets this. The issue is not duration, it is skipping a level.
+
+Why not D? The SRE confidence vote and incident response plan are L3→L4 criteria, not L1→L3.
+
+</details>
+
+---
+
+## Score Interpretation
+
+| Score | Interpretation |
+|-------|---------------|
+| 6/6 | Strong pattern reasoning — ready to design and justify agent architectures for Module 10 |
+| 4–5/6 | Good foundation — review the explanations for questions you missed before the Module 10 build |
+| 2–3/6 | Re-read concepts.mdx, focusing on the pattern definitions and the promotion criteria section |
+| 0–1/6 | Work through both reading files before attempting Module 10 — the design patterns are foundational for the build project |
+
+## What's Next
+
+Module 10 is where you build. You will choose one of three tracks (database health, cost optimization, or Kubernetes health) and build a complete domain agent from scratch. The pattern and autonomy level you select in Module 10 should be justified using the framework from this module — "I am building an investigator at L1 because..." is the design vocabulary you now have.
+
+**Continue to:** [Module 10 — Build Project: Your Domain Agent](../../module-10-domain-agent/)

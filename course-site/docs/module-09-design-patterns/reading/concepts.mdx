@@ -1,0 +1,229 @@
+---
+id: module-09-concepts
+title: "Concepts: Agent Design Patterns"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "The four agent design patterns and L1-L4 autonomy spectrum mapped to Hermes capabilities and DevOps analogies"
+---
+
+# Concepts: Agent Design Patterns
+
+In Module 8, you wired tools and safety boundaries to an agent. You defined what it *can* do — which commands it can run, which domains it can access, which actions require approval. Now we ask a different question: what *kind* of agent are you building?
+
+Two frameworks answer that question. The four design patterns define the operational *role* your agent plays — the same way job titles define roles on a DevOps team. The autonomy spectrum defines how much the agent acts independently — the same way deployment strategies define how much automation you trust without human review.
+
+These are not academic categories. Every Hermes agent you build implicitly implements one of these patterns at one of these levels. Making those choices explicit is what separates a thoughtfully designed agent from an improvised one.
+
+---
+
+## 1. The Four Agent Patterns
+
+### Pattern 1: Advisor
+
+**Definition:** An advisor observes system state, analyzes what it sees, and tells you what is wrong. It never takes action. Every output is a recommendation directed at a human operator.
+
+**DevOps team role analogy:** The on-call SRE who is always watching dashboards. They send you a message: "RDS CPU has been at 95% for 10 minutes, likely a runaway query, check pg_stat_activity." They tell you — you act.
+
+**Core behavior:**
+1. Receives a trigger (alert, schedule, or on-demand request)
+2. Retrieves relevant system data using read-only tools
+3. Analyzes the data against the knowledge in its skills
+4. Returns a structured recommendation — never executes a change
+
+**Hermes mapping:**
+- `autonomy_level: L1`
+- Toolset restricted to read-only operations (`aws describe-*`, `kubectl get`, `SELECT` queries)
+- No `approval` tool in toolset — not because approval is skipped, but because the agent cannot take actions that would require approval
+- SKILL.md contains diagnostic decision trees that end in `RECOMMEND: [action]`, not `EXECUTE: [action]`
+- Output routed to human (Slack message, email, dashboard entry)
+
+**When to use:** When you want AI-powered analysis but are not ready to trust automated actions. Good for high-stakes domains (production databases, billing changes) where you want a second pair of eyes, not automation.
+
+**Anti-pattern warning:** Building an advisor and then manually executing everything it recommends is a valid pattern at L1 — but if you find yourself copy-pasting agent output into the terminal 50 times a day without reviewing it, you have built an inefficient proposal agent. Recognize when advisor-plus-manual-execution has become the de facto workflow and consider formally promoting to proposal pattern.
+
+---
+
+### Pattern 2: Investigator
+
+**Definition:** An investigator digs. It receives an incident or question and works through a multi-step reasoning process — pulling logs, querying metrics, reading documentation — until it traces the issue to root cause. Output is an analysis report, not a recommendation for a single action.
+
+**DevOps team role analogy:** The root-cause analyst who gets paged after an incident is resolved. They spend two hours in the postmortem, tracing the failure path from symptom to cause: "The 503s started when the HPA scaled up at 14:32, which pushed the node past its memory limit at 14:34, which triggered the OOM killer on the API pod at 14:37. Root cause: HPA target utilization set too low for current traffic pattern." They hand you a report. You decide what to change.
+
+**Core behavior:**
+1. Receives an incident trigger or analytical question
+2. Executes a multi-step retrieval loop: queries metrics, reads logs, checks documentation
+3. Synthesizes findings into a causal chain or analysis report
+4. Returns a structured analysis — root cause identified, evidence cited
+
+**Hermes mapping:**
+- `autonomy_level: L1` or `L2` (analysis is read-only; recommendations are advisory)
+- Terminal tool enabled for `aws logs filter-log-events`, `kubectl logs`, `kubectl describe`
+- Web tool enabled for documentation lookup (Kubernetes docs, AWS service quotas)
+- RAG-backed skills: SKILL.md contains decision trees with `IF [symptom] THEN retrieve [data source]` branches
+- Output is a structured report, not a single-line recommendation
+
+**When to use:** Postmortem analysis, cost anomaly investigation, performance regression tracing. Any task where the work is mostly "figure out what happened" rather than "fix it."
+
+**Anti-pattern warning:** An investigator that *never* produces root cause — it produces vague "could be several things" outputs — is a sign of a skill with insufficient decision branches. The investigation loop needs to terminate. If your investigator spins through 10 retrieval steps and returns "investigation inconclusive," the SKILL.md decision tree is missing a terminal condition. Add it.
+
+---
+
+### Pattern 3: Proposal
+
+**Definition:** A proposal agent does the full analysis — diagnosing the problem, determining the correct action — and then *stops*. It prepares a complete execution plan and presents it for human approval before touching anything. If approved, it executes. If rejected, it explains the rejection path.
+
+**DevOps team role analogy:** The change manager who writes the RFC before any production change. They specify exactly what will change, why, the expected outcome, and the rollback procedure. The change advisory board reviews and approves. Nothing happens without the approval ticket.
+
+**Core behavior:**
+1. Receives a task (fix slow query, right-size an EC2 instance, update a Helm value)
+2. Diagnoses the issue using read-only tools
+3. Constructs a complete action plan: what commands will run, in what order, with what parameters
+4. Presents the plan for human approval via the `approval` tool
+5. On approval: executes the plan
+6. On rejection: returns with the rejection recorded and no changes made
+
+**Hermes mapping:**
+- `autonomy_level: L2` or `L3`
+- Toolset includes both read-only tools (for diagnosis) and write tools (for execution, gated behind approval)
+- `approval` tool is explicitly in toolset — agent calls it with a structured plan before executing any mutation
+- Hermes config: `approval_required: true` for any tool action in the `write` category
+- SKILL.md includes an `approval_template` section that defines what the plan presentation looks like
+
+**When to use:** Any action that modifies production state and carries meaningful risk — parameter changes, scaling events, configuration updates, database index creation. When you need full analysis automation but want a human in the decision loop before execution.
+
+**Anti-pattern warning:** A proposal agent that presents plans in an unreadable format defeats its own purpose. If the approval request is a wall of raw JSON that no operator wants to read, they will approve everything blindly — which is worse than no approval gate. The plan presentation must be human-readable: a brief summary, the specific commands, the expected outcome, and the rollback path. Design the approval template as carefully as you design the skill.
+
+---
+
+### Pattern 4: Guardian
+
+**Definition:** A guardian does not diagnose or recommend. It *reviews*. It monitors proposed actions from other agents or human operators against a policy specification and blocks anything that violates the policy. It is the enforcement layer in a multi-agent system.
+
+**DevOps team role analogy:** The security reviewer who reads every pull request before it goes to production — not to understand the business logic, but to check: "Does this change add a new open port? Does it modify an IAM policy? Does it touch a resource outside the defined blast radius?" They block the PR if the answer is yes.
+
+**Core behavior:**
+1. Receives a proposed action (from a human or another agent)
+2. Checks the action against its policy specification (allowed/blocked command lists, resource scope, approval requirements)
+3. Returns: ALLOW (action proceeds), BLOCK (action rejected with reason), or ESCALATE (action requires elevated approval)
+4. Records every decision in the audit log
+
+**Hermes mapping:**
+- `autonomy_level: L1` (the guardian itself never takes actions)
+- Toolset: no terminal execution tools — only the `review` tool and audit logging
+- Config: extensive `blocked_commands` list, `allowed_resource_patterns`, `escalation_targets`
+- Guardian is deployed as a *companion* to other agents — it intercepts the proposal agent's execution plan before the plan runs
+- SKILL.md contains policy specification: what the guardian enforces and why
+
+**When to use:** When deploying a proposal or semi-autonomous agent in a regulated environment, or when multiple agents interact and you need a centralized policy enforcement point. Not needed for simple advisor agents — they never take actions, so there is nothing to guard against.
+
+**Anti-pattern warning:** A guardian with an empty `blocked_commands` list is a false safety net. Operators see that a guardian is deployed and assume the system is safe — but the guardian is enforcing nothing. Start with a specific, well-documented policy and expand it. A guardian with five well-chosen blocked patterns is safer than one with fifty vague ones.
+
+---
+
+## 2. The Autonomy Spectrum
+
+Choosing a pattern defines the agent's *role*. The autonomy level defines how much it does without asking. These are related but separate decisions.
+
+### L1 — Assistive
+
+**Description:** The agent observes and reports. It never takes action. Every output is directed at a human who will decide and act.
+
+**DevOps analogy:** The manual runbook. The SRE reads the runbook, follows the steps, executes the commands. The runbook does not run itself — it is a reference that a human uses to do the work.
+
+**Promotion criteria:** 100 correct diagnoses with zero false positives. The team must trust the agent's analysis before they would consider letting it do anything beyond reporting.
+
+**All four patterns can be L1.** An advisor is always L1. An investigator is typically L1 or L2. A proposal agent at L1 would mean: it proposes, but humans also execute — which is a valid starting point before trusting automated execution.
+
+---
+
+### L2 — Advisory
+
+**Description:** The agent recommends with enough confidence that the human can act on the recommendation without deep review. The human still approves and executes — but the recommendation is trusted, not verified from scratch each time.
+
+**DevOps analogy:** The canary deploy metrics dashboard. The system shows you the error rate comparison between canary and stable. You look at the numbers and decide: promote or roll back. The system has done the measurement; you make the call.
+
+**Promotion criteria:** 30-day track record at L1 with consistent accuracy; team review and sign-off on the recommendation quality; documented edge cases where the agent was wrong and confirmation those cases are now handled.
+
+---
+
+### L3 — Proposal
+
+**Description:** The agent prepares the complete execution plan and presents it for human approval. On approval, it executes. The human approves but does not manually execute — the agent does.
+
+**DevOps analogy:** The blue-green deployment. The deployment system prepares the new stack, shows you the health checks, and waits for you to approve the traffic switch. You click approve. The system executes the switch. You did not manually run the commands — you authorized the prepared plan.
+
+**Promotion criteria:** 90-day track record at L2; change management review and sign-off; documented rollback procedure for agent-executed changes; at least one postmortem showing the agent did not escalate when it should have, and that case is now fixed.
+
+---
+
+### L4 — Semi-autonomous
+
+**Description:** The agent executes within defined thresholds, alerting humans when it acts or when it encounters a situation outside its policy bounds. Humans can intervene, but the agent does not pause and wait for approval on every action.
+
+**DevOps analogy:** Auto-scaling. The auto-scaler fires when CPU exceeds the target. It adds instances, adds them, scales down when load drops. It alerts your Slack channel with what it did. You can override if needed — but for routine scaling events, no human approval is required. The threshold *is* the approval.
+
+**Promotion criteria:** 180-day track record at L3; SRE team confidence vote; documented incident response plan if the agent takes a wrong action; executive/security sign-off in regulated environments.
+
+---
+
+### Why L5 (Fully Autonomous) Is Out of Scope
+
+This course teaches through L4. Full autonomy — where the agent acts in all situations without any human-visible decision points — is not included by design.
+
+The reasoning is operational, not theoretical. In L5, the agent's error surface is unconstrained. When an agent with full autonomy makes a wrong decision, the damage is done before any human is aware. For infrastructure operations — where a wrong action can delete data, expose a security boundary, or generate thousands of dollars in cloud spend — the notification and intervention capability of L4 is a hard safety requirement.
+
+Context engineering shapes what agents see and how they reason. But it cannot guarantee correct behavior in every edge case the world presents. L4's explicit alerting and intervention capability is the acknowledgment that operational AI systems need a human-accessible circuit breaker. L5 removes that breaker. This course does not teach patterns that require trust beyond what L4 requires.
+
+---
+
+## 3. Combining Patterns with Autonomy
+
+Patterns and autonomy levels are independent axes. The combination defines the full operational profile of an agent.
+
+| Pattern | L1 (Assistive) | L2 (Advisory) | L3 (Proposal) | L4 (Semi-auto) |
+|---------|---------------|---------------|---------------|----------------|
+| **Advisor** | Standard: reports findings to human | Trusted advice: human acts without re-verifying | Unusual: advisor that "proposes" → use Proposal pattern instead | Not meaningful: advisors don't act |
+| **Investigator** | Standard: analysis report, human decides | Common: trusted root-cause, team acts on it | Advanced: investigator that escalates to proposal | Edge case: autonomous investigation with alerting |
+| **Proposal** | Starting point: proposes, human executes manually | Transitional: proposal with human approval and execution | Standard pattern: agent executes approved plans | Production: agent executes within approved bounds, alerts on anomalies |
+| **Guardian** | Always L1: guardian does not act, only reviews | Not meaningful: guardian that "recommends" on policy is not a guardian | Not applicable | Not applicable |
+
+**Most common combinations in practice:**
+- **Advisor L1** — starting point for any new domain; safest first deployment
+- **Investigator L1/L2** — postmortem analysis, anomaly investigation
+- **Proposal L3** — production-readiness target for most operational automation
+- **Guardian L1** — companion to any L3/L4 agent in regulated environments
+
+---
+
+## 4. The Path From Advisor to Proposal
+
+Agents earn autonomy. The promotion path is not a setting you flip — it is a trust-building process that mirrors how a new team member earns the right to push to production.
+
+**Starting point:** Deploy every new agent as an advisor (L1). Even if you intend to eventually give it execution capability, start with read-only operation. This costs nothing in risk and gives you real operational data on whether the agent's analysis is correct.
+
+**Promotion workflow:**
+1. **Track record:** Measure the agent against a success criterion (100 correct diagnoses, 30-day track record). Do not promote on feeling — on evidence.
+2. **Team review:** A human who operates in the agent's domain reviews the track record, the SKILL.md, and the edge cases the agent has encountered. They sign off or identify gaps.
+3. **Documented exceptions:** Every case where the agent was wrong must be documented, the SKILL.md updated, and the fix verified before promotion.
+4. **Formal promotion:** Update `autonomy_level` in the agent's config, update the blocked/allowed lists if the new level adds execution capability, and record the promotion date and approver in the agent's audit log.
+
+**The key insight:** This is context engineering, not mechanical configuration. The agent's behavior at each level is shaped by the context it receives — the SKILL.md decision trees, the toolset scope, the approval templates. Promoting an agent from L1 to L3 means engineering better context, not just changing a number. The SKILL.md must grow with the autonomy level.
+
+---
+
+## Summary
+
+| Concept | What It Defines |
+|---------|----------------|
+| Advisor pattern | Agent observes and reports; all actions by human |
+| Investigator pattern | Agent traces root cause through multi-step retrieval |
+| Proposal pattern | Agent prepares execution plan; human approves; agent executes |
+| Guardian pattern | Agent enforces policy; blocks violations; records all decisions |
+| L1 Assistive | Agent reports; human decides and executes |
+| L2 Advisory | Agent recommends with trusted accuracy; human approves and executes |
+| L3 Proposal | Agent prepares plan; human approves; agent executes |
+| L4 Semi-autonomous | Agent executes within thresholds; alerts; human can intervene |
+| L5 | Out of scope — no human circuit breaker |
+| Promotion path | Evidence-based: track record → team review → documented exceptions → formal update |
+
+**Next:** [Reference — Pattern Decision Flowchart and Hermes Config Examples](./module-09-reference)
