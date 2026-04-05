@@ -1,0 +1,22 @@
+{
+  "AlarmName": "HighCPUUtilization-catalog-api",
+  "AlarmDescription": "CPU utilization exceeded 90% threshold",
+  "StateValue": "ALARM",
+  "StateReason": "Threshold Crossed: 1 out of the last 1 datapoints [92.3] was greater than the threshold (90.0)",
+  "MetricName": "CPUUtilization",
+  "Namespace": "AWS/EC2",
+  "Dimensions": [
+    {
+      "Name": "InstanceId",
+      "Value": "i-0abc123def456001"
+    }
+  ],
+  "Period": 300,
+  "EvaluationPeriods": 1,
+  "Threshold": 90.0,
+  "ComparisonOperator": "GreaterThanThreshold",
+  "StateUpdatedTimestamp": "2026-04-05T03:47:00Z",
+  "InsufficientDataActions": [],
+  "OKActions": ["arn:aws:sns:us-east-1:123456789012:ops-alerts"],
+  "AlarmActions": ["arn:aws:sns:us-east-1:123456789012:ops-critical"]
+}
