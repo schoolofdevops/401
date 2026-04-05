@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "kubernetes": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-kubernetes"],
+      "env": {
+        "KUBECONFIG": "${HOME}/.kube/config"
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://refapp:refapp-lab-password@localhost:5432/refapp"
+      ]
+    }
+  }
+}

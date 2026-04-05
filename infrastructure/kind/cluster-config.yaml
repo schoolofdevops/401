@@ -10,14 +10,29 @@ nodes:
           kubeletExtraArgs:
             node-labels: "ingress-ready=true"
     extraPortMappings:
+      # Reference app dashboard
       - containerPort: 30080
         hostPort: 30080
         protocol: TCP
+      # Grafana
       - containerPort: 30090
         hostPort: 30090
         protocol: TCP
+      # Prometheus
       - containerPort: 30091
         hostPort: 30091
         protocol: TCP
+      # Reserved for future services (Hermes UI, ArgoCD, etc.)
+      - containerPort: 30400
+        hostPort: 30400
+        protocol: TCP
+      - containerPort: 30500
+        hostPort: 30500
+        protocol: TCP
+      - containerPort: 30600
+        hostPort: 30600
+        protocol: TCP
+  - role: worker
+  - role: worker
 networking:
   apiServerAddress: "127.0.0.1"

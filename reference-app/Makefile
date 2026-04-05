@@ -1,4 +1,5 @@
-.PHONY: deploy destroy build load-images status cluster db monitoring app compose-up compose-down compose-logs
+.PHONY: deploy destroy build publish load-images status cluster db monitoring app \
+        compose-up compose-down compose-logs compose-build-up
 
 CLUSTER_NAME    := lab
 APP_NAMESPACE   := app
@@ -7,7 +8,12 @@ MON_NAMESPACE   := monitoring
 HELM_CHART      := ./helm/reference-app
 KIND_CONFIG     := ../infrastructure/kind/cluster-config.yaml
 PROM_VALUES     := ../infrastructure/helm/prometheus-lab-values.yaml
+
 IMAGE_TAG       := 1.0.0
+REGISTRY        := schoolofdevops
+GIT_SHA         := $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
+
+# --- Kubernetes (KIND) deployment ---
 
 # One-command deploy: creates cluster, installs DB + monitoring, builds images, deploys app
 deploy: cluster db monitoring build load-images app
@@ -43,19 +49,44 @@ monitoring:
 		--wait --timeout 180s
 
 build:
-	docker build --build-arg GIT_SHA=$(shell git rev-parse --short HEAD 2>/dev/null || echo "dev") \
-		-f services/api-gateway/Dockerfile -t reference-app/api-gateway:$(IMAGE_TAG) .
-	docker build --build-arg GIT_SHA=$(shell git rev-parse --short HEAD 2>/dev/null || echo "dev") \
-		-f services/catalog/Dockerfile -t reference-app/catalog:$(IMAGE_TAG) .
-	docker build --build-arg GIT_SHA=$(shell git rev-parse --short HEAD 2>/dev/null || echo "dev") \
-		-f services/worker/Dockerfile -t reference-app/worker:$(IMAGE_TAG) .
-	docker build -t reference-app/dashboard:$(IMAGE_TAG) dashboard/
+	docker build --build-arg GIT_SHA=$(GIT_SHA) \
+		-f services/api-gateway/Dockerfile \
+		-t $(REGISTRY)/refapp-gateway:$(IMAGE_TAG) \
+		-t $(REGISTRY)/refapp-gateway:latest .
+	docker build --build-arg GIT_SHA=$(GIT_SHA) \
+		-f services/catalog/Dockerfile \
+		-t $(REGISTRY)/refapp-catalog:$(IMAGE_TAG) \
+		-t $(REGISTRY)/refapp-catalog:latest .
+	docker build --build-arg GIT_SHA=$(GIT_SHA) \
+		-f services/worker/Dockerfile \
+		-t $(REGISTRY)/refapp-worker:$(IMAGE_TAG) \
+		-t $(REGISTRY)/refapp-worker:latest .
+	docker build \
+		-t $(REGISTRY)/refapp-dashboard:$(IMAGE_TAG) \
+		-t $(REGISTRY)/refapp-dashboard:latest \
+		dashboard/
+
+publish: build
+	docker push $(REGISTRY)/refapp-gateway:$(IMAGE_TAG)
+	docker push $(REGISTRY)/refapp-gateway:latest
+	docker push $(REGISTRY)/refapp-catalog:$(IMAGE_TAG)
+	docker push $(REGISTRY)/refapp-catalog:latest
+	docker push $(REGISTRY)/refapp-worker:$(IMAGE_TAG)
+	docker push $(REGISTRY)/refapp-worker:latest
+	docker push $(REGISTRY)/refapp-dashboard:$(IMAGE_TAG)
+	docker push $(REGISTRY)/refapp-dashboard:latest
+	@echo ""
+	@echo "=== Published to Docker Hub ==="
+	@echo "$(REGISTRY)/refapp-gateway:$(IMAGE_TAG)"
+	@echo "$(REGISTRY)/refapp-catalog:$(IMAGE_TAG)"
+	@echo "$(REGISTRY)/refapp-worker:$(IMAGE_TAG)"
+	@echo "$(REGISTRY)/refapp-dashboard:$(IMAGE_TAG)"
 
 load-images:
-	kind load docker-image reference-app/api-gateway:$(IMAGE_TAG) --name $(CLUSTER_NAME)
-	kind load docker-image reference-app/catalog:$(IMAGE_TAG) --name $(CLUSTER_NAME)
-	kind load docker-image reference-app/worker:$(IMAGE_TAG) --name $(CLUSTER_NAME)
-	kind load docker-image reference-app/dashboard:$(IMAGE_TAG) --name $(CLUSTER_NAME)
+	kind load docker-image $(REGISTRY)/refapp-gateway:$(IMAGE_TAG) --name $(CLUSTER_NAME)
+	kind load docker-image $(REGISTRY)/refapp-catalog:$(IMAGE_TAG) --name $(CLUSTER_NAME)
+	kind load docker-image $(REGISTRY)/refapp-worker:$(IMAGE_TAG) --name $(CLUSTER_NAME)
+	kind load docker-image $(REGISTRY)/refapp-dashboard:$(IMAGE_TAG) --name $(CLUSTER_NAME)
 
 app:
 	helm upgrade --install reference-app $(HELM_CHART) \
@@ -73,9 +104,9 @@ destroy:
 
 # --- Docker Compose (no K8s required) ---
 
+# Quick start: pulls pre-built images from Docker Hub
 compose-up:
-	GIT_SHA=$(shell git rev-parse --short HEAD 2>/dev/null || echo "dev") \
-		docker compose up --build -d
+	docker compose up -d
 	@echo ""
 	@echo "=== Docker Compose Deployment ==="
 	@echo "Dashboard:   http://localhost:3000"
@@ -83,6 +114,20 @@ compose-up:
 	@echo "Catalog:     http://localhost:8081"
 	@echo "Worker:      http://localhost:8082"
 	@echo "PostgreSQL:  localhost:5432"
+	@echo ""
+	@echo "Logs: make compose-logs"
+	@echo "Stop: make compose-down"
+
+# Build from source, then start
+compose-build-up:
+	GIT_SHA=$(GIT_SHA) \
+		docker compose -f docker-compose.yml -f docker-compose.build.yml up --build -d
+	@echo ""
+	@echo "=== Docker Compose (built from source) ==="
+	@echo "Dashboard:   http://localhost:3000"
+	@echo "API Gateway: http://localhost:8080"
+	@echo "Catalog:     http://localhost:8081"
+	@echo "Worker:      http://localhost:8082"
 	@echo ""
 	@echo "Logs: make compose-logs"
 	@echo "Stop: make compose-down"

@@ -1,5 +1,10 @@
-# Docker Compose deployment for the reference app
-# Usage: make compose-up  (or: docker compose up --build)
+# Docker Compose — quick start using pre-built images from Docker Hub
+# Usage:  docker compose up -d
+#         make compose-up
+#
+# To build from source instead, use the build override:
+#         docker compose -f docker-compose.yml -f docker-compose.build.yml up --build -d
+#         make compose-build-up
 
 services:
   postgres:
@@ -20,11 +25,7 @@ services:
       retries: 5
 
   catalog:
-    build:
-      context: .
-      dockerfile: services/catalog/Dockerfile
-      args:
-        GIT_SHA: ${GIT_SHA:-dev}
+    image: schoolofdevops/refapp-catalog:1.0.0
     environment:
       DATABASE_URL: postgres://refapp:refapp-lab-password@postgres:5432/refapp
     ports:
@@ -34,11 +35,7 @@ services:
         condition: service_healthy
 
   worker:
-    build:
-      context: .
-      dockerfile: services/worker/Dockerfile
-      args:
-        GIT_SHA: ${GIT_SHA:-dev}
+    image: schoolofdevops/refapp-worker:1.0.0
     environment:
       DATABASE_URL: postgres://refapp:refapp-lab-password@postgres:5432/refapp
     ports:
@@ -48,11 +45,7 @@ services:
         condition: service_healthy
 
   api-gateway:
-    build:
-      context: .
-      dockerfile: services/api-gateway/Dockerfile
-      args:
-        GIT_SHA: ${GIT_SHA:-dev}
+    image: schoolofdevops/refapp-gateway:1.0.0
     environment:
       CATALOG_URL: http://catalog:8081
       WORKER_URL: http://worker:8082
@@ -63,9 +56,7 @@ services:
       - worker
 
   dashboard:
-    build:
-      context: dashboard
-      dockerfile: Dockerfile
+    image: schoolofdevops/refapp-dashboard:1.0.0
     ports:
       - "3000:3000"
     depends_on:
