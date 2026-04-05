@@ -1,0 +1,248 @@
+---
+id: module-06-quiz
+title: "Quiz: AI-Assisted IaC"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of IaC validation and AI error patterns from Module 6"
+---
+
+# Quiz: AI-Assisted IaC
+
+These questions test your understanding of AI failure modes in infrastructure code generation and the validation patterns that catch them. Questions focus on operational understanding — not syntax trivia.
+
+---
+
+### Question 1: AI Failure Modes
+
+Name three types of AI errors that commonly occur in Terraform code generation.
+
+A) Syntax errors, runtime errors, and compilation errors
+B) Schema drift, hallucinated attributes, and version mismatch
+C) Network timeouts, API rate limits, and authentication failures
+D) Missing variables, undefined outputs, and broken state files
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Schema drift, hallucinated attributes, and version mismatch**
+
+From the concepts reading, the four main AI failure modes in IaC generation are:
+
+1. **Schema drift** — AI generates attributes from an older provider version (e.g., `security_groups` instead of `vpc_security_group_ids` in `aws_instance` for AWS provider 5.x)
+2. **Hallucinated attributes** — AI invents resource attributes that do not exist in the provider schema at all (e.g., `alarm_type = "threshold"` in `aws_cloudwatch_metric_alarm`)
+3. **Version mismatch** — AI uses Terraform HCL syntax from a different version (e.g., using `count` and `for_each` on the same resource, or variables in `lifecycle` blocks)
+4. **Missing dependencies** — AI forgets to use resource references, instead hardcoding ARNs as strings — breaking Terraform's dependency graph
+
+Options A and C describe general software and network errors, not AI-specific IaC failure modes. Option D describes errors in the Terraform workflow, not AI generation errors.
+
+All of B's errors are caught by `terraform validate` except missing dependencies, which requires `terraform plan` to detect.
+
+</details>
+
+---
+
+### Question 2: Terraform Validation
+
+What command validates Terraform syntax and provider schema without making any API calls to AWS?
+
+A) `terraform plan`
+B) `terraform apply --dry-run`
+C) `terraform validate`
+D) `terraform test`
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) `terraform validate`**
+
+`terraform validate` performs two checks:
+1. **Syntax check** — Ensures the HCL is syntactically valid
+2. **Schema check** — Validates resource types and attributes against the locally downloaded provider schema
+
+Critically, it does **not** make any API calls to AWS. It works entirely offline against the schema files downloaded during `terraform init`. This makes it the right command to run immediately after every AI generation step, even without AWS credentials.
+
+**Why not the others?**
+- `terraform plan` requires AWS credentials and makes real API calls to compute the execution plan
+- `terraform apply --dry-run` does not exist as a Terraform command (this is a common confusion with `kubectl apply --dry-run`)
+- `terraform test` runs `.tftest.hcl` test files — useful but requires a test file to exist and Terraform 1.7+
+
+Think of `terraform validate` as the fast feedback loop: run it after every generation step to catch syntax and schema errors before you waste time on a `plan` with broken HCL.
+
+</details>
+
+---
+
+### Question 3: Blast Radius
+
+Why is `terraform plan` critical before `terraform apply` when working with AI-generated infrastructure code?
+
+A) `terraform plan` downloads the latest provider schema — required for `apply` to work
+B) AI-generated code can contain errors with significant blast radius — plan shows exactly what will be created, changed, or destroyed before any changes occur
+C) `terraform plan` automatically corrects any AI errors before apply runs
+D) Without `terraform plan`, Terraform applies changes in random order
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) AI-generated code can contain errors with significant blast radius — plan shows exactly what will be created, changed, or destroyed before any changes occur**
+
+Infrastructure errors have blast radius. A bad `terraform apply` can:
+- Delete a database that has no backup
+- Create security groups that expose services to the public internet
+- Provision non-free-tier resources that cost hundreds of dollars overnight
+- Leave infrastructure in a broken intermediate state that is harder to clean up than to rebuild
+
+The `terraform plan` output is your safety net. It shows the complete execution plan — what will be created (`+`), changed (`~`), or destroyed (`-`). An AI error shows up as something unexpected: a deletion you did not intend, a resource type you did not request, or an attribute value that is clearly wrong.
+
+Reviewing the plan is the same discipline as code review before merge. You would not skip code review just because an AI wrote the code — and you would not skip `terraform plan` for the same reason.
+
+Option A is incorrect — `terraform init` downloads the provider schema, not `terraform plan`.
+Option C is incorrect — plan shows errors but does not correct them.
+Option D is incorrect — Terraform uses a dependency graph for ordering, not random order.
+
+</details>
+
+---
+
+### Question 4: ArgoCD Sync Policy
+
+In ArgoCD, what does `selfHeal: true` in the sync policy do?
+
+A) Automatically repairs broken container images by pulling a new version
+B) Reverts manual changes made directly to cluster resources when they drift from the Git-defined state
+C) Monitors ArgoCD itself for configuration errors and restores defaults
+D) Automatically merges Git conflicts when multiple teams push to the same branch
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Reverts manual changes made directly to cluster resources when they drift from the Git-defined state**
+
+`selfHeal: true` is one of the core GitOps enforcement mechanisms. When `selfHeal` is enabled:
+
+1. ArgoCD continuously monitors the cluster state
+2. If anyone makes a manual change directly to the cluster (e.g., `kubectl scale deployment api-gateway --replicas=1` when Git says `replicas: 2`), ArgoCD detects the drift
+3. Within the next sync cycle (default: 3 minutes), ArgoCD reverts the manual change to match the Git-defined state
+
+This enforces the GitOps principle: Git is the single source of truth. Direct cluster manipulation is not only ineffective (ArgoCD will undo it) but actively signals that someone bypassed the GitOps process.
+
+From the Track B lab: you demonstrated this by running `kubectl scale deployment api-gateway -n app --replicas=1` with `selfHeal: true` active — ArgoCD restored the deployment to 2 replicas within 3 minutes.
+
+`selfHeal` does not affect container images, ArgoCD's own configuration, or Git merge conflicts.
+
+</details>
+
+---
+
+### Question 5: CLAUDE.md Purpose
+
+What is the purpose of a CLAUDE.md file when generating IaC with AI?
+
+A) It stores the Terraform state file so AI can read the current infrastructure
+B) It provides system context — versions, constraints, and vocabulary — so AI generates accurate, environment-specific code rather than generic output
+C) It lists all the AWS resources already created so AI does not create duplicates
+D) It sets the temperature and model parameters for the AI generation session
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) It provides system context — versions, constraints, and vocabulary — so AI generates accurate, environment-specific code rather than generic output**
+
+CLAUDE.md is the context engineering artifact for your IaC project. It encodes:
+
+- **Versions** — Terraform version, AWS provider version (prevents schema drift to older attributes)
+- **Constraints** — Free tier only, specific instance types, monitoring configuration (prevents expensive or wrong resources)
+- **Vocabulary** — What "monitoring" means in your context, what "notification" means (prevents the AI from generating a different interpretation)
+
+Without CLAUDE.md, AI generates generic Terraform that might use any provider version, any instance type, and interpret your requirements in any way that "looks plausible" based on training data.
+
+With CLAUDE.md, the AI has the Layer 3 system context from the 4-layer context pattern: it knows YOUR environment, YOUR constraints, YOUR conventions.
+
+This is context engineering — you are not writing a clever request, you are assembling the right information layer first.
+
+CLAUDE.md does not contain state files (that is `.tfstate`), a resource inventory, or model parameters.
+
+</details>
+
+---
+
+### Question 6: ArgoCD Source Requirement
+
+Why must ArgoCD sync from a Git URL rather than a local file path?
+
+A) ArgoCD requires HTTPS connections for security — file paths use the HTTP protocol
+B) ArgoCD runs inside the Kubernetes cluster and cannot access the host filesystem; Git is the source of truth in the GitOps pattern
+C) Local file paths are too slow for ArgoCD's 3-minute sync interval
+D) Terraform state files conflict with local file paths in ArgoCD's working directory
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) ArgoCD runs inside the Kubernetes cluster and cannot access the host filesystem; Git is the source of truth in the GitOps pattern**
+
+There are two reasons ArgoCD cannot sync from a local file path:
+
+**Technical reason:** ArgoCD's components (argocd-repo-server, application-controller) run as pods inside the Kubernetes cluster. The cluster's pod network cannot access `file:///Users/yourname/...` on your laptop. If you try, ArgoCD will fail with "failed to get git client for URL."
+
+**Conceptual reason:** The GitOps pattern defines Git as the single source of truth for cluster state. Local files are ephemeral — they exist only on your machine, cannot be reviewed or audited, and are not shared with teammates. The entire point of GitOps is that the desired state is committed to Git, visible to everyone, and subject to pull request review before it reaches the cluster.
+
+This is also why the Track B lab required forking the course repository: ArgoCD needed a real Git URL it could poll for changes. Pushing to your fork was what triggered the GitOps sync demo — not running `kubectl apply` manually.
+
+Options A, C, and D are incorrect — ArgoCD does not use HTTP for file paths, sync speed is not affected by path type, and Terraform state files are unrelated to ArgoCD configuration.
+
+</details>
+
+---
+
+### Question 7: mock_provider vs Real AWS
+
+What is the key difference between running `terraform test` with `mock_provider` and running `terraform plan` against real AWS credentials?
+
+A) `mock_provider` only works on macOS — it does not support Linux CI environments
+B) `mock_provider` validates module logic and behavioral assertions without requiring AWS credentials or incurring cost; a real plan validates against the actual AWS API schemas and current account state
+C) `terraform test` with `mock_provider` is less accurate than `terraform plan` and should not be used in CI pipelines
+D) `mock_provider` requires Terraform Enterprise — it is not available in the open-source version
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) `mock_provider` validates module logic and behavioral assertions without requiring AWS credentials or incurring cost; a real plan validates against the actual AWS API schemas and current account state**
+
+`mock_provider` (available in Terraform 1.7+) substitutes all AWS API calls with in-memory stubs. It allows you to:
+- Validate that your module is syntactically correct
+- Assert that specific resource attributes have expected values (e.g., CPU alarm threshold is 80, instance type is t2.micro)
+- Run these tests in CI without AWS credentials configured
+
+What it **cannot** catch:
+- IAM permission errors (cannot test `iam:CreateRole` without real credentials)
+- Resource quota limits (your account is at the EC2 limit for us-east-1)
+- AMI availability (the specific AMI in your data source does not exist in this region)
+- Eventual consistency issues
+
+From the concepts reading, the analogy is:
+- `mock_provider` = unit tests (fast, no external dependencies, run on every PR)
+- Real `terraform plan` = integration tests (slower, requires credentials, catches provider-specific issues)
+- Real `terraform apply` = production deploy (run when everything else has passed)
+
+Both are valid and complementary. Using `mock_provider` in CI is production-grade practice — it is what the Terraform testing framework was designed for.
+
+Options A, C, and D are all incorrect. `mock_provider` works on all platforms, is recommended for CI use, and is available in the open-source Terraform binary.
+
+</details>
+
+---
+
+## Score Interpretation
+
+| Score | Interpretation |
+|-------|---------------|
+| 7/7 | Solid foundation in IaC validation and AI failure modes — ready for Module 7 |
+| 5–6/7 | Good understanding — review the answer explanations for questions you missed |
+| 3–4/7 | Re-read concepts.mdx, focusing on the validation hierarchy and failure mode sections |
+| 0–2/7 | Work through the lab again before proceeding — focus on the CLAUDE.md creation and validate steps |
+
+## What's Next
+
+These validation patterns are foundational for everything that follows. In Module 7, you will write SKILL.md files — context engineering artifacts that encode your operational expertise in a format AI agents read at runtime. The discipline of specifying versions, constraints, and vocabulary precisely in CLAUDE.md is the same discipline you will apply when authoring SKILL.md files.
+
+**Continue to:** [Module 7 — SKILL.md Authoring](../../module-07-skills/)
