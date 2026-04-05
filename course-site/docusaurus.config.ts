@@ -7,8 +7,12 @@ const config: Config = {
   tagline: 'Building Agentic Skills for Infrastructure Automation',
   favicon: 'img/favicon.ico',
 
-  url: 'https://localhost',
-  baseUrl: '/',
+  url: 'https://schoolofdevops.github.io',
+  baseUrl: '/401/',
+
+  organizationName: 'schoolofdevops',
+  projectName: '401',
+  trailingSlash: false,
 
   onBrokenLinks: 'warn',
 
