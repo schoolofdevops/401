@@ -8,48 +8,93 @@ slug: /
 
 # Agentic DevOps: Building Agentic Skills for Infrastructure Automation
 
-Welcome to a 3-day advanced workshop for DevOps practitioners who are completely new to AI and agentic systems.
+A 3-day advanced workshop for DevOps practitioners who are completely new to AI and agentic systems — also available as a self-paced Udemy course.
 
 You already know the hard part — Terraform, Kubernetes, CI/CD pipelines, CloudWatch, incident response. This course teaches you how to build AI agents that encode that expertise and work alongside you at scale.
+
+---
 
 ## What This Course Is
 
 **This is not a course about writing clever prompts.**
 
-It's about **context engineering** — structuring the right domain knowledge, system state, and operational constraints so that AI produces expert-level output on your infrastructure problems. The AI's intelligence doesn't change. What changes is the context you give it.
+It is about **context engineering** — structuring the right domain knowledge, system state, and operational constraints so that AI produces expert-level output on your infrastructure problems. The AI's intelligence does not change. What changes is the context you give it.
 
-By the end of this course, you will have built a production-ready domain agent for your own operational environment.
+By the end of this course, you will have built a production-ready domain agent for your own operational environment and a 30-day deployment roadmap.
 
-## Course Structure — 14 Modules Over 3 Days
+---
+
+## Format
+
+**Live 3-day workshop** — instructor-led, cohort-based, team exercises. Hands-on throughout.
+
+**Udemy self-paced** — all labs are designed to be completable solo, with no team exercise dependencies. Complete at your own pace.
+
+---
+
+## Prerequisites
+
+This is an advanced workshop. You need working knowledge of:
+
+- Docker — comfortable running containers and reading `docker` output
+- Kubernetes basics — `kubectl`, deployed to a cluster before
+- Terraform basics — written and applied a module
+- CI/CD — GitHub Actions, Jenkins, or equivalent
+- AWS basics — console navigation, IAM concepts, EC2/RDS/CloudWatch familiarity
+- Git workflows — branching, PRs, code review
+- CLI comfort — bash/zsh, you live in the terminal
+
+**Zero AI knowledge required.** Your mental model is built from scratch using operational analogies.
+
+---
+
+## Module Overview
 
 ### Day 1: Foundations and Assessment
 
 | Module | Topic | Duration |
-|--------|-------|----------|
-| 1 | AI Foundations for Operations | 90 min |
-| 2 | Platform AI — AWS Built-In Features | 60 min |
-| 3 | Platform AI → Custom Agents (Bridge) | 45 min |
-| 4 | Impact Assessment — Where to Automate First | 60 min |
+|---|---|---|
+| [Module 1: AI Foundations](./module-01-foundations/module-01-readme) | LLMs from an ops perspective — tokenization, context windows, inference pipeline using operational analogies | 90 min |
+| [Module 2: Platform AI](./module-02-platform-ai/module-02-readme) | AWS built-in AI features — GuardDuty, CodeGuru, DevOps Guru, Bedrock | 60 min |
+| [Module 3: Platform → Custom Agents](./module-03-bridge/module-03-readme) | Bridge from platform AI to custom agents — live Hermes demo | 45 min |
+| [Module 4: Impact Assessment](./module-04-impact/module-04-readme) | Structured framework for scoring and prioritizing your top 10 automation candidates | 60 min |
 
-### Day 2: Structured AI Coding and IaC
+### Day 2: Structured Coding and IaC
 
 | Module | Topic | Duration |
-|--------|-------|----------|
-| 5 | Structured AI Coding Workflow | 90 min |
-| 6 | AI-Assisted Infrastructure as Code | 90 min |
-| 7 | Building SKILL.md — Domain Knowledge Encoding | 60 min |
-| 8 | Tool Wiring — Connecting Agents to Infrastructure | 60 min |
+|---|---|---|
+| [Module 5a: Structured AI Coding](./module-05a-structured-coding/module-05a-readme) | Superpowers workflow — TDD with AI, verification discipline, systematic debugging | 90 min |
+| [Module 5b: AI Workflows](./module-05b-ai-workflows/module-05b-readme) | GSD planning workflow — requirements, roadmaps, phased execution | 45 min |
+| [Module 6: AI-Assisted IaC](./module-06-ai-iac/module-06-readme) | Generating and reviewing Terraform, Ansible, and Kubernetes manifests | 90 min |
+| [Module 7: Agent Skills](./module-07-agent-skills/module-07-readme) | SKILL.md authoring — encoding runbooks as machine-readable domain knowledge | 90 min |
+| [Module 8: Tool Integration](./module-08-tool-integration/module-08-readme) | Wiring agents to real infrastructure tools — AWS CLI, kubectl, Terraform, monitoring APIs | 60 min |
 
 ### Day 3: Agent Systems and Capstone
 
 | Module | Topic | Duration |
-|--------|-------|----------|
-| 9 | Agent Design Patterns | 60 min |
-| 10 | Domain Agent Build (3 tracks) | 120 min |
-| 11 | Fleet Management — Multiple Agents | 60 min |
-| 12 | Triggers and Automation | 60 min |
-| 13 | Governance and Safety | 60 min |
-| 14 | Capstone — Present Your Agent + 30-Day Plan | 60 min |
+|---|---|---|
+| [Module 9: Design Patterns](./module-09-design-patterns/module-09-readme) | Agent patterns — triage-and-delegate, noise reduction, change gating, cost guardian | 60 min |
+| [Module 10: Domain Agent Build](./module-10-domain-agent/module-10-readme) | Build a complete domain agent — three tracks (Track A: Database, Track B: FinOps, Track C: Kubernetes) | 120 min |
+| [Module 11: Fleet Management](./module-11-fleet/module-11-readme) | Multi-agent systems — the fleet coordinator pattern, delegation loops, Morgan | 60 min |
+| [Module 12: Triggers and Automation](./module-12-triggers/module-12-readme) | Event-driven agent invocation — CI/CD hooks, CloudWatch triggers, scheduled runs | 60 min |
+| [Module 13: Governance and Safety](./module-13-governance/module-13-readme) | L1–L4 governance levels, SOUL.md safety design, audit trails, production criteria | 60 min |
+| [Module 14: Capstone](./module-14-capstone/module-14-readme) | Present your agent and 30-day deployment plan | 60 min |
+
+---
+
+## Tools You Will Use
+
+### Primary Coding Tool (Modules 1–8)
+
+**Claude Code** — Anthropic's terminal AI coding agent. Uses your Claude Pro or Team subscription. No additional billing.
+
+**OpenCode** — Alternative terminal agent from [opencode.ai](https://opencode.ai). Supports 75+ LLM providers including free-tier options (Gemini 2.5 Flash, Groq). Use this if you prefer not to use a Claude subscription.
+
+### Agent Framework (Modules 7–13)
+
+**Hermes** — The agent framework you will use to build your domain agent. Python-based, runs locally, supports multiple LLM providers. Four agent profiles ship with the course as starting templates.
+
+---
 
 ## Learning Objectives
 
@@ -57,49 +102,32 @@ By the end of this course, you will:
 
 1. **Explain** how LLMs work — tokenization, context windows, inference pipeline — using operational analogies
 2. **Demonstrate** progressive context engineering on real infrastructure data (CloudWatch alarms, cost anomalies, deployment failures)
-3. **Build** a working domain agent using the Hermes framework that encodes your team's operational expertise
+3. **Build** a working domain agent using Hermes that encodes your team's operational expertise
 4. **Wire** your agent to real infrastructure tools — AWS CLI, kubectl, Terraform, monitoring APIs
 5. **Evaluate** the automation potential of your top 10 operational tasks using a structured scoring framework
 6. **Deliver** a 30-day roadmap for deploying your agent in production
 
-## Prerequisites
+---
 
-This is an **advanced workshop**. You need:
+## How to Navigate This Site
 
-- Docker (working installation, comfortable with containers)
-- Kubernetes basics (kubectl, you've deployed to a cluster before)
-- Terraform basics (you've written and applied a module)
-- CI/CD experience (GitHub Actions, Jenkins, or equivalent)
-- AWS basics (console navigation, IAM concepts, EC2/RDS/CloudWatch familiarity)
-- Git workflows (branching, PRs, code review)
-- CLI comfort (bash/zsh, you live in the terminal)
+**Workshop participants:** Your instructor sets the pace. Use this site for reference — open the module page before each session to review objectives and prerequisites.
 
-**Zero AI knowledge required.** We build your mental model from scratch using operational analogies.
+**Udemy learners:** Work through modules in order. Each module page has a lab link — the lab is the primary content. The reading and explainer materials are supplementary context.
 
-## Tools You'll Use
-
-### Primary Path: Claude Code
-
-Claude Code is an AI coding agent that works directly in your terminal. It uses your Claude Pro or Team subscription (no additional cost). It's the primary tool for all coding labs.
-
-### Alternative Path: Crush
-
-[Crush](https://github.com/charmbracelet/crush) (by Charm) is a multi-provider terminal agent that supports 75+ LLM providers via `/connect`. Use it if you prefer a different LLM backend or want to explore free-tier options like Google Gemini 2.5 Flash or Groq.
-
-### Hermes Framework (Modules 7-13)
-
-[Hermes](https://hermes-agent.nousresearch.com/) is the agent framework you'll use to build your domain agent in Day 2 and Day 3. Install instructions are in the setup guide.
-
-## Environment Setup
-
-Before Day 1, follow the setup guide: [setup/SETUP.md](pathname:///setup/SETUP.md)
-
-You'll need:
-- Claude Code installed (requires Claude Pro/Team subscription)
-- OR Crush installed with a free-tier LLM provider configured
-- KIND cluster running locally (for Kubernetes labs)
-- AWS account with free tier (or use the provided mock data — all labs have offline fallbacks)
+**Before you start:** Complete the [Setup Guide](./setup) first. You need the reference app running and an AI coding tool configured before Module 1.
 
 ---
 
-*Course developed for live 3-day workshop delivery and self-paced Udemy learning.*
+## Resources
+
+| Resource | Description |
+|---|---|
+| [Setup Guide](./setup) | Full environment setup — Day 1 (Docker/KIND/Claude Code) and Day 2–3 (Hermes) |
+| [Skills Reference](./resources/skills) | The 4 SKILL.md example files with descriptions and authoring guidance |
+| [Agent Profiles](./resources/agent-profiles) | Aria, Finley, Kiran, Morgan — identity docs and safety model for each |
+| [Governance Templates](./resources/governance-templates) | L1–L4 governance YAML with diffs showing the progression |
+
+---
+
+*This course was developed for live 3-day workshop delivery and self-paced Udemy learning. All labs are completable with free-tier infrastructure and a single Claude Pro or free-tier LLM provider.*
