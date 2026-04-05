@@ -85,11 +85,11 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 
 ### All Modules — Reading & Assessment
 
-- [ ] **CONTENT-01**: concepts.md for every module (1-14) — core concepts with DevOps analogies
-- [ ] **CONTENT-02**: reference.md for every module (1-14) — command reference, configs, cheat sheets
-- [ ] **CONTENT-03**: QUIZ.md for every module (1-14) — 5-8 questions, concept-focused not syntax trivia
-- [ ] **CONTENT-04**: Exploratory projects (PROJECTS.md) per module — 2-3 stretch ideas for advanced participants
-- [ ] **CONTENT-05**: Module README.md for every module — overview, 3-5 learning objectives, prerequisites
+- [x] **CONTENT-01**: concepts.md for every module (1-14) — core concepts with DevOps analogies
+- [x] **CONTENT-02**: reference.md for every module (1-14) — command reference, configs, cheat sheets
+- [x] **CONTENT-03**: QUIZ.md for every module (1-14) — 5-8 questions, concept-focused not syntax trivia
+- [x] **CONTENT-04**: Exploratory projects (PROJECTS.md) per module — 2-3 stretch ideas for advanced participants
+- [x] **CONTENT-05**: Module README.md for every module — overview, 3-5 learning objectives, prerequisites
 - [ ] **CONTENT-06**: Context engineering vocabulary enforced throughout — no "prompt engineering" language after Module 1, DevOps analogies for every AI concept
 
 ### Format & Delivery
@@ -181,11 +181,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOD14-01 | Phase 4 | Complete |
 | MOD14-02 | Phase 4 | Complete |
 | MOD14-03 | Phase 4 | Complete |
-| CONTENT-01 | Phase 4 | Pending |
-| CONTENT-02 | Phase 4 | Pending |
-| CONTENT-03 | Phase 4 | Pending |
-| CONTENT-04 | Phase 4 | Pending |
-| CONTENT-05 | Phase 4 | Pending |
+| CONTENT-01 | Phase 4 | Complete |
+| CONTENT-02 | Phase 4 | Complete |
+| CONTENT-03 | Phase 4 | Complete |
+| CONTENT-04 | Phase 4 | Complete |
+| CONTENT-05 | Phase 4 | Complete |
 | CONTENT-06 | Phase 4 | Pending |
 | FMT-01 | Phase 4 | Pending |
 | FMT-02 | Phase 4 | Pending |
