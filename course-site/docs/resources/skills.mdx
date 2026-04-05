@@ -1,0 +1,141 @@
+---
+id: skills
+title: "SKILL.md Reference Files"
+sidebar_label: "Skills"
+sidebar_position: 1
+---
+
+# SKILL.md Reference Files
+
+Skills are the primary mechanism for encoding domain expertise into Hermes agents. Each SKILL.md file is a structured runbook — machine-readable by Hermes, human-readable by the engineer who authors it.
+
+You work with these files in **Modules 7 and 8**. Four complete example skills ship with the course repo under `skills/`. A blank authoring template is at `skills/SKILL-TEMPLATE.md`.
+
+---
+
+## What a Skill File Contains
+
+Every SKILL.md has four required zones:
+
+| Section | Purpose |
+|---|---|
+| Frontmatter | Machine metadata: `name`, `description`, `version`, `compatibility`, `tags` |
+| When to Use | Exact trigger conditions — specific alarm names, metric thresholds, CLI output patterns |
+| Inputs | Environment variables, required tools, permissions |
+| Procedure | Two-phase structure: Scripts Zone (deterministic CLI) + Agents Zone (reasoning/decision tree) |
+| Escalation / NEVER DO | Human-approval gates and hard prohibitions |
+| Verification | Checklist confirming the investigation is complete |
+
+The split between Scripts Zone and Agents Zone is the key design pattern: deterministic data gathering separated from LLM-driven interpretation.
+
+---
+
+## Course Skills
+
+### `sre-ec2-health-check`
+
+**File:** `skills/sre-ec2-health-check/SKILL.md`
+
+```
+Diagnose EC2 instance health issues. Use when CloudWatch alert fires on
+EC2 CPU, network, or disk metrics, or when instance becomes unreachable
+or performance-degraded. Covers status checks, CloudWatch metrics,
+CloudTrail events, and health report generation.
+```
+
+**Tags:** ec2, sre, health-check, cloudwatch, aws, monitoring, incidents
+
+**What it does:**
+- Phase 1 (Scripts Zone): Runs `aws ec2 describe-instance-status`, CloudWatch CPU/network/disk metrics, CloudTrail events, and active alarm checks — six deterministic data-gather steps.
+- Phase 2 (Agents Zone): Four decision branches — status check failures, CPU saturation, network isolation, no active issue — each with explicit numeric thresholds and escalation criteria.
+
+**Key constraint:** Read-only. The skill never reboots, stops, or modifies the instance. Any remediation action requires explicit human approval.
+
+**Used in:** Module 7 lab (the primary hands-on example), Module 8 tool-wiring lab.
+
+---
+
+### `dba-rds-slow-query`
+
+**File:** `skills/dba-rds-slow-query/SKILL.md`
+
+```
+Investigate RDS PostgreSQL slow query performance using pg_stat_statements.
+Use when CloudWatch RDS CPUUtilization alarm fires, application reports slow
+queries, or pg_stat_statements shows queries with mean_time > 1000ms. Covers
+slow query identification, index gap analysis, parameter group review, and
+tuning recommendations.
+```
+
+**Tags:** rds, postgresql, slow-query, pg-stat-statements, index, performance, dba, tuning
+
+**What it does:**
+- Phase 1: Queries `pg_stat_statements` for top slow queries, checks CloudWatch RDS CPU and IOPS metrics, reviews active connections and wait events.
+- Phase 2: Decision branches for query-plan issues (runs `EXPLAIN`), parameter group drift, connection pool saturation, and no active issue. Produces a tuning recommendation with estimated impact.
+
+**Key constraint:** Recommends index creation and parameter changes but never executes DDL without approval. `VACUUM FULL` is flagged as a business-hours risk.
+
+**Used in:** Module 10 Domain Agent Build — Track A (Database Health).
+
+---
+
+### `devops-deployment-safety-check`
+
+**File:** `skills/devops-deployment-safety-check/SKILL.md`
+
+```
+Validate deployment readiness and monitor canary rollout health. Use before
+deploying to production, after canary release, or when automated deployment
+gate reports failure. Covers pre-deploy validation, canary health monitoring,
+rollback criteria, and post-deploy verification.
+```
+
+**Tags:** deployment, canary, rollback, safety, cicd, production, ec2, kubernetes, ecs
+
+**What it does:**
+- Phase 1: Pre-deploy checks (resource availability, circuit breaker state, error rate baseline), canary traffic split validation, post-canary error rate and latency comparison against baseline.
+- Phase 2: Go/no-go decision logic using configurable thresholds. If canary error rate exceeds baseline by 2x or p99 latency increases more than 50%, the skill recommends rollback with the exact `kubectl rollout undo` or ECS equivalent.
+
+**Key constraint:** Never executes rollback autonomously. Outputs the rollback command and rationale for human execution.
+
+**Used in:** Module 8 (tool wiring), Module 12 (trigger-based automation).
+
+---
+
+### `observability-alert-noise-analyzer`
+
+**File:** `skills/observability-alert-noise-analyzer/SKILL.md`
+
+```
+Analyze CloudWatch alarm patterns to identify noise, duplicates, and
+correlated alerts. Use when on-call engineer reports alert fatigue, when
+alert volume spikes without a corresponding incident, or as part of weekly
+observability hygiene. Produces dedup candidates, correlation clusters, and
+snooze window recommendations.
+```
+
+**Tags:** cloudwatch, observability, alerts, noise, deduplication, correlation, on-call, sre
+
+**What it does:**
+- Phase 1: Retrieves last 24 hours of alarm state history, groups by alarm name and time window, identifies alarms that fire within 60 seconds of each other (correlation candidates).
+- Phase 2: Classifies alarms as noisy (fired more than 3x per hour with no incident), correlated (co-firing with root cause alarm), or healthy. Produces a ranked list of dedup and snooze candidates with estimated on-call burden reduction.
+
+**Key constraint:** Read-only analysis only. Does not modify alarm thresholds or suppress alarms — outputs a structured recommendation report.
+
+**Used in:** Module 7 stretch lab, Module 9 (design patterns — noise reduction pattern).
+
+---
+
+## Authoring Your Own Skill
+
+The blank template is at `skills/SKILL-TEMPLATE.md`. It includes all required sections with authoring guidance in comments.
+
+Quality gate: before submitting a new skill, every Tier 1 item in `skills/RUBRIC.md` must pass. Tier 1 blockers are:
+
+- Frontmatter `description` starts with an action verb and names the trigger condition
+- `When to Use` lists specific alert names or metric thresholds (not vague descriptions)
+- Scripts Zone contains only CLI commands and expected output (no prose decisions)
+- Agents Zone contains only IF/THEN/ELSE trees (no raw CLI commands)
+- All numeric thresholds are explicit (e.g., `> 80%`, `> 1000ms`) — not qualitative
+
+See Module 7 reading material for a full walkthrough of the authoring process.

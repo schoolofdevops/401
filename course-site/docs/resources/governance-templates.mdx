@@ -1,0 +1,188 @@
+---
+id: governance-templates
+title: "Governance Templates"
+sidebar_label: "Governance Templates"
+sidebar_position: 3
+---
+
+# Governance Templates
+
+Governance templates define how much autonomy a Hermes agent has when executing commands. They are YAML snippets — a few keys that you merge into an agent's `config.yaml` to set its approval mode and command access.
+
+Six templates ship with the course under `governance/`. You work with them in **Module 13** (Governance and Safety).
+
+---
+
+## The Four Levels
+
+| Level | Name | Approval Mode | Terminal Access | Human in the Loop |
+|---|---|---|---|---|
+| L1 | Assistive | manual | No | Every action |
+| L2 | Advisory | manual | Yes | Every flagged command |
+| L3 | Proposal | smart | Yes | High-risk commands only |
+| L4 | Semi-autonomous | smart | Yes | Novel/high-risk only |
+
+The levels represent a trust progression. You move an agent up a level deliberately, after observing its behavior at the lower level and reviewing its audit logs. Moving levels is a conscious decision — not a dial you turn up because you're tired of approval prompts.
+
+---
+
+## L1: Assistive
+
+**File:** `governance/governance-L1.yaml`
+
+```yaml
+platform_toolsets:
+  cli: [web, skills]      # No terminal: agent cannot execute commands
+
+approvals:
+  mode: manual            # Every flagged command would require approval (none can run anyway)
+  timeout: 300
+
+command_allowlist: []     # Nothing pre-approved
+```
+
+**What this means in practice:**
+
+The agent has no terminal access. It can read SKILL.md files and web resources, and produce text output — but it cannot run `aws`, `kubectl`, or any other CLI tool. Every action the agent recommends must be executed manually by the human.
+
+**When to use L1:**
+
+- First session with a new agent in an unfamiliar environment
+- High-stakes production environments where you want a "review only" mode
+- Teaching situations where participants should execute each step themselves to build muscle memory
+
+---
+
+## L2: Advisory
+
+**File:** `governance/governance-L2.yaml`
+
+```yaml
+platform_toolsets:
+  cli: [terminal, file, web, skills]   # Terminal enabled: agent can run commands
+
+approvals:
+  mode: manual            # Every DANGEROUS_PATTERNS match requires human approval
+  timeout: 300
+
+command_allowlist: []     # Nothing pre-approved
+```
+
+**Diff from L1:**
+
+```diff
+ platform_toolsets:
+-  cli: [web, skills]
++  cli: [terminal, file, web, skills]
+```
+
+**What changes:** Terminal access is now enabled. The agent can execute commands autonomously when those commands do not match Hermes's `DANGEROUS_PATTERNS` list. Read-only commands (`aws ec2 describe-*`, `kubectl get`, `SELECT`, `EXPLAIN`) run without prompting. Anything matching `DANGEROUS_PATTERNS` (e.g., `DROP`, `DELETE`, destructive mutations) pauses for human approval before executing.
+
+**The course default.** All four track agents (Aria, Finley, Kiran, Morgan) ship with L2 governance.
+
+---
+
+## L3: Proposal
+
+**File:** `governance/governance-L3.yaml`
+
+```yaml
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: smart             # Auxiliary LLM auto-approves low-risk flagged commands
+  timeout: 300
+
+command_allowlist: []     # Nothing permanently pre-approved; smart handles case-by-case
+```
+
+**Diff from L2:**
+
+```diff
+ approvals:
+-  mode: manual
++  mode: smart
+```
+
+**What changes:** When a command matches `DANGEROUS_PATTERNS`, instead of pausing for human approval, Hermes sends the command to an auxiliary LLM (a separate, smaller model) for risk assessment. The auxiliary LLM auto-approves commands it classifies as low-risk and routes genuinely high-risk commands (e.g., `DROP TABLE`, `DELETE` without `WHERE`) to a human.
+
+**When to promote from L2 to L3:**
+
+After running the agent at L2 for several sessions and reviewing its approval audit log, if the pattern shows that the human routinely approves the same class of commands without hesitation (e.g., `CREATE INDEX CONCURRENTLY` is always approved), L3 eliminates that overhead.
+
+---
+
+## L4: Semi-Autonomous
+
+Four L4 templates ship — one per track. Each is identical to L3 at the file level, but includes track-specific comments explaining the safety model.
+
+### L4 Track A (Database)
+
+**File:** `governance/governance-L4-track-a.yaml`
+
+```yaml
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: smart
+  timeout: 300
+
+command_allowlist: []
+# Track A: no mutations pre-approved at course level
+# Read-only SQL (SELECT, EXPLAIN, SHOW) are not in DANGEROUS_PATTERNS —
+# they never trigger an approval gate regardless.
+# Example (DO NOT add without security review): "SQL DROP" would pre-approve DROP TABLE/DATABASE
+```
+
+**The key insight for Track A:** `SELECT`, `EXPLAIN`, and `SHOW` are not in `DANGEROUS_PATTERNS`. Aria already runs them autonomously at L2. L4 does not change read-only behavior — it reduces friction for the subset of flagged commands that have been validated safe for this agent's domain.
+
+### L4 Track B (FinOps)
+
+**File:** `governance/governance-L4-track-b.yaml`
+
+```yaml
+# Track B note: aws ec2 terminate-instances and modify-instance-attribute are NOT
+# in Hermes DANGEROUS_PATTERNS. Safety for these commands is enforced via
+# SOUL.md NEVER rules (behavioral), not the approval gate (mechanical).
+```
+
+**The key insight for Track B:** The commands Finley must never run (`aws ec2 terminate-instances`, `aws ec2 modify-instance-attribute`) fall outside `DANGEROUS_PATTERNS`. The config.yaml approval gate cannot protect against them at any level. Protection comes entirely from Finley's SOUL.md `NEVER DO` rules. This is the two-layer safety model in practice.
+
+### L4 Track C (Kubernetes)
+
+**File:** `governance/governance-L4-track-c.yaml`
+
+```yaml
+# Track C note: kubectl delete, kubectl drain, kubectl cordon are NOT in
+# Hermes DANGEROUS_PATTERNS. Safety is enforced via SOUL.md NEVER rules.
+```
+
+Same pattern as Track B. The most destructive Kubernetes operations — `kubectl delete`, `kubectl drain`, `kubectl cordon` — are enforced behaviorally via SOUL.md, not mechanically via the approval gate.
+
+---
+
+## Applying a Governance Template
+
+Governance templates are applied by merging their keys into an agent's `config.yaml`:
+
+```bash
+# Example: promote Aria from L2 to L3
+# Copy the governance keys from governance-L3.yaml into track-a-database/config.yaml
+```
+
+In practice, you copy the `platform_toolsets` and `approvals` blocks from the template you want and replace the corresponding blocks in your agent's config. The `command_allowlist` key carries forward.
+
+---
+
+## Governance Progression in the Course
+
+| Module | Activity |
+|---|---|
+| Module 10 | Deploy agents at L2 (course default) — observe approval patterns |
+| Module 13 | Audit L2 approval logs — identify candidates for L3 promotion |
+| Module 13 | Apply L3 template to one agent — observe smart-approval behavior |
+| Module 13 | Discuss L4 promotion criteria — what evidence justifies semi-autonomous operation |
+
+L4 is not covered as a hands-on lab at course level. Participants learn to recognize the conditions that justify L4 promotion and understand the safety model before attempting it in their own environments.
