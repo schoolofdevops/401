@@ -89,7 +89,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Module 9 (design patterns, autonomy spectrum) and Module 14 (capstone templates, rubric, roadmap) complete content
 - [x] 04-02-PLAN.md — Modules 7-13 reading/quiz/exploratory content + gap-fill PROJECTS.mdx for Modules 1-5a + fix stale README tables
-- [ ] 04-03-PLAN.md — Instructor facilitator guides (Day 1/2/3), Udemy section outline, solo fallbacks, lab format audit, vocabulary audit
+- [x] 04-03-PLAN.md — Instructor facilitator guides (Day 1/2/3), Udemy section outline, solo fallbacks, lab format audit, vocabulary audit
 
 ## Progress
 
