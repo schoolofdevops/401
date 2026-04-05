@@ -68,8 +68,8 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 - [x] **MOD6-02**: Lab Track B — Kubernetes manifests + Helm charts + ArgoCD GitOps config for reference app on KIND — fully real, local
 - [ ] **MOD6-03**: Lab Track C — CI/CD pipeline with Argo Workflows + GitHub Actions for reference app — fully real
 - [x] **MOD6-04**: Each track: starter files, solution files, expected outputs, validation steps
-- [ ] **MOD6-05**: Reading — AI failure modes in infrastructure generation, common AI errors in IaC
-- [ ] **MOD6-06**: Quiz covering IaC validation, AI error patterns in infrastructure code
+- [x] **MOD6-05**: Reading — AI failure modes in infrastructure generation, common AI errors in IaC
+- [x] **MOD6-06**: Quiz covering IaC validation, AI error patterns in infrastructure code
 
 ### Module 9 — Agent Design Patterns (partial — this repo)
 
@@ -173,8 +173,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOD6-02 | Phase 3 | Complete |
 | MOD6-03 | Phase 3 | Pending |
 | MOD6-04 | Phase 3 | Complete |
-| MOD6-05 | Phase 3 | Pending |
-| MOD6-06 | Phase 3 | Pending |
+| MOD6-05 | Phase 3 | Complete |
+| MOD6-06 | Phase 3 | Complete |
 | MOD9-01 | Phase 4 | Pending |
 | MOD9-02 | Phase 4 | Pending |
 | MOD9-03 | Phase 4 | Pending |

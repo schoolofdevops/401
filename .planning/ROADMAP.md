@@ -72,7 +72,7 @@ Plans:
 - [x] 03-02-PLAN.md — Module 5b lab (GSD workflow, context engineering practical, memory systems, plan modes) + superpowers exploratory
 - [ ] 03-03-PLAN.md — Module 5a and 5b reading materials and quizzes
 - [x] 03-04-PLAN.md — Module 6 labs (Track A Terraform + Track B ArgoCD GitOps) with starter and solution files
-- [ ] 03-05-PLAN.md — Module 6 reading materials, quiz, and exploratory projects
+- [x] 03-05-PLAN.md — Module 6 reading materials, quiz, and exploratory projects
 
 ### Phase 4: Remaining Content
 **Goal**: Every module in the course has complete reading material, quiz, and explainer; Modules 9 and 14 have their specific artifacts; instructors have facilitator guides; Udemy has a section outline
@@ -100,5 +100,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete   | 2026-04-04 |
 | 2. Day 1 Modules | 1/3 | In Progress|  |
-| 3. Day 2 Modules | 2/5 | In Progress|  |
+| 3. Day 2 Modules | 4/5 | In Progress|  |
 | 4. Remaining Content | 0/3 | Not started | - |
