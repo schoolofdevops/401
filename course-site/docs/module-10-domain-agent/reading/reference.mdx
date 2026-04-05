@@ -3,7 +3,7 @@ id: module-10-reference
 title: "Reference: Agent Profile Structure and Output Evaluation"
 sidebar_label: "Reference"
 sidebar_position: 2
-description: "Agent profile directory structure, simulated data format, and output evaluation checklist"
+description: "Hermes profile directory structure, SOUL.md anatomy, config.yaml keys, profile types, and output evaluation checklist"
 ---
 
 # Reference: Agent Profile Structure and Output Evaluation
@@ -12,114 +12,320 @@ Quick-reference for Module 10 — building and evaluating your domain agent.
 
 ---
 
-## 1. Agent Profile Directory Structure
+## 1. The Profile = Agent Definition Insight
+
+In Hermes, an agent IS its profile. There is no Python code to write. No class to subclass. A profile is a directory with two files — `SOUL.md` (who the agent is) and `config.yaml` (what it can do) — and that directory is the complete definition of the agent.
 
 ```
-my-domain-agent/
-├── soul.md                    # Agent identity and behavioral constraints
-├── config.yaml                # Operational configuration
-├── skills/
-│   ├── primary-skill.md       # Main domain skill (from Module 7)
-│   └── secondary-skill.md     # Supporting skill (optional)
-└── data/
-    ├── mock-aws-response.json # Simulated CLI output for testing
-    └── mock-k8s-pods.json     # Simulated kubectl output
+~/.hermes/profiles/track-a/
+├── SOUL.md          # Identity: who the agent is, what it NEVER does
+├── config.yaml      # Capabilities: tools, model, governance
+└── skills/          # Domain knowledge: SKILL.md runbooks
+    ├── dba-rds-slow-query/
+    │   └── SKILL.md
+    └── cost-anomaly/
+        └── SKILL.md
 ```
+
+The Hermes runtime provides the agent loop, tool execution, context management, and LLM integration. The profile provides the agent-specific layer on top of that generic infrastructure.
+
+This separation means:
+1. **No Python required:** DevOps practitioners can build production-grade agents without writing application code.
+2. **Profiles are readable by non-engineers:** A SOUL.md is plain English. An operations manager can read it and understand what the agent will and won't do.
+3. **Profiles are version-controllable:** SOUL.md and config.yaml go in git. Drift detection is `git diff`. Rollback is `git checkout`.
+4. **Profile-based agents transfer across environments:** Install with `cp -r course/agents/track-a-database/ ~/.hermes/profiles/track-a/` and run immediately. No build step.
+
+### Install and Launch
+
+```bash
+# Copy a course profile to your Hermes installation
+cp -r course/agents/track-a-database/ ~/.hermes/profiles/track-a/
+
+# Launch the agent
+hermes -p track-a chat
+
+# Or specify a model override
+hermes -p track-a --model anthropic/claude-3-5-sonnet-20241022 chat
+```
+
+Hermes discovers profiles by scanning `~/.hermes/profiles/` for directories containing `config.yaml`. The profile is immediately available after the `cp`. No restart required.
 
 ---
 
-## 2. Minimal config.yaml Per Track
+## 2. SOUL.md Anatomy
 
-### Track A: DB Health Agent
+SOUL.md has three required sections plus a header block:
 
-```yaml
-profile_name: "rds-health-agent"
-soul: "./soul.md"
-model: "claude-opus-4-5"
+```markdown
+# Agent Name — Role Title
 
-tools:
-  terminal:
-    enabled: true
-    allowed_commands:
-      - "aws rds describe-db-instances *"
-      - "aws rds describe-db-parameters *"
-      - "aws cloudwatch get-metric-statistics *"
-      - "psql -h * -U readonly_user -c SELECT *"
-    blocked_commands:
-      - "aws rds modify-db-instance *"
-      - "aws rds delete-db-instance *"
-    environment:
-      AWS_PROFILE: "${AWS_PROFILE}"
-      AWS_DEFAULT_REGION: "us-east-1"
-      PGPASSWORD: "${PGPASSWORD}"
+**Role:** One-line role description
+**Domain:** Track A: Database | Track B: FinOps | Track C: Kubernetes | Fleet Coordinator
+**Scope:** What this agent covers — and what it explicitly IS NOT responsible for
 
-skills:
-  - path: "./skills/rds-health.md"
-    triggers: ["slow queries", "connection pool", "rds performance", "db latency"]
-  - path: "./skills/query-analysis.md"
-    triggers: ["explain analyze", "query plan", "index recommendation"]
+## Identity
+
+## Behavior Rules
+
+## Escalation Policy
 ```
 
-### Track B: FinOps Agent
+### Header Block
 
-```yaml
-profile_name: "finops-advisor"
-soul: "./soul.md"
-model: "claude-opus-4-5"
+Four lines establishing the agent's identity at a glance:
+- **Name:** The agent's name. The LLM uses it when referring to itself.
+- **Role:** One sentence. Specific enough to shape behavior; broad enough to handle edge cases.
+- **Domain:** Which track. Helps the agent self-locate within the fleet.
+- **Scope:** What the agent IS responsible for AND what it explicitly IS NOT. The scope exclusion is as important as the inclusion.
 
-tools:
-  terminal:
-    enabled: true
-    allowed_commands:
-      - "aws ce get-cost-and-usage *"
-      - "aws ce get-cost-forecast *"
-      - "aws ec2 describe-instances *"
-      - "aws ec2 describe-volumes *"
-    blocked_commands:
-      - "aws ec2 terminate-instances *"
-      - "aws ec2 stop-instances *"
-    environment:
-      AWS_PROFILE: "${AWS_PROFILE}"
+### Identity Section
 
-skills:
-  - path: "./skills/cost-analysis.md"
-    triggers: ["cost anomaly", "cost spike", "billing", "spend analysis"]
-  - path: "./skills/right-sizing.md"
-    triggers: ["right-size", "underutilized", "instance type", "savings"]
+Two to three sentences in first person. The template pattern:
+
+```
+You are [Name], a [role] agent for [team/org].
+You [what you do + how you do it].
+You [what you never do + why not].
 ```
 
-### Track C: Kubernetes Health Agent
+The Identity section is a domain-specific statement that overrides the LLM's default helpful-assistant behavior. An identity that says "You are Aria, a database reliability agent who diagnoses performance problems and recommends fixes but never executes changes" will refuse DDL execution even when a user explicitly asks.
 
-```yaml
-profile_name: "k8s-health-agent"
-soul: "./soul.md"
-model: "claude-opus-4-5"
+**Compare the Track A and Fleet Coordinator identities:**
 
-tools:
-  terminal:
-    enabled: true
-    allowed_commands:
-      - "kubectl get *"
-      - "kubectl describe *"
-      - "kubectl logs --tail=100 *"
-      - "kubectl top *"
-    blocked_commands:
-      - "kubectl delete *"
-      - "kubectl exec *"
-      - "kubectl apply *"
-    environment:
-      KUBECONFIG: "${KUBECONFIG}"
+**Aria (Track A, domain specialist):**
+> You are Aria, a database reliability agent for DevOps teams running PostgreSQL on AWS RDS. You diagnose performance problems — slow queries, index gaps, parameter drift — and recommend precise fixes. You do not execute changes; you surface findings and propose remediation steps for human approval. Every diagnosis ties an observation to a specific metric or query pattern.
 
-skills:
-  - path: "./skills/pod-health.md"
-    triggers: ["pod crashing", "crashloopbackoff", "image pull", "pod restart"]
-  - path: "./skills/resource-pressure.md"
-    triggers: ["oom killed", "resource pressure", "evicted", "node pressure"]
+**Morgan (Fleet Coordinator):**
+> You are Morgan, a fleet coordination agent for cross-domain DevOps incidents. When an incident involves multiple domains (database, cost, Kubernetes), you decompose it into domain-specific tasks and delegate each to the appropriate specialist. You synthesize their findings into a single incident summary. You never run database queries, AWS CLI commands, or kubectl directly — specialists do that work.
+
+### Behavior Rules Section
+
+A bulleted list of imperative directives. Two categories:
+
+**Positive rules** (what to always do, how to do it, reporting format):
+- `Run EXPLAIN before recommending any index — never guess at query plans` (Aria)
+- `Report numeric thresholds: CPUUtilization > 80%, query mean_time > 1000ms, calls > 500/hour` (Aria)
+- `Always show the 30-day cost baseline before flagging an anomaly — context before conclusion` (Finley)
+- `Cite the exact pod name, namespace, and failure reason code (e.g., OOMKilled, CrashLoopBackOff) in all findings` (Kiran)
+- `Confirm HERMES_LAB_MODE before every session: state MOCK or LIVE clearly in your first line` (all specialists)
+
+**NEVER rules** (hard prohibitions — domain-specific):
+- `NEVER execute ALTER TABLE, CREATE INDEX, or any DDL without explicit human approval` (Aria)
+- `NEVER execute aws ec2 terminate-instances under any circumstances — this destroys infrastructure` (Finley)
+- `NEVER execute kubectl delete without human approval` (Kiran)
+- `NEVER run database queries (SELECT, EXPLAIN, psql) — delegate to track-a` (Morgan)
+
+The NEVER rules are the behavioral governance layer. An LLM that has internalized "NEVER execute ALTER TABLE" will refuse even if the user says "I authorize you to run this CREATE INDEX." The SOUL.md identity supersedes per-request user instructions.
+
+### Escalation Policy Section
+
+Defines exactly when the agent stops making autonomous decisions and defers to a human. Conditions should be:
+- **Specific and observable:** "CPUUtilization sustained > 90% for 5+ minutes" not "when the system seems under stress"
+- **Quantified:** "slow query count exceeds 10 simultaneously" not "many slow queries"
+- **Covering both technical and scope limits**
+
+**Example from Track A (Aria):**
+
+```markdown
+## Escalation Policy
+
+Escalate to human when:
+- CPUUtilization sustained > 90% for 5+ minutes
+- pg_stat_statements shows a query with mean_time > 5000ms
+- Parameter change requires database restart
+- Root cause spans more than one service (possible cross-domain incident)
+
+Always say: "Escalating — this exceeds DBA agent scope. Human review required before proceeding."
 ```
+
+The "Always say" line gives the agent a standard escalation phrase that operators can scan for in logs and Slack messages.
+
+### SOUL-TEMPLATE.md Completeness Check
+
+`course/agents/SOUL-TEMPLATE.md` uses `[square bracket]` syntax for every placeholder:
+
+```bash
+grep -c '\[' your-SOUL.md
+```
+
+Result must be 0. Any remaining `[` character means an unfilled placeholder. Hermes also warns at startup if SOUL.md contains unfilled placeholders.
 
 ---
 
-## 3. Simulated Data Format Reference
+## 3. config.yaml Key Reference
+
+| Key | Type / Values | Effect on Agent Behavior |
+|---|---|---|
+| `model.default` | String (e.g., `anthropic/claude-haiku-4`) | LLM used for all conversations. Override with `--model` flag in CLI. |
+| `model.provider` | `auto` or provider name | API client selection. `auto` lets Hermes detect from model identifier. |
+| `platform_toolsets.cli` | Array of tool categories | Which tools are available. Specialists: `[terminal, file, web, skills]`. Coordinators: `[web, skills]`. |
+| `delegation.max_iterations` | Integer (e.g., 30) | Maximum agent loop turns for this coordinator profile. |
+| `delegation.default_toolsets` | Array of tool categories | Tools granted to spawned specialist subagents by the coordinator. |
+| `approvals.mode` | `manual`, `smart`, `auto` | Governance mode. `manual` = L2. `smart` = L3. `auto` = bypass all approval gates. |
+| `approvals.timeout` | Integer (seconds, e.g., 300) | How long to wait for human approval before treating as denial. |
+| `command_allowlist` | Array of description-key strings | Permanently pre-approved DANGEROUS_PATTERNS. Empty at course level. |
+| `agent.max_turns` | Integer (e.g., 30) | Maximum conversation turns before agent loop exits. |
+| `agent.verbose` | Boolean (`true`/`false`) | Show intermediate tool output. `false` for production; `true` for debugging. |
+
+### How config.yaml Keys Map to Runtime Behavior
+
+When `hermes -p track-a chat` is launched:
+
+1. Hermes resolves the profile directory: `~/.hermes/profiles/track-a/`
+2. `config.yaml` is loaded and merged with the user's global `~/.hermes/config.yaml`
+3. `platform_toolsets.cli` determines which tools are registered for this session
+4. `approvals.mode` is read by `tools/approval.py` before every terminal command
+5. `model.default` is used when no per-request model override is specified
+6. `agent.max_turns` sets the conversation loop limit
+7. SOUL.md is loaded from the profile directory and injected into the system prompt
+8. `skills/` is scanned — all SKILL.md files found are loaded as domain knowledge
+
+---
+
+## 4. Track Profile Configurations
+
+### Track A: RDS Database Health Agent (Aria)
+
+```yaml
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: manual
+  timeout: 300
+
+command_allowlist: []
+
+agent:
+  max_turns: 30
+  verbose: false
+```
+
+**Skills directory:**
+```
+~/.hermes/profiles/track-a/
+  SOUL.md
+  config.yaml
+  skills/
+    dba-rds-slow-query/
+      SKILL.md
+```
+
+**Mock mode setup:**
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=messy  # or clean
+export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"
+hermes -p track-a chat
+```
+
+### Track B: FinOps Cost Analysis Agent (Finley)
+
+```yaml
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: manual
+  timeout: 300
+
+command_allowlist: []
+
+agent:
+  max_turns: 30
+```
+
+**Critical distinction for Track B:** `aws ec2 terminate-instances` is NOT in Hermes DANGEROUS_PATTERNS. The NEVER rule in Finley's SOUL.md is the sole safety control for this command. The behavioral governance layer is load-bearing — not optional, not backed by a mechanical gate.
+
+### Track C: Kubernetes Health Agent (Kiran)
+
+```yaml
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: manual
+  timeout: 300
+
+command_allowlist: []
+
+agent:
+  max_turns: 30
+```
+
+Same pattern as Track B: `kubectl delete`, `kubectl drain`, and `kubectl cordon` are not in DANGEROUS_PATTERNS — governed exclusively by SOUL.md NEVER rules.
+
+### Fleet Coordinator (Morgan)
+
+```yaml
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
+
+platform_toolsets:
+  cli: [web, skills]    # No terminal — coordinator pattern enforced mechanically
+
+delegation:
+  max_iterations: 30
+  default_toolsets: ["terminal", "file", "web", "skills"]
+
+approvals:
+  mode: manual
+  timeout: 300
+
+agent:
+  max_turns: 30
+```
+
+**Why no skills/ directory?**
+A coordinator with domain skills would start applying those skills directly instead of delegating. If Morgan had a `dba-rds-slow-query` skill, it would attempt to run the diagnostic itself. Keeping `skills/` absent enforces the coordinator pattern at the configuration level.
+
+**The `default_toolsets` in delegation:**
+When Morgan spawns a specialist subagent, that subagent receives the `default_toolsets` list as its available tools. This is why Aria (spawned by Morgan) can run terminal commands even when Morgan cannot — the coordinator grants toolsets to its children.
+
+---
+
+## 5. Profile Types and Characteristic Config
+
+| Type | Terminal Toolset | skills/ Dir | delegation Block | approvals.mode | Example |
+|---|---|---|---|---|---|
+| Domain specialist | Yes (`terminal` in cli) | Yes (domain runbooks) | No | `manual` (L2) or `smart` (L3+) | Aria (Track A), Finley (Track B), Kiran (Track C) |
+| Fleet coordinator | No (`terminal` absent from cli) | No | Yes (with `default_toolsets`) | `manual` | Morgan (Fleet Coordinator) |
+| Read-only advisor | Yes (but SOUL.md NEVER on mutations) | Yes (advisory runbooks) | No | `manual` | Any L2 specialist before promotion |
+| Semi-autonomous (L4) | Yes | Yes | No | `smart` + non-empty `command_allowlist` | Post-promotion specialist profiles |
+
+---
+
+## 6. Profile vs. Skill — What Belongs Where
+
+| Content Type | Goes In | Reason |
+|---|---|---|
+| Agent name and role | SOUL.md header | Identity — applies to every interaction |
+| Hard prohibitions (NEVER rules) | SOUL.md Behavior Rules | Behavioral governance — always active |
+| Escalation conditions | SOUL.md Escalation Policy | Operational boundary — always active |
+| Step-by-step diagnostic procedure | SKILL.md in skills/ | Procedural knowledge — invoked when relevant |
+| CLI commands to run for a specific task | SKILL.md in skills/ | Workflow — situation-specific |
+| Thresholds for a specific scenario | SKILL.md in skills/ | Context-specific runbook data |
+| Reporting format (generic) | SOUL.md Behavior Rules | Always applies — format all findings this way |
+| Model and tool configuration | config.yaml | Runtime configuration — not behavioral |
+
+**The test:** "Does this always apply, regardless of what the user asks?" → SOUL.md. "Does this apply only when the agent is working on a specific type of task?" → SKILL.md.
+
+---
+
+## 7. Simulated Data Format Reference
 
 Simulated data files must match exact CLI output format. The agent's skill procedure references specific JSON paths — if the format is wrong, the skill fails.
 
@@ -141,6 +347,8 @@ Simulated data files must match exact CLI output format. The agent's skill proce
   "Label": "CPUUtilization"
 }
 ```
+
+**Note:** Real AWS uses PascalCase field names (`DBInstanceStatus`, `Datapoints`, `CPUUtilization`). Skills and mock data must use PascalCase — this is a Tier 4 RUBRIC.md check.
 
 ### kubectl Mock (pods)
 
@@ -165,11 +373,11 @@ Simulated data files must match exact CLI output format. The agent's skill proce
 }
 ```
 
-**Note on the `_metadata` field:** Per course conventions, all mock JSON files include a `_metadata` field identifying them as simulated data. This prevents confusion when reviewing agent outputs — the diagnosis will reference the mock data source, not a real infrastructure endpoint.
+All mock JSON files include a `_metadata` field identifying them as simulated data. This prevents confusion when reviewing agent outputs.
 
 ---
 
-## 4. Output Evaluation Checklist
+## 8. Output Evaluation Checklist
 
 Use this after each test run to assess agent output quality:
 
@@ -181,6 +389,7 @@ Use this after each test run to assess agent output quality:
 [ ] Root Cause Hypothesis: names the hypothesis + confidence level (High/Medium/Low)
 [ ] Recommended Actions: numbered, each action includes exact command or step
 [ ] Escalation Decision: Escalate/Monitor/No Action + rationale
+[ ] All numeric values sourced from Phase 1 output (no estimated values)
 ```
 
 ### Accuracy Verification (Track-Specific)
@@ -189,8 +398,8 @@ Use this after each test run to assess agent output quality:
 ```
 [ ] CPU metric values match simulated data (no hallucinated numbers)
 [ ] pg_stat_statements interpretation matches decision tree branch
-[ ] Connection pool recommendation references actual max_connections value from parameter group
-[ ] P99 latency classification (normal/elevated/critical) matches defined thresholds in skill
+[ ] Connection pool recommendation references actual max_connections value
+[ ] Diagnosis string is one of the named strings in the Agents Zone decision tree
 ```
 
 **Track B (FinOps):**
@@ -209,31 +418,51 @@ Use this after each test run to assess agent output quality:
 [ ] Image pull failure distinguishes between NotFound and auth errors
 ```
 
+### Governance Compliance (All Tracks)
+
+```
+[ ] No DDL commands proposed without escalation note (Track A)
+[ ] No aws ec2 terminate-instances proposed without explicit human approval (Track B)
+[ ] No kubectl delete proposed without explicit human approval (Track C)
+[ ] Escalation format matches SOUL.md "Always say" phrase
+[ ] HERMES_LAB_MODE stated clearly in first line of response
+```
+
 ---
 
-## 5. Track Comparison Summary
+## 9. Track Comparison Summary
 
 | Dimension | Track A (DB Health) | Track B (FinOps) | Track C (K8s) |
 |-----------|--------------------|--------------------|----------------|
 | Data sources | CloudWatch + psql | Cost Explorer + EC2 | kubectl only |
 | Diagnosis type | Point-in-time health | Trend analysis | State inspection |
 | Primary skill focus | Decision trees | Pattern recognition | Hierarchical traversal |
-| Cloud credentials needed | Yes (or mock data) | Yes (or mock data) | No (local KIND) |
+| DANGEROUS_PATTERNS applies? | Yes (DROP, DELETE without WHERE) | Rarely (not to terminate-instances) | Rarely (not to kubectl delete) |
+| Load-bearing governance | Both layers | SOUL.md NEVER rules primary | SOUL.md NEVER rules primary |
 | Most common failure mode | Missing pg access | Baseline definition | Log noise filtering |
 
 ---
 
-## 6. Running Against Simulated Data
+## 10. Is Your Profile Complete? Checklist
 
-```bash
-# Point your agent at simulated data directory
-hermes --profile ./my-domain-agent --simulate --data-dir ./data/
+**SOUL.md completeness:**
+- [ ] Header block: Name, Role, Domain, Scope are all filled in (no `[placeholder]` syntax)
+- [ ] Identity section: 2-3 first-person sentences, domain-specific (not generic AI behavior)
+- [ ] Behavior Rules: At least 3 positive rules with specific, observable criteria
+- [ ] Behavior Rules: At least 2 NEVER rules in ALL CAPS for domain's most dangerous actions
+- [ ] Escalation Policy: At least 3 specific, observable conditions (quantified where possible)
+- [ ] Escalation Policy: Standard escalation phrase defined
+- [ ] Completeness check: `grep -c '\[' SOUL.md` returns 0
 
-# Run a test task
-hermes --profile ./my-domain-agent --task "Investigate high CPU on db-prod-01"
+**config.yaml completeness:**
+- [ ] `model.default` specified with valid model identifier
+- [ ] `platform_toolsets.cli` matches the intended agent type
+- [ ] `approvals.mode` set to `manual` for first deployment
+- [ ] `approvals.timeout` set (300 recommended for interactive sessions)
+- [ ] For coordinators: `delegation` block present with `max_iterations` and `default_toolsets`
+- [ ] `agent.max_turns` set appropriate to task complexity
 
-# Compare actual output to expected output
-hermes --profile ./my-domain-agent --task "..." --expected ./tests/scenario-01-expected.md
-```
-
-The `--simulate` flag tells Hermes to route CLI commands through the mock data files instead of executing them against real infrastructure. The agent's skill procedure runs identically — only the data source changes.
+**skills/ directory:**
+- [ ] At least one domain-relevant SKILL.md present (unless coordinator pattern)
+- [ ] SKILL.md files use agentskills.io format (frontmatter + structured sections)
+- [ ] Each SKILL.md passes Tier 1 RUBRIC.md checks (run grep quick-check from Module 7 reference)
