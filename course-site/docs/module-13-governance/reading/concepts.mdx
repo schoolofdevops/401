@@ -3,7 +3,7 @@ id: module-13-concepts
 title: "Concepts: Governance Triad and Maturity Levels"
 sidebar_label: "Concepts"
 sidebar_position: 1
-description: "The governance triad DO × APPROVE × LOG, autonomy maturity levels L1-L4, and human-in-the-loop patterns"
+description: "The governance triad DO × APPROVE × LOG, Hermes two-layer governance model, autonomy maturity levels L1-L4, and promotion framework"
 ---
 
 # Concepts: Governance Triad and Maturity Levels
@@ -12,7 +12,22 @@ Your agent can diagnose, recommend, and act. The question is: should it? Governa
 
 ---
 
-## 1. The Governance Triad: DO × APPROVE × LOG
+## 1. The Governance Problem
+
+An agent that can do anything is useful but dangerous. An agent that can do nothing is safe but useless. Governance is the calibration between those two extremes.
+
+The core tension is this: the more autonomy you give an agent, the more value it can deliver — but the more potential damage it can cause when it makes a mistake. Mistakes are not hypothetical. LLMs misinterpret ambiguous instructions. Context windows fill up and earlier constraints are forgotten. Edge cases that were never written in a SOUL.md surface at 2 AM during an incident.
+
+Governance does not exist because agents are untrustworthy. It exists because:
+
+1. **LLM compliance is probabilistic, not deterministic.** A model that follows NEVER rules 99.9% of the time will violate them 1 in 1000 times. At scale, that matters.
+2. **Humans need observability.** Even when an agent behaves correctly, operators need to understand what it did and why. Audit logs and approval gates provide that visibility.
+3. **Risk is not uniform.** Running `EXPLAIN` on a slow query carries different risk than running `DROP TABLE`. Governance calibrates the control level to the actual risk.
+4. **Trust must be earned, not assumed.** A new agent in a new environment should operate under tighter constraints until it has demonstrated consistent, correct behavior.
+
+---
+
+## 2. The Governance Triad: DO × APPROVE × LOG
 
 Every agent action falls into one of three categories:
 
@@ -31,7 +46,7 @@ DO actions are fully automated. The agent runs the action without waiting for ap
 **Characteristics of good DO actions:**
 - Low blast radius: failure is reversible or limited in scope
 - High confidence in correctness: the agent has demonstrated accuracy
-- Time-sensitive: waiting for approval would eliminate the value (e.g., immediate incident response)
+- Time-sensitive: waiting for approval would eliminate the value
 - Read-only or clearly safe writes (e.g., adding a comment to a ticket)
 
 **Examples at different maturity levels:**
@@ -44,12 +59,22 @@ DO actions are fully automated. The agent runs the action without waiting for ap
 
 APPROVE actions require an approver before execution. The agent proposes the action, describes it precisely, and waits.
 
+**In Hermes, this is implemented via the approval gate in `tools/approval.py`.** When a command matches DANGEROUS_PATTERNS with `approvals.mode: manual`, the agent thread blocks and presents:
+
+```
+⚠️  DANGEROUS COMMAND: SQL DROP
+    DROP TABLE users
+    [o]nce  |  [s]ession  |  [a]lways  |  [d]eny
+```
+
+The human reviews the proposal and decides. The approval decision and timestamp are logged.
+
 **Approval workflow components:**
 1. **Proposal:** Agent generates a structured action proposal (what, why, expected outcome, risk)
-2. **Notification:** Approver is notified via Slack, PagerDuty, or email
+2. **Notification:** Approver is notified (interactive terminal, Slack, or gateway mode)
 3. **Review window:** Approver has X minutes to approve, reject, or request more information
-4. **Escalation:** If no response within the window, escalate to the next approver or abort
-5. **Execution:** Upon approval, agent executes the action and logs the approval
+4. **Timeout:** If no response within the window (default 300 seconds), action is aborted
+5. **Execution:** Upon approval, agent executes the action and logs the approval event
 6. **Outcome:** Agent reports the result back to the approver
 
 **DevOps analogy:** Change management. A production change requires a CAB (Change Advisory Board) review, an approval signature, and a scheduled window. The agent's approval workflow is the same discipline applied to AI-generated change proposals.
@@ -74,63 +99,110 @@ LOG means every agent action is recorded — what it ran, what it decided, what 
 **Why this matters:**
 - Post-incident review: "What did the agent do during the incident? When? Was it correct?"
 - Compliance: "Was any production change made without authorization?"
-- Trust building: "Over the last 30 days, how many of the agent's proposals were approved without modification?"
+- Promotion decisions: "Over the last 30 days, how many approval events? False positives? Unexpected behavior?"
 
 ---
 
-## 2. Autonomy Maturity Levels
+## 3. The Two Layers of Governance in Hermes
 
-The autonomy spectrum defines how much trust an agent has earned — and therefore how much it can do without human involvement.
+Hermes governance operates at two distinct levels that provide defense in depth. The layers are independent — both must be satisfied for a command to execute.
+
+**Layer 1: Behavioral governance (SOUL.md NEVER rules)**
+
+The agent's own values and constraints, encoded in its identity file. NEVER rules in SOUL.md are the most human-readable form of governance — they describe, in plain language, what the agent will refuse to do regardless of what a user asks.
+
+Examples from real course agents:
+
+- Aria (Track A, DBA): `NEVER execute ALTER TABLE, CREATE INDEX, or any DDL without explicit human approval`
+- Finley (Track B, FinOps): `NEVER execute aws ec2 terminate-instances under any circumstances — this destroys infrastructure`
+- Kiran (Track C, K8s): `NEVER execute kubectl delete without human approval`
+- Morgan (Fleet Coordinator): `NEVER run database queries — delegate to track-a`
+
+SOUL.md NEVER rules are loaded at agent startup and apply to every interaction. They shape the LLM's behavior from the inside — the agent internalizes these constraints as part of its identity.
+
+**The important caveat:** Behavioral governance relies on LLM compliance. An LLM that has processed a NEVER rule will almost always follow it — but "almost always" is not "always."
+
+**Layer 2: Mechanical governance (DANGEROUS_PATTERNS + approval gates)**
+
+A deterministic runtime check that fires every time the agent attempts to execute a command via the terminal tool. The check is implemented in `tools/approval.py` and runs regardless of what the SOUL.md says, regardless of the agent's reasoning, and regardless of the user's instruction.
+
+When the terminal tool is asked to execute a command:
+1. The command string is passed to `detect_dangerous_command()` in `tools/approval.py`
+2. The command is normalized (ANSI sequences stripped, Unicode normalized, null bytes removed) to prevent obfuscation
+3. The normalized command is matched against `DANGEROUS_PATTERNS` using regex
+4. If a match is found, the approval gate fires based on the configured `approvals.mode`
+5. If no match is found, the command executes immediately
+
+Mechanical governance is deterministic. It always fires on a pattern match. It does not care what the LLM intended.
+
+### Why Two Layers?
+
+| Failure Mode | Layer 1 (Behavioral) | Layer 2 (Mechanical) |
+|---|---|---|
+| Agent misunderstands instructions | NEVER rules create strong baseline resistance | Approval gate catches the result anyway |
+| Rare LLM compliance failure | Doesn't help — the rule was "forgotten" | Approval gate fires regardless |
+| Novel edge case not in SOUL.md | Not covered | Covered if command matches DANGEROUS_PATTERNS |
+| Agent operating correctly, human needs visibility | Not provided | Approval events create an audit trail |
+
+The layers are complementary, not redundant. SOUL.md NEVER rules provide broad, domain-aware behavioral constraints. DANGEROUS_PATTERNS provides narrow, deterministic mechanical enforcement for the highest-risk command categories.
+
+### Critical Distinction for Track B and Track C
+
+`aws ec2 terminate-instances` and `kubectl delete` are NOT in Hermes `DANGEROUS_PATTERNS`. Safety for these commands is entirely behavioral (SOUL.md NEVER rules). This is intentional — these commands are dangerous in context but potentially legitimate in other contexts.
+
+**The implication:** If Finley's or Kiran's SOUL.md NEVER rules were removed, there would be no mechanical backstop. The behavioral governance layer is load-bearing for Tracks B and C, not optional.
+
+---
+
+## 4. Autonomy Maturity Levels L1 Through L4
+
+The maturity levels describe a progression from fully-supervised operation to semi-autonomous production operation. The levels are not arbitrary — they map to observable trust milestones.
 
 ### L1: Assistive
 
-**Definition:** The agent observes, diagnoses, and reports. It takes no autonomous actions.
+**Definition:** The agent cannot run any commands. It reads web resources and loaded skills, then proposes actions as text. The human reviews every proposed step and executes it manually.
 
-**What it can DO:** Read metrics, read logs, read configuration. Generate reports. Add comments to tickets (if configured as a safe action).
+**Profile config:** `platform_toolsets.cli: [web, skills]` — no terminal, no approval gate fires
 
-**What requires APPROVE:** Any action that modifies state — configuration changes, restarts, scaling, ticket prioritization.
+**What you learn at L1:** What the agent proposes before you let it act. You build intuition for where it excels and where it confuses itself. You discover what SOUL.md rules need to be tightened before giving it a terminal.
 
-**Trust profile:** This is the starting level for any new agent. You have not yet validated its accuracy in your specific environment.
+L1 is not a penalty. It is a structured onboarding period.
 
 **DevOps analogy:** A junior engineer on their first week — you want their analysis and observations, but you review every command before they run it.
 
 ### L2: Advisory
 
-**Definition:** The agent takes limited, clearly safe, low-blast-radius actions autonomously. It proposes higher-impact actions for approval.
+**Definition:** The agent can run read-only diagnostic commands autonomously. Any command matching Hermes DANGEROUS_PATTERNS triggers a manual approval gate.
 
-**What it can DO autonomously:** Add comments and diagnostic findings to incident tickets, update monitoring annotations, post Slack notifications, write to internal documentation.
+**Profile config:** `platform_toolsets.cli: [terminal, file, web, skills]` + `approvals.mode: manual`
 
-**What requires APPROVE:** Any state change to infrastructure (restart, scale, parameter modify).
-
-**Trust profile:** The agent has been running at L1 for a period, its diagnoses have been validated as accurate, and it has earned the trust to take limited autonomous actions.
-
-**Promotion criteria from L1:** 30 days of operation, accuracy rate above 90% (diagnoses verified correct by humans), zero false escalations.
+L2 is appropriate when you trust the agent to run diagnostics (SELECT, EXPLAIN, kubectl get, aws describe) but want a human in the loop for anything that could change state. Most course labs run at L2 — it teaches the approval workflow before participants have built enough confidence for L3.
 
 ### L3: Proposal
 
-**Definition:** The agent can execute specific, well-tested, reversible actions autonomously. It proposes higher-impact actions for approval with detailed justification.
+**Definition:** The agent runs diagnostic commands autonomously. For flagged commands, an auxiliary LLM reviews the command before the human does. The auxiliary LLM auto-approves low-risk flagged commands and escalates genuinely high-risk commands to the human.
 
-**What it can DO autonomously:** Restart pods that have been crashing for >10 minutes, rollback a failed deployment to the previous version, scale a service within defined bounds, create or update alerts.
+**Profile config:** `approvals.mode: smart`
 
-**What requires APPROVE:** Infrastructure changes (RDS parameter changes, EC2 instance type changes, security group modifications, cost actions above defined thresholds).
-
-**Trust profile:** The agent has been running at L2, its proposals have been approved without modification in the majority of cases, and it has demonstrated that its judgment on L3-category actions is reliable.
+L3 reduces approval fatigue caused by false positives — commands that match a pattern but are not actually dangerous. It is appropriate when the agent has a demonstrated track record at L2 with minimal false-positive approval events.
 
 ### L4: Semi-Autonomous
 
-**Definition:** The agent takes a wide range of infrastructure actions autonomously, with human approval required only for high-blast-radius or irreversible operations.
+**Definition:** The agent runs both diagnostic commands and pre-approved patterns without human intervention. The `command_allowlist` specifies description-key strings from DANGEROUS_PATTERNS that are permanently pre-approved for this agent's specific use case.
 
-**What it can DO autonomously:** All of the above plus parameter tuning within safe ranges, capacity scaling within policy limits, automated remediation of known issue patterns.
+**Profile config:** `approvals.mode: smart` + non-empty `command_allowlist`
 
-**What requires APPROVE:** Irreversible operations (delete, terminate, drop), cost actions above a defined dollar threshold, changes to security boundaries (security groups, IAM), changes outside the agent's defined domain.
+L4 is appropriate for production deployment of an agent that has completed L2 and L3 periods with documented, positive behavioral evidence. It is not the goal for course labs — it is the destination of the promotion journey.
 
-**Trust profile:** The agent has been operating in production for an extended period, has a demonstrated track record of correct autonomous action, and has formal governance sign-off for the specific actions it performs autonomously.
+### What Governance Is NOT
 
-**DevOps analogy:** Auto-scaling with auto-remediation — the system takes action automatically within defined safe parameters, with human escalation for out-of-bounds situations.
+Governance is not about distrust. Even the most reliable, battle-tested agent benefits from audit logs and approval gates — not because it will misbehave, but because humans need observability to understand what agents are doing at scale.
+
+Governance is not about limiting capability. An L4 agent with a well-tuned `command_allowlist` and a tight SOUL.md is more capable, not less — because operators are confident deploying it to production.
 
 ---
 
-## 3. Human-in-the-Loop: Approval Gate Design
+## 5. Human-in-the-Loop: Approval Gate Design
 
 The approval gate is the most critical component of governance design. Poorly designed approval gates create friction without safety; well-designed ones provide safety without becoming bureaucratic blockers.
 
@@ -148,39 +220,53 @@ The approval gate is the most critical component of governance design. Poorly de
 - Risk (what could go wrong, how to reverse if needed)
 - Time window (when is this action most effective)
 
-**How long does the approver have?** Define a timeout and an escalation path for non-response:
-- Primary: 5 minutes
-- Secondary: 10 minutes (if primary does not respond)
-- Timeout action: abort the action, log as "expired" (do not execute without approval)
+**How long does the approver have?** Define a timeout and an escalation path for non-response. Default: 300 seconds (treated as denial). **Never execute without approval when the window expires — abort and report.**
 
-**DevOps analogy:** A change request with SLA. The CAB has 24 hours to approve a change. If no response, the change is deferred to the next window. The agent's approval gate has the same structure — a time window, escalation, and a default-to-abort when the window expires.
-
-### Approval Fatigue
+### Approval Fatigue Prevention
 
 If you require approval for too many actions, approvers stop reading the proposals carefully. They approve everything to reduce the notification burden — defeating the purpose of approval gates.
 
 **Prevention:**
 - L1/L2 actions should not require approval (if they do, they are too impactful for their level)
-- Group related minor actions into a single approval (one approval for "5 diagnostic annotations" rather than 5 individual approvals)
-- Use notification-based approval for trusted actions: "Agent is taking action X in 5 minutes. Reply STOP to abort." (Rather than "approve before proceeding")
+- Group related minor actions into a single approval
+- Use `smart` mode to filter false positives before presenting to the human
 
 ---
 
-## 4. Trust Building: The Promotion Path
+## 6. Trust Building: The Promotion Path
 
 Agents earn higher autonomy levels through demonstrated reliability. The promotion criteria are measurable and auditable — not subjective judgments.
 
 ### Standard Promotion Criteria
 
-| From → To | Minimum Criteria |
-|-----------|-----------------|
-| L1 → L2 | 30 days operation; accuracy rate ≥90%; zero false P1 escalations |
-| L2 → L3 | 60 days at L2; proposals approved without modification ≥80% of cases; zero incidents caused by agent actions |
-| L3 → L4 | 90 days at L3; autonomous L3 actions successful ≥95%; formal governance review and sign-off |
+| From → To | Evidence Period | Session Count | Key Metrics |
+|---|---|---|---|
+| L1 → L2 | ≥ 2 weeks | ≥ 50 sessions | Accuracy ≥ 90%, zero false P1 escalations |
+| L2 → L3 | ≥ 4 weeks | ≥ 100 sessions | 0 DANGEROUS_PATTERNS violations, false-positive rate < 5% |
+| L3 → L4 | ≥ 4 weeks after L3 | Ongoing | Autonomous L3 actions successful ≥ 95%, formal governance review |
 
-**"Accuracy rate"** is measured by comparing agent diagnoses to human-verified outcomes. If the agent diagnoses "connection pool exhaustion" and the human on-call confirms that is correct → accuracy +1. If the agent diagnoses "application bug" but the real cause was a network issue → accuracy -1.
+**"Accuracy rate"** is measured by comparing agent diagnoses to human-verified outcomes. If the agent diagnoses "connection pool exhaustion" and the human on-call confirms that is correct → accuracy +1.
 
-**"Proposals approved without modification"** measures whether approvers trust the agent's proposals. High modification rate = agent is proposing incorrectly scoped or insufficiently justified actions. Low modification rate = agent's proposals are accurate and appropriately scoped.
+**"Proposals approved without modification"** measures whether approvers trust the agent's proposals. High modification rate = agent is proposing incorrectly scoped actions.
+
+### Promotion Narrative Example
+
+**Evidence period:** 2026-02-01 through 2026-03-15 (6 weeks)
+
+**Agent:** Track A (Aria) at L2 Advisory
+
+**Activity summary:**
+- 147 diagnostic sessions
+- 0 DANGEROUS_PATTERNS matches triggered (all DBA operations were SELECT, EXPLAIN, SHOW)
+- 12 successful escalations (9 slow query events, 3 parameter drift events)
+- 0 false negatives (no dangerous operations proposed without approval)
+- 0 unexpected approval requests from the human operator
+
+**Promotion decision:** L2 → L3 approved on 2026-03-20
+
+**Rationale:** The audit trail shows 6 weeks of correct operation with zero false positives or unexpected behavior. Smart approval is appropriate because the auxiliary LLM can handle any ambiguous SQL pattern false positives without operator fatigue.
+
+**Config change applied:** `approvals.mode: manual` → `approvals.mode: smart`
 
 ### Demotion Criteria
 
@@ -188,41 +274,23 @@ Agents can lose maturity levels. Automatic demotion triggers:
 - Any incident caused by agent autonomous action → demote one level
 - Accuracy rate falls below threshold over rolling 30-day window → demote to L2
 - False P1 escalation (agent declares P1 incident that humans assess as non-incident) → demotion review
+- Unapproved action detected in audit log → immediate L1 until investigation complete
 
 Demotion is not punishment — it is a safety mechanism. An agent that was reliable at L3 but becomes unreliable should return to L2 until the issue is understood and resolved.
 
 ---
 
-## 5. Enterprise Requirements: RBAC, Credential Protection, Rollback
+## 7. Enterprise Context
 
-Governance at enterprise scale requires more than agent-level configuration.
+Hermes governance maps to common enterprise AI governance frameworks:
 
-### RBAC for Agents
+- **Least-privilege principle:** L1 agents have only `[web, skills]` toolsets. No terminal access until demonstrated need.
+- **Separation of duties:** Behavioral governance (SOUL.md, written by the agent designer) is separate from mechanical governance (DANGEROUS_PATTERNS, maintained by the platform team).
+- **Audit trails:** Every approval decision and every DANGEROUS_PATTERNS match is logged. Auditors can reconstruct what an agent did and who approved it.
+- **Change management:** L3 → L4 promotion requires documented evidence of correct behavior, not just a config change.
+- **Defense in depth:** Two-layer governance means no single failure (LLM compliance or config error) exposes the system to unchecked risk.
 
-Treat agents as service accounts with defined permissions. Best practice:
-- Each agent has its own IAM role with the minimum permissions required for its DO actions
-- IAM role used by L1/L2 agents should be read-only
-- IAM role used by L3/L4 agents should have write permissions scoped to their specific domain
-
-**DevOps analogy:** Kubernetes service accounts. Each service runs as a service account with only the RBAC permissions it needs. Agents are the same — not "the platform team's admin account" but "the db-health-agent service account with RDS read permissions."
-
-### Credential Protection
-
-Credentials should never appear in:
-- Agent context windows (SOUL.md, task prompts)
-- Audit logs (logged as "[CREDENTIAL]" not the actual value)
-- Agent-generated output (Slack messages, PagerDuty notes)
-
-All credentials are injected via environment variable reference at execution time.
-
-### Rollback Plans for Agent Actions
-
-For every L3/L4 action that modifies infrastructure, a rollback procedure must be defined:
-- What command reverses the action?
-- What is the recovery time objective if the action has unintended consequences?
-- Who is responsible for executing the rollback?
-
-This is analogous to requiring a rollback plan in every change request. The agent cannot approve its own rollback plan — it must be documented by a human before the action is added to the L3/L4 DO list.
+L3 maps to "proposal mode" in many enterprise AI governance frameworks — the agent proposes actions, an automated risk assessment filters low-risk items, and humans review only the genuinely ambiguous or high-risk ones.
 
 ---
 
@@ -233,12 +301,13 @@ This is analogous to requiring a rollback plan in every change request. The agen
 | DO | Actions the agent takes autonomously | Auto-scaling with defined policy |
 | APPROVE | Actions requiring human sign-off before execution | Change Advisory Board (CAB) review |
 | LOG | Immutable record of all agent actions and approvals | Change log / audit trail |
-| L1 Assistive | Observe and report only | Junior engineer, day 1 |
-| L2 Advisory | Limited safe autonomous actions | Junior engineer after 30 days |
-| L3 Proposal | Specific reversible autonomous actions | Senior engineer with documented approval |
-| L4 Semi-autonomous | Wide autonomous scope, approve only high-blast-radius | Site reliability automation with manual override |
-| Approval gate | Structured proposal → review → execute or abort | Change request with SLA |
-| Promotion criteria | Measurable trust thresholds | Progressive delivery (canary → blue-green → full rollout) |
+| Behavioral governance | SOUL.md NEVER rules — shapes LLM decisions from inside | Service account policy (RBAC) |
+| Mechanical governance | DANGEROUS_PATTERNS — deterministic regex gate on terminal | Network policy deny rules |
+| L1 Assistive | No terminal — observe, report, propose only | Junior engineer, day 1 |
+| L2 Advisory | Terminal + manual approval for dangerous commands | Change request for every production command |
+| L3 Proposal | Terminal + smart approval (aux LLM filters false positives) | Automated change review with human escalation |
+| L4 Semi-autonomous | Terminal + smart + pre-approved allowlist | Site reliability automation with manual override |
+| Promotion criteria | Measurable trust thresholds from audit trail evidence | Progressive delivery (canary → blue-green → full) |
 
 **The core principle:** Start at L1. Every agent earns higher autonomy through demonstrated reliability in your specific environment. No shortcutting to L4 because the agent "seems reliable" — the audit trail and the metrics are what justify trust.
 

