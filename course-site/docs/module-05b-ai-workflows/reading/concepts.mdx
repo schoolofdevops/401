@@ -1,0 +1,208 @@
+---
+id: module-05b-concepts
+title: "Concepts: AI Workflow Tools"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "Context engineering, GSD workflows, memory systems, and plan modes — the meta-skills for AI-assisted DevOps"
+---
+
+# Concepts: AI Workflow Tools
+
+You spent the lab running a complete GSD workflow — new-project, discuss, plan, execute, verify — to build Prometheus alerting rules. You saw CLAUDE.md transform AI output from generic to system-specific. You configured a memory system to persist decisions across sessions. Now let's understand *why* these tools work — the principles behind the mechanics.
+
+---
+
+## 1. Context Engineering: The Core Skill
+
+Module 1 introduced context engineering as the alternative to prompt engineering. Module 5b is where you see it applied at the infrastructure tooling level — not just to individual requests, but to the entire AI workflow.
+
+**A quick recap:** Context engineering is the practice of structuring what the AI sees to get expert-level output. The quality improvement you experienced in the Module 1 lab — from Layer 1 to Layer 4 — came entirely from adding context, not from rewording the request.
+
+In Module 5b, context engineering takes three forms:
+
+| Context Form | What It Is | Where You See It |
+|---|---|---|
+| **Session context** | Files and information injected for a single interaction | `@CLAUDE.md` in a request, `@file.tf` for a review |
+| **System context** | Persistent configuration that applies to every interaction | CLAUDE.md read automatically at session start |
+| **Workflow context** | Structured context locked across multiple AI agent interactions | GSD's CONTEXT.md, STATE.md — the context that persists across sessions and agents |
+
+GSD is a context engineering harness. Every GSD command structures what the AI sees at that step — `/gsd:discuss-phase` locks requirements as context, `/gsd:plan-phase` uses that locked context to generate plans, `/gsd:execute-phase` uses the plan as execution context.
+
+### CLAUDE.md: The Most Teachable Context Artifact
+
+Of all the context engineering artifacts in this module, CLAUDE.md is the most immediately teachable. It is a single Markdown file that Claude Code reads at session start — every interaction in that session runs with CLAUDE.md as system context.
+
+The before/after comparison in Section 2 of the lab demonstrates this directly: the exact same request ("Create a Prometheus alerting rule for high CPU usage") produces generic output in a directory without CLAUDE.md, and system-specific output in a directory with CLAUDE.md.
+
+**The Kubernetes ConfigMap analogy:** CLAUDE.md is to Claude Code what a ConfigMap is to a Kubernetes workload. The workload (AI tool) runs the same code regardless — what changes is the configuration it reads at startup. A ConfigMap that says `NAMESPACE=monitoring` changes where the workload operates without changing how it operates. CLAUDE.md that says `namespace: monitoring, CRD version: v1, constraint: no source code changes` changes what the AI produces without changing how you ask.
+
+**What belongs in CLAUDE.md:**
+
+- System state (cluster context, namespace layout, service names and ports)
+- Tool versions (Kubernetes version, Helm version, operator versions)
+- Constraints (what NOT to do — don't modify source code, don't use paid services)
+- Vocabulary (project-specific terms so AI uses your language, not generic language)
+- Context engineering principles for the project (4-layer model applied to your domain)
+
+What does NOT belong in CLAUDE.md: the task you're working on right now, specific request details, or one-time facts that only apply to the current session.
+
+---
+
+## 2. Structured Workflows: From Ad-Hoc to Repeatable
+
+Before GSD, an AI-assisted infrastructure change might look like this:
+
+1. Open Claude Code
+2. Ask it to generate a Helm chart addition
+3. Copy the output, edit it, apply it
+4. If something breaks, remember nothing about what the AI generated or why
+
+This is ad-hoc AI usage. It works for small, low-risk changes. It fails for multi-file infrastructure changes, for changes that need review, for changes that need to be repeatable, and for changes where you need to understand a decision six months later.
+
+GSD adds structure to this workflow:
+
+| GSD Step | What Happens | Analogy |
+|----------|-------------|---------|
+| `new-project` | Initializes `.planning/PROJECT.md` with scope | `git init` — creates the workspace |
+| `discuss-phase` | Locks requirements into `CONTEXT.md` | RFC/change request — requirements are reviewed and frozen |
+| `plan-phase` | Generates `PLAN.md` with research-backed tasks | Design review — tasks are specified before implementation |
+| `execute-phase` | Runs tasks atomically with per-task commits | `terraform apply` — each change is committed and traceable |
+| `verify-work` | Validates outputs against acceptance criteria | CI gate — automated validation of the result |
+
+**The CI/CD analogy:** GSD is a CI/CD pipeline for AI work. Without GSD, AI-assisted infrastructure is like deploying manually without a pipeline — it works until it doesn't, and when it fails, there's no trace of what happened. With GSD, every decision is logged in CONTEXT.md, every plan is reviewable in PLAN.md, every execution is committed atomically. The artifact is reproducible because the context that produced it is persisted.
+
+### The Traceability Benefit
+
+The reflection section in the Section 1 lab makes this explicit. After running the GSD workflow, you can trace every decision back to the workflow step that produced it:
+
+- Which alerting rules? — Locked in CONTEXT.md at discuss-phase
+- Why blackbox exporter? — Constraint decision logged: "no source code changes"
+- Which CRD version? — Discovered during plan-phase research
+
+Without GSD, these decisions live in the conversation history — ephemeral, unsearchable, gone when the session closes. With GSD, they live in version-controlled files alongside the infrastructure they describe.
+
+---
+
+## 3. Memory: Cross-Session Persistence
+
+AI tools forget everything between sessions. This is the container analogy: each Claude Code or Crush session is like a stateless container — no persistent storage, no memory of previous conversations. When the session ends, the AI's context is gone.
+
+For a DevOps team using AI tools on production infrastructure, this creates a real problem:
+
+- You spent 30 minutes establishing context about your monitoring stack in session 1
+- You come back two days later to add another alerting rule
+- You start from scratch — the AI has no recollection of the constraints you established
+
+There are two approaches to solving this.
+
+### Approach 1: claude-mem (Claude Code)
+
+claude-mem is an automatic context capture tool for Claude Code. When you run `/mem search [query]`, claude-mem searches your previous Claude Code sessions for relevant context — patterns, decisions, solutions — and injects it into the current session.
+
+```
+/mem search prometheus alerting rules
+```
+
+This might surface: "3 weeks ago you established that ServiceMonitor requires `release: prometheus` label for kube-prometheus-stack discovery" — exactly the constraint you'd forget between sessions.
+
+The claude-mem approach is implicit: it captures and retrieves context automatically, requiring no discipline beyond running the search command at session start.
+
+### Approach 2: Crush / MCP Memory (Protocol-Based)
+
+Crush uses the Model Context Protocol (MCP) for persistent memory. The MCP memory server stores explicitly saved facts and retrieves them on demand. Unlike claude-mem's semantic search, MCP memory stores what you explicitly save:
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    }
+  }
+}
+```
+
+The MCP approach is explicit: you decide what to persist. This is more work but more precise — you control exactly what the AI will remember.
+
+### When to Use Memory vs Context vs Plans
+
+| Situation | Use |
+|-----------|-----|
+| Decisions and patterns that recur across many sessions | Memory (claude-mem or MCP) |
+| Facts specific to the current session's work | Inline context (`@file`, `@CLAUDE.md`) |
+| Multi-step work requiring research → plan → execution | GSD plans |
+| One-time information needed for a single request | Direct injection in the request |
+
+The three systems complement each other. GSD plans persist the context for a specific structured workflow. CLAUDE.md persists system context for a project. Memory systems persist patterns and decisions that span projects and sessions.
+
+---
+
+## 4. Plan Modes: Think Before You Execute
+
+Both Claude Code and Crush support a "plan mode" — a way to ask the AI to design an approach before executing it. But there are two different levels of planning:
+
+### Level 1: Quick Plan (`/plan` in Claude Code)
+
+Type `/plan` before your request and Claude Code enters plan mode — it describes what it would do before doing it. You review the plan and approve (or modify) before execution.
+
+This is appropriate for:
+- Single-file changes where you want to see the approach before committing to it
+- Exploring options for a well-understood problem
+- Training yourself to think about what AI should do before letting it act
+
+**Analogy:** Like running `kubectl apply --dry-run=client` before `kubectl apply` — you see what would happen before committing.
+
+### Level 2: GSD plan-phase (`/gsd:plan-phase`)
+
+GSD plan-phase is a full planning cycle: research, task decomposition, acceptance criteria, dependency mapping. The output is a `PLAN.md` file — a version-controlled, reviewable document specifying every task, its done criteria, and its file targets.
+
+This is appropriate for:
+- Multi-file changes affecting multiple services or components
+- Changes with production impact or requiring review
+- Changes where you need traceability (who planned this, what was the intent?)
+- Changes in unfamiliar territory where research should precede implementation
+
+**Analogy:** Like the difference between `kubectl apply -f` (quick, no review) and the change management process (RFC, design review, approval before apply). The former is appropriate for dev environment fixes; the latter is required before production changes.
+
+### The Decision Framework
+
+| Question | Answer → Mode |
+|----------|---------------|
+| "Is this one file, low risk, well-understood?" | Direct execution or `/plan` |
+| "Is this multi-file, production-impacting, needs review?" | GSD plan-phase |
+| "Am I in unfamiliar territory?" | GSD plan-phase (research-backed) |
+| "Do I need to hand this off or come back to it later?" | GSD plan-phase (traceability) |
+| "Would a code review require a design document?" | GSD plan-phase |
+
+The default should not always be GSD — that adds overhead. The default should not always be direct execution — that removes visibility. The decision framework helps you choose the right level of structure for the risk level of the change.
+
+---
+
+## 5. Extending AI with Disciplined Workflows
+
+The exploratory projects in Module 5b demonstrate a broader principle: **structured workflows make AI more reliable, not just more capable.**
+
+Three disciplined engineering practices — TDD, systematic debugging, structured code review — become more powerful when combined with AI:
+
+**TDD + AI:** The failing test IS the specification. When you give Claude Code a failing test, it knows exactly what to implement — not a vague description, but executable evidence of the required behavior. AI-written code with a failing test as context is more likely to be correct than AI-written code from a natural language description.
+
+**Systematic debugging + AI:** "It doesn't work" is the worst input you can give AI for debugging. The systematic approach — read errors, reproduce, check recent changes, trace data flow, form hypothesis — produces structured context that gives AI the same information an expert debugger would start with. The AI's diagnosis is as good as the context you provide.
+
+**Structured code review + AI:** Generic "review this" produces generic observations. Review criteria (security, caching, multi-stage build, layer efficiency) are context. Specifying what to review for focuses the AI on dimensions that matter for your production environment.
+
+**The guardrails analogy:** Adding disciplined workflows to AI-assisted development is like adding linting, testing, and code review gates to a CI pipeline. The AI is the developer — fast, tireless, capable. The workflows are the guardrails — they ensure the output meets your standards before it reaches production. AI tools produce better output when given a structured process, not just a blank canvas.
+
+---
+
+## Summary
+
+| Concept | DevOps Analogy | Why It Matters |
+|---------|----------------|----------------|
+| Context engineering | Writing precise runbooks so automation knows exactly what to do | Without it, AI generates statistically plausible code that doesn't fit your environment |
+| CLAUDE.md | Kubernetes ConfigMap — defines the environment the workload runs in | Transforms every interaction from generic to system-specific automatically |
+| GSD workflow | CI/CD pipeline for AI work — structured, traceable, repeatable | Decisions are logged, plans are reviewable, executions are atomic |
+| Cross-session memory | Persistent volume for a stateless container | Prevents losing established context between sessions |
+| Plan modes | `kubectl apply --dry-run` vs full change management | Right level of structure for the risk level of the change |
+| Disciplined workflows (TDD/debug/review) | Linting and testing gates in CI pipeline | AI produces better output when given structured context, not blank canvas |
+
+**Next:** [Reference — AI Workflow Tools Cheat Sheet](./module-05b-reference)
