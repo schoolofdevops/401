@@ -27,6 +27,44 @@ The specific problems with prose runbooks for agents:
 
 SKILL.md resolves all three by making conditions, steps, and escalation explicit.
 
+### What Skills Encode
+
+A SKILL.md file encodes five things that an ad-hoc prompt cannot:
+
+1. **When to activate.** Specific, observable trigger conditions — not "when the database is slow" but "when CloudWatch alarm `rds-cpu-high` fires on `$RDS_INSTANCE_ID`."
+
+2. **What data to gather.** Exact CLI commands with exact expected output. Not "check the metrics" but `aws rds describe-db-instances --db-instance-identifier $RDS_INSTANCE_ID --query 'DBInstances[0].{Status:DBInstanceStatus,...}'`.
+
+3. **How to reason about that data.** IF/THEN/ELSE decision trees with numeric thresholds. Not "if CPU is high, investigate further" but `IF CPUUtilization > 80 AND mean_exec_time_ms > 1000: Diagnosis = SLOW_QUERY_INDEX_GAP`.
+
+4. **What is forbidden.** A NEVER DO list specific to this domain and this agent's scope. Not "be safe" but "NEVER execute `CREATE INDEX` without explicit human approval — reason: locks the table for the duration, blocks production writes during business hours."
+
+5. **When to stop.** Escalation rules with specific triggering conditions. The agent does not decide when to escalate based on its own judgment. The skill defines the escalation threshold.
+
+### The Expert Vocabulary Effect
+
+Consider two versions of a skill excerpt:
+
+**Vague (poor skill):**
+```
+Check if the database is having performance problems.
+Look at the slow queries and see if anything looks wrong.
+```
+
+**Expert vocabulary (good skill):**
+```sql
+Step 1.2 — Query pg_stat_statements for high-latency queries:
+SELECT mean_exec_time_ms, total_exec_time_ms, calls, rows_per_call, query
+FROM pg_stat_statements
+WHERE mean_exec_time_ms > 1000
+ORDER BY mean_exec_time_ms DESC
+LIMIT 20;
+```
+
+The vague version forces the LLM to invent the query structure. The expert vocabulary version leaves the LLM no room to improvise. The Brain's job is to execute this query and interpret the output — not to decide how to investigate slow queries.
+
+This is the expert vocabulary effect: writing SKILL.md in the language of your domain (field names, threshold values, service identifiers, procedure steps) activates the LLM's training on that domain precisely.
+
 ---
 
 ## 2. Memory Types: State Management for Agents
@@ -44,7 +82,7 @@ Short-term memory is the active conversation context — everything the agent ha
 - Lost when the session ends
 - Perfect for: in-session reasoning, multi-step tasks, intermediate results
 
-**Operational equivalent:** Your working memory during an incident. You hold the current log lines, the timeline, the commands you've run. When the incident closes, that context disperses. The next on-call engineer starts fresh unless you wrote a postmortem.
+**Operational equivalent:** Your working memory during an incident. You hold the current log lines, the timeline, the commands you've run. When the incident closes, that context disperses.
 
 **Failure mode:** Context window overflow. When a session accumulates too much context, older information gets truncated. An agent investigating a long-running incident may "forget" early observations by the time it reaches conclusions. Skill design must account for this — break long tasks into discrete sessions with explicit state handoffs.
 
@@ -58,7 +96,7 @@ Long-term memory persists across sessions. The agent can store findings, learned
 - Requires explicit retrieval (does not auto-appear in context)
 - Tools: vector databases, key-value stores, structured databases
 
-**Operational equivalent:** Your postmortem database, runbook wiki, incident history. Valuable knowledge that accumulated over time. The problem is the same for both humans and agents: finding the relevant piece when you need it.
+**Operational equivalent:** Your postmortem database, runbook wiki, incident history. Valuable knowledge accumulated over time. The problem is the same for both humans and agents: finding the relevant piece when you need it.
 
 **In Hermes:** The `memory` tool lets agents store and retrieve long-term observations. A DB Health agent can store "this RDS instance consistently hits connection limits on Mondays at 09:00" — and retrieve that context in the next investigation session.
 
@@ -76,6 +114,21 @@ Procedural memory is encoded expertise — not facts to recall, but procedures t
 
 **Why this matters:** An AI agent without procedural memory makes up its own procedure for every task. That procedure may be reasonable or it may miss your organization's specific safety steps, escalation paths, or conditional branches. SKILL.md replaces "AI improvises" with "AI executes your expertise."
 
+### How Skills Are Loaded at Runtime
+
+When Hermes loads an agent profile, it scans the `skills/` subdirectory and reads each `SKILL.md` file. The skill content is prepended to the system prompt — every skill the agent has is visible to the Brain from the first turn.
+
+The session startup sequence:
+1. Load `config.yaml` — determines model, toolsets, approval mode
+2. Load `SOUL.md` — agent identity and behavioral constraints
+3. Scan `skills/` directory — load all SKILL.md files
+4. Initialize tool registry with enabled toolsets
+5. First LLM call with full context: SOUL.md + all skills + tool schemas
+
+The agent's context window contains everything it needs from the first token. This is a deliberate tradeoff: simplicity and reliability over token efficiency.
+
+**For agents with 1-3 skills** (typical for course agents), this is the right approach: the agent does not need to decide which skill to use before using it, because all skills are already in context. For production agents with many skills (10+), the `skills_search` tool becomes important — the agent queries it to locate the right skill by keyword before loading its full text.
+
 ---
 
 ## 3. RAG: When Skills Are Not Enough
@@ -88,7 +141,7 @@ SKILL.md covers procedural knowledge. But some agent tasks require **factual ret
 Query → Retrieve relevant documents → Augment context → Generate response
 ```
 
-**DevOps analogy:** Incident response. A skilled SRE doesn't just remember everything — they know which dashboards to check, which runbooks to pull, and which recent tickets to review. They retrieve the relevant information for the specific incident. RAG is this retrieval pattern formalized for AI agents.
+**DevOps analogy:** Incident response. A skilled SRE doesn't just remember everything — they know which dashboards to check, which runbooks to pull, and which recent tickets to review. RAG is this retrieval pattern formalized for AI agents.
 
 ### Embeddings and Semantic Search
 
@@ -122,7 +175,7 @@ Standard RAG retrieves once, adds results to context, generates response. Agenti
 4. Agent decides to retrieve: documentation on PostgreSQL connection pool tuning
 5. Agent generates structured diagnosis + recommendations
 
-**DevOps analogy:** An SRE who knows when to consult documentation and when to work from memory. They don't look everything up (too slow), and they don't rely purely on memory (too error-prone for unfamiliar situations). Agentic RAG is this calibrated retrieval — triggered by what the agent discovers, not just by the initial query.
+**DevOps analogy:** An SRE who knows when to consult documentation and when to work from memory. They don't look everything up (too slow), and they don't rely purely on memory (too error-prone). Agentic RAG is this calibrated retrieval — triggered by what the agent discovers, not just by the initial query.
 
 ### Graph RAG: When Relationships Matter
 
@@ -134,7 +187,68 @@ Graph RAG is more complex to set up than standard RAG and is typically introduce
 
 ---
 
-## 4. Hallucination and Why Skills Provide Guardrails
+## 4. The Two-Zone Design: Why SKILL.md Has Distinct Phases
+
+The most important structural concept in SKILL.md authoring is the **two-zone design**. This separates data collection from reasoning into distinct, sequential phases.
+
+Without this constraint, agents exhibit a failure mode called **mid-loop data discovery**:
+
+1. Agent starts reasoning over the initial data (high CPU, slow queries visible)
+2. During reasoning, the agent realizes it needs more data (what's the table size? is there a lock?)
+3. Agent runs a new query to get that data
+4. New data reveals a new dimension to the problem
+5. Agent needs more data to understand the new dimension
+6. Loop continues — the agent is not converging on a diagnosis, it is discovering new data indefinitely
+
+The result: unpredictable session duration, escalating token costs, and a diagnosis that arrived at different conclusions depending on what data happened to be discovered in what order.
+
+The two-zone design solves this:
+
+**Scripts Zone (Phase 1 and Phase 3) — deterministic:**
+Run all the CLI commands. Collect all the data. No decisions. No interpretation. No "if this result looks concerning, also run X." Just: run this, get that, move to Phase 2.
+
+The Scripts Zone is idempotent and deterministic. Running Phase 1 twice on the same database produces the same output. There is no branching based on intermediate results.
+
+**Agents Zone (Phase 2 and Phase 4) — reasoning:**
+Reason over the complete dataset collected in Phase 1. Apply the decision tree. Produce a named diagnosis or escalation. No new data collection. The reasoning is bounded.
+
+**Correct Scripts Zone example:**
+```bash
+psql -h $DB_HOST -p ${DB_PORT:-5432} -U $DB_USER -d $DB_NAME --csv -c \
+  "SELECT mean_exec_time_ms, total_exec_time_ms, calls, rows_per_call,
+          LEFT(query, 200) as query
+   FROM pg_stat_statements
+   WHERE mean_exec_time_ms > 1000
+   ORDER BY mean_exec_time_ms DESC
+   LIMIT 20"
+```
+No interpretation. No branching. Run this, get that.
+
+**Correct Agents Zone example:**
+```
+IF mean_exec_time_ms > 5000:
+  THEN Diagnosis = "CRITICAL_SLOW_QUERY"
+  → Escalate immediately (see Escalation Rules)
+
+ELSE IF mean_exec_time_ms > 1000 AND sequential_scan_pct > 80:
+  THEN Diagnosis = "SLOW_QUERY_INDEX_GAP"
+  → Proceed to Phase 3 (index recommendation)
+```
+No CLI commands. Only IF/THEN/ELSE logic on the data already collected.
+
+**Mixed violation (Tier 4 FAIL — do not do this):**
+```
+Phase 2 — Analysis:
+Check if the queries are slow:
+aws cloudwatch get-metric-statistics ...   ← CLI command in Agents Zone!
+IF the metrics show high CPU...            ← vague condition
+```
+
+This violates both zones. The result is an agent that runs unpredictable queries during reasoning, making its behavior session-dependent and unauditable.
+
+---
+
+## 5. Hallucination and Why Skills Provide Guardrails
 
 AI agents hallucinate. This is not a bug — it is a property of how language models work. The model generates the most probable next token, and sometimes the most probable token is wrong.
 
@@ -151,11 +265,11 @@ Skills constrain the agent's action space. Instead of "what should I do about hi
 
 The agent cannot hallucinate steps that are not in the skill. It follows the decision tree. Gaps in the skill are gaps in behavior — which is why you test skills against realistic scenarios before deploying them.
 
-**Temperature and skill execution:** Skills should be executed at low temperature (0.0-0.1). High temperature introduces variability in which branch of a decision tree the agent follows. The same incident might get different responses on different runs. For operational reliability, you want deterministic behavior — which requires both good skill design and low temperature configuration.
+**Temperature and skill execution:** Skills should be executed at low temperature (0.0-0.1). High temperature introduces variability in which branch of a decision tree the agent follows. For operational reliability, you want deterministic behavior — which requires both good skill design and low temperature configuration.
 
 ---
 
-## 5. Skills as Procedural Memory: The Architecture Connection
+## 6. Skills as Procedural Memory: The Architecture Connection
 
 Skills are loaded into the agent's context window at runtime. They are not training data — the agent does not "learn" skills in the machine learning sense. It reads them the same way it reads any text in its context.
 
@@ -181,7 +295,8 @@ This has important implications:
 | RAG | Retrieve documents to augment context before generation | SRE checking dashboards and runbooks before diagnosis |
 | Embeddings | Vector representation of text meaning | Container image layer hashes (similar content, similar fingerprint) |
 | Agentic RAG | Agent-triggered retrieval mid-task | SRE knowing when to look something up vs. work from memory |
-| Graph RAG | Knowledge graph + RAG for relationship-aware retrieval | Service mesh dependency map |
+| Scripts Zone | Phase of a skill that runs deterministic CLI commands | Automation runbook — exact commands, no judgment |
+| Agents Zone | Phase of a skill that applies IF/THEN/ELSE reasoning to collected data | Post-incident analysis using gathered facts |
 
 **The core principle:** Skills encode what your agent knows how to do. RAG retrieves what your agent needs to know for this specific situation. Together, they replace "AI improvises" with "AI executes expertise."
 

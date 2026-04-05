@@ -3,7 +3,7 @@ id: module-07-reference
 title: "Reference: SKILL.md Format and Skill Lifecycle"
 sidebar_label: "Reference"
 sidebar_position: 2
-description: "SKILL.md format reference, annotated examples, and the skill lifecycle"
+description: "SKILL.md format reference, two-zone design, RUBRIC.md quality tiers, and the skill lifecycle"
 ---
 
 # Reference: SKILL.md Format and Skill Lifecycle
@@ -14,32 +14,56 @@ Quick-reference material for Module 7 — writing domain-specific skills for Her
 
 ## 1. SKILL.md Structure
 
-A complete SKILL.md has five required sections:
+A complete SKILL.md has nine required sections in a specific order:
 
-```markdown
-# [Skill Name]
+| Section | Purpose | Required? | Rubric Tier |
+|---|---|---|---|
+| YAML frontmatter | Metadata for skill loading, discovery, versioning | Yes | Tier 1 |
+| `## When to Use` | Specific trigger conditions; anti-cases | Yes | Tier 1 |
+| `## Inputs` | Input table with `HERMES_LAB_MODE` row | Yes | Tier 1 |
+| `## Prerequisites` | Tools, permissions, env var setup, mock setup | Yes | Tier 1 |
+| `## Procedure` | Alternating Scripts Zone / Agents Zone phases | Yes | Tier 1 |
+| `## Escalation Rules` | Observable triggers + handoff template | Yes | Tier 1 |
+| `## NEVER DO` | 3+ domain-specific prohibited actions with consequences | Yes | Tier 1 |
+| `## Rollback Procedure` | Steps to undo Phase 3 changes | Yes | Tier 1 |
+| `## Verification` | 4+ checkboxes confirming skill run complete | Yes | Tier 1 |
 
-## Metadata
-- version: [semver, e.g., 1.0.0]
-- domain: [area, e.g., "RDS / PostgreSQL"]
-- author: [your name or team]
-- last_validated: [YYYY-MM-DD]
-- triggers: [what conditions invoke this skill]
+### YAML Frontmatter Fields
 
-## Inputs
-- [input_name]: [type] — [description, validation rules]
-- ...
+Every SKILL.md file begins with a YAML frontmatter block:
 
-## Procedure
-[Numbered steps with explicit commands, conditions, and branches]
-
-## Decision Trees
-[Structured condition → action tables or flowcharts]
-
-## Escalation
-- [condition]: [escalation target] via [channel] with [required information]
-- ...
+```yaml
+---
+name: dba-rds-slow-query
+description: "Investigate RDS PostgreSQL slow query performance using pg_stat_statements.
+  Use when CloudWatch RDS CPUUtilization alarm fires, application reports slow queries,
+  or pg_stat_statements shows queries with mean_time > 1000ms."
+version: 1.0.0
+compatibility: "aws cli v2, psql, HERMES_LAB_MODE=mock|live"
+metadata:
+  hermes:
+    category: devops
+    tags: [rds, postgresql, slow-query, pg-stat-statements, index, performance]
+---
 ```
+
+**`name`:** Must match the skill directory name in kebab-case. Used for `hermes skill info`, skill selection, and audit logging.
+
+**`description`:** The skill's searchable summary. This is what the `skills_search` tool queries when an agent has multiple skills and needs to locate the right one. It must answer: "When should I use this skill?" — not "What does this skill do?" Start with an action verb, include the domain, service, and trigger condition.
+
+**`version`:** Semantic versioning (1.0.0). Skills can be versioned and updated without changing the agent configuration. Starting at `1.0.0` and incrementing with each revision creates an audit trail.
+
+**`compatibility`:** Lists required tool versions AND the `HERMES_LAB_MODE=mock|live` declaration. This field is checked by the Tier 1 rubric — a skill that does not declare mock/live compatibility cannot be used in course labs.
+
+**`metadata.hermes.category`:** One of `devops`, `sre`, `dba`, `observability`. Used for skill discovery and filtering.
+
+**`metadata.hermes.tags`:** Used for keyword search across the skills hub. At minimum: domain, service, key operations.
+
+### The agentskills.io Spec
+
+The SKILL.md format used in this course aligns with the `agentskills.io` spec published in December 2025. This is a cross-platform standard — skills authored in the SKILL.md format are compatible with any framework that implements the spec (LangGraph, AutoGen, CrewAI, etc.), not just Hermes.
+
+The `hermes` metadata block (`metadata.hermes.*`) is a vendor extension — framework-specific extensions are explicitly supported by the spec. The operational knowledge encoded in a SKILL.md file is a reusable asset.
 
 ---
 
@@ -55,77 +79,121 @@ A complete SKILL.md has five required sections:
 - last_validated: 2026-03-15
 - triggers: ["ec2 health check", "instance unreachable", "high cpu alert"]
 
+## When to Use
+- CloudWatch alarm `ec2-cpu-high` fires (CPUUtilization > 80% for 5+ minutes)
+- Instance status check reports "impaired"
+- Application team reports instance unreachable
+
+NOT this skill: RDS performance issues (use dba-rds-slow-query), cost analysis (use cost-anomaly)
+
 ## Inputs
-- instance_id: string — AWS EC2 instance ID (format: i-[17 hex chars])
-- region: string — AWS region (default: us-east-1)
-- alert_threshold_cpu: number — CPU % threshold that triggered investigation (default: 80)
+
+| Input | Source | Required | Description |
+|---|---|---|---|
+| `INSTANCE_ID` | Environment variable | Yes | AWS EC2 instance ID (format: i-[17 hex chars]) |
+| `AWS_REGION` | Environment variable | Yes | AWS region (default: us-east-1) |
+| `HERMES_LAB_MODE` | Environment variable | Yes | `mock` for lab; `live` for real AWS |
+
+## Prerequisites
+
+**Tools required:** aws cli v2.15+
+
+**Permissions required:** `ec2:DescribeInstances`, `ec2:DescribeInstanceStatus`, `cloudwatch:GetMetricStatistics`
+
+**Environment setup:**
+```bash
+export INSTANCE_ID="i-0abc123def456"
+export AWS_REGION="us-east-1"
+export HERMES_LAB_MODE=mock  # or live
+```
 
 ## Procedure
 
-1. Verify instance state:
-   ```
-   aws ec2 describe-instances --instance-ids {instance_id} --region {region} \
-     --query 'Reservations[0].Instances[0].{State:State.Name,Type:InstanceType,AZ:Placement.AvailabilityZone}'
-   ```
-   Expected: State = "running". If "stopped" or "terminated": escalate immediately (see Escalation section, case A).
+### Phase 1 — Gather Instance Data [SCRIPTS ZONE — deterministic]
 
-2. Check system status checks:
-   ```
-   aws ec2 describe-instance-status --instance-ids {instance_id} --region {region} \
-     --query 'InstanceStatuses[0].{SystemStatus:SystemStatus.Status,InstanceStatus:InstanceStatus.Status}'
-   ```
-   Expected: both = "ok". If either = "impaired": this is a hardware issue, escalate (case B).
+Step 1.1 — Verify instance state:
+```bash
+aws ec2 describe-instances --instance-ids $INSTANCE_ID --region $AWS_REGION \
+  --query 'Reservations[0].Instances[0].{State:State.Name,Type:InstanceType,AZ:Placement.AvailabilityZone}'
+```
+**Expected output:**
+```json
+{"State": "running", "Type": "t3.medium", "AZ": "us-east-1a"}
+```
 
-3. Retrieve CPU metrics (last 30 minutes):
-   ```
-   aws cloudwatch get-metric-statistics \
-     --namespace AWS/EC2 --metric-name CPUUtilization \
-     --dimensions Name=InstanceId,Value={instance_id} \
-     --start-time $(date -u -v-30M +%Y-%m-%dT%H:%M:%SZ) \
-     --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
-     --period 300 --statistics Average,Maximum \
-     --region {region}
-   ```
+Step 1.2 — Check system status checks:
+```bash
+aws ec2 describe-instance-status --instance-ids $INSTANCE_ID --region $AWS_REGION \
+  --query 'InstanceStatuses[0].{SystemStatus:SystemStatus.Status,InstanceStatus:InstanceStatus.Status}'
+```
+**Expected output:** `{"SystemStatus": "ok", "InstanceStatus": "ok"}`
 
-4. Evaluate CPU data — see Decision Tree below.
+Step 1.3 — Retrieve CPU metrics (last 30 minutes):
+```bash
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/EC2 --metric-name CPUUtilization \
+  --dimensions Name=InstanceId,Value=$INSTANCE_ID \
+  --start-time $(date -u -v-30M +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 300 --statistics Average,Maximum \
+  --region $AWS_REGION
+```
 
-5. Check network throughput and disk I/O:
-   ```
-   aws cloudwatch get-metric-statistics \
-     --namespace AWS/EC2 --metric-name NetworkPacketsOut \
-     --dimensions Name=InstanceId,Value={instance_id} \
-     --start-time $(date -u -v-30M +%Y-%m-%dT%H:%M:%SZ) \
-     --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
-     --period 300 --statistics Sum --region {region}
-   ```
+### Phase 2 — Diagnose Root Cause [AGENTS ZONE — reasoning]
 
-6. Generate diagnosis report with: instance ID, current state, CPU trend (last 30 min), top anomaly finding, recommended action, escalation decision.
+IF State != "running":
+  THEN Diagnosis = "INSTANCE_NOT_RUNNING"
+  → Escalate immediately (Case A in Escalation Rules)
 
-## Decision Trees
+IF SystemStatus == "impaired" OR InstanceStatus == "impaired":
+  THEN Diagnosis = "STATUS_CHECK_IMPAIRED"
+  → Escalate immediately (Case B in Escalation Rules)
 
-### CPU Evaluation
+IF CPUUtilization_average_30min > 80 AND CPUUtilization_peak > 95 sustained 10+ min:
+  THEN Diagnosis = "CPU_CRITICAL"
+  → Escalate (Case C)
 
-| CPU Average (30 min) | CPU Peak | Action |
-|---------------------|---------|--------|
-| under 50% | under 80% | Normal — no action. Document in report. |
-| 50-80% | under 90% | Elevated — recommend investigation. Check application logs. |
-| over 80% | any | High — proceed to Step 5. Check network + disk correlation. |
-| over 80% | sustained over 95% for 10+ min | Critical — escalate (case C). Do not restart without approval. |
+IF CPUUtilization_average_30min > 80:
+  THEN Diagnosis = "CPU_ELEVATED"
+  → Proceed to Phase 3
 
-### Root Cause Routing
+IF all metrics within normal range:
+  THEN Diagnosis = "NO_ISSUE_FOUND"
+  → Report false positive
 
-| Finding | Likely Cause | Recommended Action |
-|---------|-------------|-------------------|
-| CPU high + network low | Application processing issue | Check application logs, JVM heap, query patterns |
-| CPU high + network high | Traffic spike or DDoS | Check ALB metrics, WAF logs, enable CloudWatch detailed monitoring |
-| CPU high + disk I/O high | I/O bound workload | Check EBS throughput, consider IOPS-optimized volume type |
-| Status checks impaired | Hardware failure | Escalate immediately — AWS may need to retire instance |
+## Escalation Rules
 
-## Escalation
+**Case A (INSTANCE_NOT_RUNNING):**
+Escalate to on-call via PagerDuty P2.
+Subject: EC2 Health — INSTANCE_NOT_RUNNING on $INSTANCE_ID
+Findings: State=[value], Time discovered=[timestamp], Last known healthy: [from audit log]
 
-- **Case A (instance stopped/terminated):** Escalate to on-call via PagerDuty P2. Include: instance ID, state, time discovered, last known healthy time.
-- **Case B (status check impaired):** Escalate to on-call via PagerDuty P1. Include: instance ID, impaired check name, region. Do not attempt remediation.
-- **Case C (CPU critical sustained):** Escalate to on-call via PagerDuty P2. Include: full CPU metrics dump, network metrics, application service name. Do not restart.
+**Case B (STATUS_CHECK_IMPAIRED):**
+Escalate to on-call via PagerDuty P1. Do not attempt remediation.
+Subject: EC2 Health — STATUS_CHECK_IMPAIRED on $INSTANCE_ID
+Findings: Impaired check=[SystemStatus or InstanceStatus], Region=$AWS_REGION
+
+**Case C (CPU_CRITICAL):**
+Escalate to on-call via PagerDuty P2. Do not restart without approval.
+Subject: EC2 Health — CPU_CRITICAL on $INSTANCE_ID
+Findings: CPU average=[value]%, CPU peak=[value]% sustained [duration], Service=[name]
+
+## NEVER DO
+
+- **NEVER restart the instance without human approval** — reason: restart during active traffic causes service interruption; root cause may persist after restart
+- **NEVER run commands that modify instance state** — this skill is read-only diagnostic; all changes require human execution
+- **NEVER report "no issue found" without checking all three Phase 1 data sources** — reason: a single metric can appear normal while others indicate a problem
+
+## Rollback Procedure
+
+Phase 2 only (no Phase 3 in this read-only skill). No rollback required.
+
+## Verification
+
+- [ ] Phase 1 data collected: instance state, status checks, CPU metrics (30 min)
+- [ ] Diagnosis string assigned from the Phase 2 decision tree
+- [ ] Escalation sent if diagnosis is INSTANCE_NOT_RUNNING, STATUS_CHECK_IMPAIRED, or CPU_CRITICAL
+- [ ] All numeric values in the report sourced from Phase 1 output (no estimated values)
 ```
 
 ---
@@ -146,7 +214,91 @@ A complete SKILL.md has five required sections:
 
 ---
 
-## 4. Skill Lifecycle
+## 4. Decision Tree Patterns: Specific vs Vague
+
+The most common Tier 4 anti-pattern (which disqualifies a skill) is vague decision conditions:
+
+```
+# FAIL — vague condition:
+IF the CPU is elevated:
+  THEN investigate further
+
+# PASS — specific condition with numeric threshold:
+IF CPUUtilization > 80 AND mean_exec_time_ms > 1000:
+  THEN Diagnosis = SLOW_QUERY_INDEX_GAP
+  CONFIDENCE: High — both metrics confirm
+```
+
+The specific version does three things the vague version cannot:
+
+1. **Reproducible:** Two agents running the same skill on the same data reach the same conclusion.
+2. **Auditable:** After an incident, you can verify the agent's diagnosis was consistent with the decision tree.
+3. **Bounded:** Every branch terminates at a named diagnosis string or an explicit escalation trigger. There is no path through the decision tree that ends in "continue investigating."
+
+### The Diagnosis String Pattern
+
+The Agents Zone produces a named diagnosis string — not a description, a string:
+
+```
+Diagnosis = "SLOW_QUERY_INDEX_GAP"
+Diagnosis = "PARAMETER_GROUP_DRIFT"
+Diagnosis = "LOCK_CONTENTION_PEAK_HOURS"
+Diagnosis = "NO_ISSUE_FOUND"
+```
+
+Why strings? They are greppable. They are consistent. They are actionable. They are comparable across sessions, agents, and incidents.
+
+### Trigger Condition Patterns — Good vs Bad
+
+| Good (Specific) | Bad (Vague) | Why Good Is Better |
+|---|---|---|
+| `When CloudWatch alarm rds-cpu-high fires (CPUUtilization > 80%)` | `When database is slow` | Names the specific alarm; maps to a specific metric |
+| `When pg_stat_statements shows mean_exec_time_ms > 1000ms` | `When queries seem slow` | Numeric threshold; greppable in audit logs |
+| `When aws ce get-cost-and-usage shows current day > 1.5x baseline` | `When costs are elevated` | Specific metric and specific formula |
+| `When kubectl get pods shows STATUS=OOMKilled` | `When pods are having issues` | Named status string; no interpretation required |
+
+---
+
+## 5. NEVER DO Rules: The Specificity Requirement
+
+Generic safety rules ("never do anything dangerous," "always be careful") are useless in a SKILL.md context. The Brain already knows to be careful — that is part of its training. What it does not know, without explicit encoding, is which specific commands are catastrophic in YOUR domain and WHY.
+
+**Generic (useless):**
+```
+NEVER do anything that could harm the production database.
+```
+
+**Domain-specific (useful):**
+```
+NEVER execute VACUUM FULL during business hours — reason: acquires exclusive lock on the table,
+blocks all reads and writes for the duration (minutes to hours on large tables),
+causes application timeout cascade.
+
+NEVER run CREATE INDEX without CONCURRENTLY — reason: locks the table, blocks writes.
+Use CREATE INDEX CONCURRENTLY instead (slower, does not block).
+
+NEVER modify max_connections without scheduling a restart — reason: this is a static parameter
+requiring DB restart; changing it applies immediately on parameter group but does not take effect
+until the restart window, creating a false expectation that the change is live.
+```
+
+The domain-specific version tells the Brain exactly which actions to avoid and exactly what catastrophic outcome each action causes.
+
+### NEVER DO Patterns by Track
+
+| Track | Domain | Example NEVER DO |
+|---|---|---|
+| Track A (DBA) | RDS PostgreSQL | NEVER execute ALTER TABLE or CREATE INDEX without explicit human approval — causes table lock, blocks production writes |
+| Track A (DBA) | RDS PostgreSQL | NEVER run VACUUM FULL during business hours — acquires exclusive lock, blocks all reads and writes |
+| Track B (FinOps) | AWS Cost Explorer | NEVER execute `aws ec2 terminate-instances` based on cost findings alone — requires cross-team approval |
+| Track B (FinOps) | AWS Cost Explorer | NEVER modify Reserved Instance or Savings Plan coverage without finance team approval |
+| Track C (K8s) | Kubernetes | NEVER run `kubectl delete pod` during active traffic — use rollout restart for controlled pod cycling |
+| Track C (K8s) | Kubernetes | NEVER modify resource limits on running deployments without checking PodDisruptionBudget |
+| All tracks | General | NEVER skip Phase 2 diagnosis and jump to Phase 3 remediation — blind remediation risks making the problem worse |
+
+---
+
+## 6. Skill Lifecycle
 
 ```
 Design → Validate → Version → Deploy → Improve
@@ -187,19 +339,18 @@ Maintain a changelog at the top of the file:
 
 ### Deploy
 
-Place the skill file in your Hermes agent's `skills/` directory. Reference it in your agent's `config.yaml`:
+Place the skill file in your Hermes agent's `skills/` directory:
 
-```yaml
-skills:
-  - path: skills/ec2-health-check.md
-    triggers:
-      - "ec2 health check"
-      - "instance unreachable"
-      - "high cpu"
-    load_strategy: trigger  # Only load when triggered, not on every request
+```
+~/.hermes/profiles/track-a/
+  config.yaml
+  SOUL.md
+  skills/
+    dba-rds-slow-query/
+      SKILL.md
 ```
 
-`load_strategy: trigger` is critical for context efficiency — skills are only added to the context window when a matching trigger phrase is detected.
+At agent startup, Hermes scans the `skills/` directory, reads each `SKILL.md` file, and prepends their content to the system prompt. The Brain sees the complete skill procedure as part of its initial context — not retrieved on demand, but present from turn 1.
 
 ### Improve
 
@@ -214,7 +365,66 @@ The improvement loop is the mechanism by which your agent gets better over time 
 
 ---
 
-## 5. Skill Context Budget
+## 7. RUBRIC.md Quality Tiers
+
+The quality rubric at `course/skills/RUBRIC.md` has 62 checkboxes organized in four tiers:
+
+**Tier 1 — Blockers (must ALL pass before skill can be used in any lab):**
+- Frontmatter completeness (7 items: name, description, version, compatibility, category, tags, YAML delimiters)
+- Section completeness (8 required sections present)
+- When to Use quality (specific named triggers, no vague conditions)
+- Inputs table format (includes HERMES_LAB_MODE row)
+- Two-zone design enforcement (SCRIPTS ZONE and AGENTS ZONE labels present; no CLI in Agents Zone; no prose decisions in Scripts Zone)
+- Scripts Zone: CLI commands with expected output blocks (inline, not external references)
+- Agents Zone: decision trees with numeric thresholds, named termination conditions
+- Escalation Rules: 2+ triggers with observable conditions + handoff template
+- NEVER DO: 3+ domain-specific items with stated consequences
+- Rollback Procedure: numbered steps covering Phase 3 changes
+- Verification checklist: 4+ checkboxes
+- Mock mode documentation present
+
+**Tier 2 — Quality (should fix before Module 10 agent build):**
+Clean two-zone separation throughout. Escalation handoff is copy-paste ready. Expected output matches real API field names. Skill tested end-to-end in mock mode.
+
+**Tier 3 — Production-Grade (required before shipping to participants as take-home material):**
+Messy scenario tested. Mock and live produce equivalent diagnostic decisions. Tested with Haiku-tier model. Skills Hub metadata validated.
+
+**Tier 4 — Anti-Patterns (one FAIL disqualifies the skill):**
+- Any decision branch ending in "investigate further" without a stopping criterion
+- CLI commands inside an Agents Zone phase
+- Expected output blocks that reference external files instead of inline output
+- Subjective decision conditions ("slow," "high," "elevated" without numeric threshold)
+- AWS field names in camelCase instead of PascalCase (real AWS uses `DBInstanceStatus`, not `dbInstanceStatus`)
+
+---
+
+## 8. Tier 1 Quick-Check with Grep
+
+Run these commands on any skill before human review:
+
+```bash
+# All 8 required sections present? (should return 8)
+grep -c "## When to Use\|## Inputs\|## Prerequisites\|## Procedure\|## Escalation Rules\|## NEVER DO\|## Rollback Procedure\|## Verification" SKILL.md
+
+# Both zone labels present? (should return 2+)
+grep -c "SCRIPTS ZONE\|AGENTS ZONE" SKILL.md
+
+# NEVER DO has 3+ items? (should return 3+)
+grep -c "^\- \*\*NEVER\|^- NEVER" SKILL.md
+
+# HERMES_LAB_MODE documented? (should return 1+)
+grep -c "HERMES_LAB_MODE" SKILL.md
+
+# Verification has 4+ checkboxes? (should return 4+)
+grep -c "\- \[ \]" SKILL.md
+
+# No unfilled placeholders? (should return 0)
+grep -c "\[" SKILL.md
+```
+
+---
+
+## 9. Skill Context Budget
 
 Skills consume context tokens. Each skill loaded into the context window reduces the space available for operational data, conversation history, and reasoning.
 
@@ -228,13 +438,12 @@ Skills consume context tokens. Each skill loaded into the context window reduces
 
 **Context budget guidelines:**
 - Load at most 3-4 skills concurrently for a standard 100K context window
-- Use `load_strategy: trigger` to prevent all skills loading on every request
 - Split large skills into focused sub-skills (e.g., `rds-health-diagnosis.md` + `rds-health-remediation.md`)
 - Compress verbose skills: eliminate prose, keep only commands, conditions, and escalation data
 
 ---
 
-## 6. Skill Anti-Patterns
+## 10. Skill Anti-Patterns
 
 | Anti-Pattern | Problem | Fix |
 |-------------|---------|-----|
@@ -244,3 +453,19 @@ Skills consume context tokens. Each skill loaded into the context window reduces
 | `"See runbook section 4"` | Cross-reference not loadable at runtime | Inline the referenced content |
 | 1000-line skill covering all scenarios | Context budget exceeded | Split into domain-specific sub-skills |
 | No version or date | No auditability | Always include version and last_validated |
+| Decision branch ends in "investigate further" | Open-ended path — Tier 4 FAIL | Every branch must terminate at a named diagnosis or escalation |
+| CLI command inside Agents Zone | Mixed-concern violation — breaks testability | Move CLI commands to Scripts Zone |
+
+---
+
+## 11. Two-Zone Design Summary
+
+| Aspect | Scripts Zone | Agents Zone |
+|---|---|---|
+| Purpose | Data collection | Reasoning and diagnosis |
+| Contains | CLI commands + expected output | IF/THEN/ELSE decision trees |
+| Does NOT contain | Prose decisions, IF/THEN logic | CLI commands (aws, kubectl, psql) |
+| Is it deterministic? | Yes — same input → same output | No — LLM reasoning varies |
+| Is it testable independently? | Yes — run commands, compare expected output | Yes — feed Phase 1 output, verify diagnosis |
+| Phase label | `[SCRIPTS ZONE — deterministic]` | `[AGENTS ZONE — reasoning]` |
+| Typical phases | Phase 1 (data collection), Phase 3 (remediation) | Phase 2 (diagnosis), Phase 4 (verification) |
