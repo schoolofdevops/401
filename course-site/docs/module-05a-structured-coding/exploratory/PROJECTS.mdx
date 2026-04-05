@@ -1,0 +1,92 @@
+---
+id: module-05a-exploratory
+title: "Exploratory: Structured Coding Stretch Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for Module 5a — second track and CLAUDE.md optimization"
+---
+
+# Exploratory: Structured Coding Stretch Projects
+
+These are **exploratory stretch projects** — not required to complete Module 5a. They extend the structured AI coding workflow from the lab.
+
+---
+
+## Project 1: Second Track
+
+**Estimated time:** 45 minutes
+**Extends:** Module 5a lab (structured AI coding)
+**Prerequisites:** Module 5a lab completed (one track done)
+
+### What You Will Build
+
+Complete the second lab track using the same 5-phase structured workflow you applied in the primary track. If you completed Track A (Helm chart), try Track B (CI/CD pipeline), or vice versa. The technique is the same; the domain is different.
+
+### Challenge
+
+The challenge is not the new domain — it is applying the same structured discipline in an unfamiliar area. When you know Helm well, the structured workflow feels natural because you can evaluate AI output quality. In an unfamiliar domain, you have to lean harder on the verification steps (Blueprint phase and Validate phase) because you are less certain about correctness.
+
+The second track deliberately puts you in "partial expertise" territory — which is the real-world condition most practitioners face when AI helps with infrastructure outside their primary specialty.
+
+### Steps
+
+1. Open the Track B lab guide (if you did Track A first) in the Hermes lab files
+
+2. Follow the same 5-phase workflow:
+   - **Phase 1 Brainstorm:** Read the requirements, ask AI to help you understand the domain if needed
+   - **Phase 2 Design:** Create your CLAUDE.md with system context for this track's technology
+   - **Phase 3 Blueprint:** Generate the implementation plan before writing any code
+   - **Phase 4 Implement:** AI generates code; you review against the blueprint
+   - **Phase 5 Validate:** Run the provided validation commands; fix any issues
+
+3. Pay attention to where you slow down vs. Track A. Where did having less expertise make the workflow harder?
+
+### Expected Deliverable
+
+Completed second-track artifacts (Helm chart OR CI/CD pipeline YAML), plus a brief comparison: where did the structured workflow help most in the unfamiliar domain?
+
+---
+
+## Project 2: CLAUDE.md Optimization
+
+**Estimated time:** 20 minutes
+**Extends:** Module 5a lab (CLAUDE.md creation)
+**Prerequisites:** Module 5a lab completed, your CLAUDE.md from the lab
+
+### What You Will Build
+
+Refine your project CLAUDE.md from the lab to produce better AI output, and measure the quality difference. This is an experiment in context engineering optimization — the same goal (generate Helm chart / CI/CD pipeline), but better context → better output.
+
+### Challenge
+
+Most CLAUDE.md files from the first pass are correct but not precise. They tell the AI the technology but not the constraints that matter. The refinement challenge: what do you add to make the AI output more accurate, less generic, and more aligned with your environment's specific requirements?
+
+### Steps
+
+1. Review your current CLAUDE.md from the lab
+
+2. For each section (System State, Constraints, Vocabulary), identify one thing that is:
+   - **Too vague** (AI could interpret it multiple ways)
+   - **Missing** (something the AI got wrong that a more specific context would have prevented)
+
+3. Update the CLAUDE.md with the refinements
+
+4. Run the same generation request you used in the lab against the updated CLAUDE.md
+
+5. Compare the two outputs: where is the refined output better? How many review cycles did it take to reach passing validation?
+
+### Expected Deliverable
+
+Refined CLAUDE.md with changelog notes explaining each change, plus side-by-side comparison of before/after AI output quality. Answer: did fewer review cycles pass with the refined context?
+
+---
+
+## Which Project Should You Do?
+
+| Your Interest | Recommended Project |
+|--------------|-------------------|
+| Breadth across IaC domains | Project 1 (second track) |
+| Context engineering mastery | Project 2 (CLAUDE.md optimization) |
+| Under 20 minutes available | Project 2 — highest signal per minute on core course skill |
+
+Project 2 directly reinforces the most transferable skill in the course: context engineering for structured generation. The optimization discipline you develop here applies to every CLAUDE.md you write for the rest of the course.

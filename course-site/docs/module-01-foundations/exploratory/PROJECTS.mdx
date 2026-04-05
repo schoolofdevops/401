@@ -1,0 +1,151 @@
+---
+id: module-01-exploratory
+title: "Exploratory: AI Foundations Stretch Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for Module 1 — context engineering templates, token budgeting, and few-shot libraries"
+---
+
+# Exploratory: AI Foundations Stretch Projects
+
+These are **exploratory stretch projects** — not required to complete Module 1. They deepen the context engineering concepts from the lab.
+
+---
+
+## Project 1: Context Engineering for a Different Service
+
+**Estimated time:** 30 minutes
+**Extends:** Module 1 lab (4-layer context pattern)
+**Prerequisites:** Module 1 lab completed
+
+### What You Will Build
+
+Take a different AWS service output and build a 4-layer context engineering template for it — the same pattern you used in the lab with CloudWatch data, applied to a new domain.
+
+**Suggested services:**
+- **RDS Performance Insights** — slow query data, wait events, database load
+- **AWS Cost Explorer** — spend by service, cost anomalies, usage trends
+- **VPC Flow Logs** — network traffic patterns, rejected connections, data transfer
+
+### Challenge
+
+Each service has its own vocabulary and domain expertise requirements. The challenge is identifying: what does an expert engineer know about this service that improves AI analysis? That expert knowledge becomes Layer 3 and 4 of your context template.
+
+### Steps
+
+1. Get sample output from your chosen service (or use the provided mock data in the lab files)
+
+2. Build the 4-layer template following the same structure as the CloudWatch lab:
+
+```markdown
+## Layer 1: Task Definition
+[What you want the AI to do with this data]
+
+## Layer 2: Role Assignment
+[Expert role that has the right knowledge frame]
+
+## Layer 3: System Context
+[Your environment, service configuration, normal baselines]
+
+## Layer 4: Domain Vocabulary
+[Key terms, thresholds, and what they mean in your context]
+```
+
+3. Test the template by passing the service output through each layer progressively
+
+4. Compare Layer 1 output vs. Layer 4 output — quantify the difference in analysis quality
+
+### Expected Deliverable
+
+A 4-layer context template for a new AWS service, with a comparison of Layer 1 vs. Layer 4 output showing the quality delta.
+
+---
+
+## Project 2: Token Budget Calculator
+
+**Estimated time:** 20 minutes
+**Extends:** Module 1 reading (token economics)
+**Prerequisites:** Module 1 lab completed, access to a spreadsheet tool
+
+### What You Will Build
+
+A simple spreadsheet or script that estimates token costs for different context sizes and compares them across providers. This makes the token economics from the reading material tangible and directly applicable to your operational scenarios.
+
+### Challenge
+
+Token pricing varies by model and provider, and the input-output split matters. A 10,000-token input with a 500-token output has very different costs than a 1,000-token input with a 5,000-token output. Real operational use cases skew heavily toward input tokens.
+
+### Steps
+
+1. Create a spreadsheet with columns: Provider, Model, Input $/1M tokens, Output $/1M tokens
+
+2. Populate with current pricing (check provider documentation — prices change):
+
+| Provider | Model | Input $/1M | Output $/1M |
+|----------|-------|-----------|------------|
+| Anthropic | Claude 3 Haiku | ~$0.25 | ~$1.25 |
+| Anthropic | Claude 3 Opus | ~$15 | ~$75 |
+| Google | Gemini Flash 1.5 | ~$0.075 | ~$0.30 |
+| Groq | Llama 3 8B | Free tier | Free tier |
+
+3. Add three rows representing realistic operational scenarios from Module 1:
+   - Layer 1 context (task only): ~50 input tokens
+   - Layer 3 context (with system info): ~500 input tokens
+   - Layer 4 context (full 4-layer): ~1,200 input tokens
+
+4. Calculate: for 100 daily agent invocations, what does each layer cost per provider per month?
+
+### Expected Deliverable
+
+A completed cost comparison spreadsheet showing the cost of different context strategies across providers. Identify: which provider is cheapest for high-volume operational use?
+
+---
+
+## Project 3: Few-Shot Library
+
+**Estimated time:** 25 minutes
+**Extends:** Module 1 reading (prompt engineering → context engineering)
+**Prerequisites:** Module 1 lab completed
+
+### What You Will Build
+
+A library of 3-5 few-shot examples for different infrastructure diagnosis scenarios. Few-shot examples are the "here's how an expert approaches this" layer in your context template — they teach the model the expected output format and reasoning style.
+
+### Challenge
+
+Good few-shot examples are not just correct answers — they demonstrate the reasoning process. A few-shot example that shows "question → answer" is less valuable than one that shows "question → evidence reviewed → hypothesis → conclusion → recommended action." The reasoning demonstration is what transfers to new scenarios.
+
+### Steps
+
+1. Choose 3-5 distinct diagnosis scenarios from your domain (examples: EC2 memory pressure, RDS slow query, K8s pod CrashLoop, network latency spike, cost anomaly)
+
+2. For each scenario, write the few-shot example in this format:
+
+```markdown
+[Example N]
+**Situation:** [one sentence describing the observed symptom]
+**Evidence reviewed:** [list the data sources and key values]
+**Hypothesis:** [stated root cause with confidence level]
+**Supporting evidence:** [which evidence supports the hypothesis]
+**Recommended action:** [specific, actionable next step]
+**Escalation:** [yes/no, with condition]
+```
+
+3. Use your few-shot library as Layer 4 in a new context template and test it against a novel scenario
+
+4. Compare: does the AI output match the format and reasoning depth of your few-shot examples? Where does it diverge?
+
+### Expected Deliverable
+
+A few-shot library file with 3-5 examples, plus a test run showing how including the library in context affects AI output format and reasoning quality.
+
+---
+
+## Which Project Should You Do?
+
+| Your Interest | Recommended Project |
+|--------------|-------------------|
+| Context depth for new services | Project 1 — most direct application of lab skills |
+| Budget and provider selection | Project 2 — practical for team planning |
+| Output format and reasoning quality | Project 3 — foundational for skill design in Modules 7+ |
+| Under 20 minutes available | Project 2 — fastest to complete with immediate practical value |

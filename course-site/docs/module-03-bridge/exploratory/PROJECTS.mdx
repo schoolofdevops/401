@@ -1,0 +1,107 @@
+---
+id: module-03-exploratory
+title: "Exploratory: Bridge Content Stretch Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for Module 3 — platform AI vs custom agent decision matrix and first agent design sketch"
+---
+
+# Exploratory: Bridge Content Stretch Projects
+
+These are **exploratory stretch projects** — not required to complete Module 3. They bridge the platform AI evaluation from Module 2 to the agent building work starting in Module 7.
+
+---
+
+## Project 1: Platform AI vs. Custom Agent Decision Matrix
+
+**Estimated time:** 25 minutes
+**Extends:** Module 3 reading (what custom agents add)
+**Prerequisites:** Modules 1-3 completed
+
+### What You Will Build
+
+A decision matrix for your top 5 operational tasks — for each task, evaluate whether it is better served by platform AI (use what AWS already provides) or a custom agent (build with Hermes). This is the foundation for your Module 4 impact assessment.
+
+### Challenge
+
+The decision is not binary, and it changes over time. A task that platform AI handles today may need a custom agent as your requirements grow. The challenge is being honest about what platform AI cannot do — versus what it just does differently than you would prefer.
+
+### Steps
+
+1. List your top 5 operational tasks that involve monitoring, diagnosis, or response (examples: EC2 health monitoring, RDS performance investigation, cost anomaly triage, K8s pod failure response, deployment validation)
+
+2. For each task, complete a decision row:
+
+| Task | Platform AI Available? | What It Can Do | What It Cannot Do | Decision | Rationale |
+|------|----------------------|----------------|-------------------|-----------|-|
+| EC2 health monitoring | Yes (CloudWatch) | Anomaly detection, alarms | Cross-reference runbooks, structured diagnosis | Custom agent | Needs context my environment |
+| ... | | | | | |
+
+3. Decision criteria:
+   - **Platform AI:** Task is well-scoped, platform AI handles it accurately, no cross-domain reasoning needed
+   - **Custom Agent:** Task requires domain context (your runbooks, your thresholds), cross-domain reasoning, or structured output in a format the platform doesn't provide
+   - **Both:** Use platform AI as the trigger, custom agent for the analysis (e.g., CloudWatch alarm fires, custom agent investigates)
+
+### Expected Deliverable
+
+Completed decision matrix with rationale for each decision, plus a summary: how many of your top 5 tasks benefit from custom agents?
+
+---
+
+## Project 2: First Agent Design Sketch
+
+**Estimated time:** 20 minutes
+**Extends:** Module 3 demo (Hermes first-run walkthrough)
+**Prerequisites:** Module 3 completed, familiarity with one of the three Module 10 agent tracks
+
+### What You Will Build
+
+A one-page design document for a custom agent that addresses a gap you identified in your Module 2 coverage audit or your Module 3 decision matrix. This is a design sketch — no code, no configuration — just the conceptual design for what the agent would do.
+
+### Challenge
+
+Keeping scope narrow. It is tempting to design an agent that does everything. A well-scoped first agent does one thing very well and has clear boundaries for what it does not do. The challenge is resisting scope creep in the design phase.
+
+### Steps
+
+Write a one-page design doc using this structure:
+
+```markdown
+# [Agent Name]
+
+## Problem
+[One paragraph: what is the manual operational task this agent addresses?
+What is the current friction?]
+
+## Agent Scope
+- **Does:** [List 3-5 specific actions the agent takes]
+- **Does not do:** [List 2-3 explicit out-of-scope items]
+
+## Inputs
+[What data does the agent need to do its job?]
+
+## Outputs
+[What does the agent produce? Format? Destination?]
+
+## Success Criteria
+[How do you know the agent is working well? What would make it worth deploying?]
+
+## Open Questions
+[What do you need to figure out before building this?]
+```
+
+### Expected Deliverable
+
+A completed one-page design doc. Bring it to Module 4 (Impact Assessment) — it becomes your capstone candidate.
+
+---
+
+## Which Project Should You Do?
+
+| Your Interest | Recommended Project |
+|--------------|-------------------|
+| Systematic evaluation framework | Project 1 (decision matrix) |
+| Starting your capstone design early | Project 2 (agent design sketch) |
+| Under 20 minutes | Project 2 — direct preparation for the capstone |
+
+Both projects directly feed into Module 4's impact assessment. Project 2 is especially valuable if you want to arrive at Module 4 with a strong capstone candidate already sketched.

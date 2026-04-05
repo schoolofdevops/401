@@ -1,0 +1,101 @@
+---
+id: module-04-exploratory
+title: "Exploratory: Impact Assessment Stretch Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for Module 4 — extended scoring and ROI estimation for automation candidates"
+---
+
+# Exploratory: Impact Assessment Stretch Projects
+
+These are **exploratory stretch projects** — not required to complete Module 4. They deepen the impact assessment from the lab into quantitative ROI analysis.
+
+---
+
+## Project 1: Extended Scoring
+
+**Estimated time:** 30 minutes
+**Extends:** Module 4 lab (Automation Quadrant scoring)
+**Prerequisites:** Module 4 lab completed (10 tasks scored)
+
+### What You Will Build
+
+Score 20 operational tasks (double the lab's 10) and analyze the distribution pattern — which quadrant has the most candidates, and what does that tell you about where your team's automation leverage is highest?
+
+### Challenge
+
+Your first 10 tasks in the lab were probably the most obvious ones. Tasks 11-20 require more creative enumeration: recurring meetings that could be summarized by AI, documentation that could be kept current automatically, compliance checks that are currently manual, handoff processes between on-call shifts.
+
+### Steps
+
+1. Generate tasks 11-20 by looking at recurring calendar items, Slack channels, and oncall runbooks you consult regularly
+
+2. Score each using the Automation Quadrant criteria (frequency × complexity)
+
+3. Plot all 20 on the quadrant diagram
+
+4. Analyze the distribution:
+   - Which quadrant has the most candidates?
+   - Are there clusters? (Multiple tasks that could share a single agent?)
+   - Which tasks scored high on frequency but low on complexity — these are your clearest wins
+
+5. Look for clustering: three tasks that could all be handled by one "daily health summary" agent vs. three separate agents
+
+### Expected Deliverable
+
+Completed 20-task scoring sheet, quadrant distribution analysis, and identification of any task clusters where one agent could handle multiple tasks.
+
+---
+
+## Project 2: ROI Estimate
+
+**Estimated time:** 20 minutes
+**Extends:** Module 4 lab (capstone candidate selection)
+**Prerequisites:** Module 4 lab completed, capstone candidate identified
+
+### What You Will Build
+
+For your top 3 automation candidates from the lab scoring, estimate the time savings per month and projected error reduction from automation. This makes the abstract impact assessment concrete.
+
+### Challenge
+
+ROI estimates for AI automation are notoriously optimistic (people assume 100% automation replaces 100% of the manual work) or pessimistic (people only count direct time savings and ignore error-reduction value). The challenge is a realistic estimate that accounts for: partial automation (the agent handles 80% of cases, 20% still need humans), error reduction value (fewer 3am pages, fewer postmortems), and setup cost.
+
+### Steps
+
+1. For each of your top 3 candidates, fill in this table:
+
+| Metric | Candidate 1 | Candidate 2 | Candidate 3 |
+|--------|-------------|-------------|-------------|
+| Current time per occurrence (minutes) | | | |
+| Occurrences per month | | | |
+| Current monthly time (minutes) | | | |
+| % of cases agent can handle fully | | | |
+| Agent monthly time savings (minutes) | | | |
+| Monthly error rate (rough) | | | |
+| Expected error reduction with agent (%) | | | |
+| Cost of each error (hours of incident response) | | | |
+| Monthly error reduction value (hours) | | | |
+| Setup cost estimate (hours to build) | | | |
+| Break-even (months) | | | |
+
+2. For each candidate: calculate break-even (when does the time saved exceed the setup cost?)
+
+3. Rank by: (break-even speed × error reduction value)
+
+### Expected Deliverable
+
+Completed ROI table for 3 candidates, with your final ranking and a one-sentence justification for which candidate has the best ROI profile. This candidate should become your Day 3 capstone build.
+
+---
+
+## Which Project Should You Do?
+
+| Your Interest | Recommended Project |
+|--------------|-------------------|
+| Finding the full opportunity landscape | Project 1 (extended scoring) |
+| Business case for your capstone | Project 2 (ROI estimate) |
+| Preparing a presentation for your team | Project 2 — most persuasive format |
+| Under 20 minutes available | Project 2 — higher direct impact on capstone decision |
+
+Project 2 specifically builds toward the Module 14 capstone presentation — your ROI estimate is part of what you present on Day 3.

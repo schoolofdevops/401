@@ -1,0 +1,98 @@
+---
+id: module-02-exploratory
+title: "Exploratory: Platform AI Stretch Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for Module 2 — platform AI coverage audit and Cost Explorer deep dive"
+---
+
+# Exploratory: Platform AI Stretch Projects
+
+These are **exploratory stretch projects** — not required to complete Module 2. They extend the platform AI evaluation from the lab into broader coverage and real cost analysis.
+
+---
+
+## Project 1: Platform AI Coverage Audit
+
+**Estimated time:** 30 minutes
+**Extends:** Module 2 lab (AWS platform AI evaluation)
+**Prerequisites:** Module 2 lab completed
+
+### What You Will Build
+
+A coverage matrix mapping all AI features across your cloud provider — not just the AWS services from the lab, but the full catalog. The goal is to identify: which operational domains are well-served by platform AI, and which have coverage gaps that custom agents (Modules 7-13) would address.
+
+### Challenge
+
+Platform AI features are scattered across services and often poorly documented as "AI features." CloudWatch Anomaly Detection is clearly AI. Amazon Inspector (security vulnerability detection) uses ML under the hood. Amazon QuickSight Q uses natural language query. Mapping all of these requires systematic exploration, not just reading the AI features documentation page.
+
+### Steps
+
+1. Create a coverage matrix with rows for your primary operational domains:
+
+| Domain | Current Platform AI Feature | What It Can Do | What It Cannot Do | Gap Score (1-5) |
+|--------|---------------------------|----------------|-------------------|----------------|
+| EC2 health monitoring | | | | |
+| RDS performance | | | | |
+| Cost optimization | | | | |
+| Security posture | | | | |
+| K8s cluster health | | | | |
+| CI/CD pipelines | | | | |
+| Network troubleshooting | | | | |
+
+2. For each domain, identify the AWS service that provides platform AI capabilities (if any). Reference the Module 2 lab findings for CloudWatch and Cost Explorer.
+
+3. Score each domain's gap (1 = platform AI handles it well, 5 = significant gap that requires custom agents)
+
+4. Identify your top 2 domains by gap score — these are candidates for the impact assessment in Module 4.
+
+### Expected Deliverable
+
+Completed coverage matrix with gap scores, plus a 2-sentence summary for each high-gap domain explaining what the platform AI cannot do that a custom agent could address.
+
+---
+
+## Project 2: Cost Explorer Deep Dive
+
+**Estimated time:** 20 minutes
+**Extends:** Module 2 lab (Cost Explorer AI features)
+**Prerequisites:** Module 2 lab completed, AWS account access OR use provided mock data
+
+### What You Will Build
+
+Use AWS Cost Explorer's AI features to find one real (or mock-data) cost anomaly and document the investigation workflow — from initial alert to understood root cause.
+
+### Challenge
+
+Cost anomaly detection is only the first step. The challenge is the gap between "anomaly detected" and "root cause identified." Cost Explorer tells you something changed; it does not tell you why. Documenting this workflow reveals exactly what a custom FinOps agent (Module 10 Track B) would add.
+
+### Steps
+
+1. Open AWS Cost Explorer (or use the mock Cost Explorer data from the lab)
+
+2. Navigate to Anomaly Detection → view anomaly history
+
+3. Find or create an anomaly to investigate (if using mock data, the lab files include a simulated anomaly)
+
+4. Document the investigation workflow step by step:
+   - What did the anomaly alert show? (service, amount, time period)
+   - What additional data did you need to understand the root cause?
+   - Where did you find that additional data? (Cost Explorer, CloudWatch, EC2 console?)
+   - How many manual steps did it take from "anomaly detected" to "root cause understood"?
+
+5. Estimate: if this investigation happened once a week, how much time is it consuming annually?
+
+### Expected Deliverable
+
+A documented investigation workflow for one cost anomaly (real or simulated), plus a time estimate for manual investigation frequency. This is the input data for your impact assessment in Module 4.
+
+---
+
+## Which Project Should You Do?
+
+| Your Interest | Recommended Project |
+|--------------|-------------------|
+| Strategic platform AI planning | Project 1 (coverage audit) |
+| FinOps automation use case | Project 2 (Cost Explorer deep dive) |
+| Preparing for Module 4 Impact Assessment | Either — both provide input data for the Automation Quadrant |
+| Under 20 minutes available | Project 2 — faster, more focused |
