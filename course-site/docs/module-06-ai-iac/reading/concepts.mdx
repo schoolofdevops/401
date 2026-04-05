@@ -1,0 +1,272 @@
+---
+id: module-06-concepts
+title: "Concepts: AI-Assisted Infrastructure as Code"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "Why AI makes mistakes in IaC generation and how context engineering solves them"
+---
+
+# Concepts: AI-Assisted Infrastructure as Code
+
+You spent the lab generating Terraform modules and ArgoCD Application CRDs using AI. You experienced what happens when you give an AI model structured context — specific versions, resource types, constraints, and vocabulary — before asking it to generate infrastructure code. Now let's understand *why* AI makes the errors it does in IaC, and why context engineering is the countermeasure.
+
+---
+
+## 1. AI Failure Modes in IaC Generation
+
+AI models generate infrastructure code by predicting tokens from training data. That training data includes Terraform HCL, Kubernetes YAML, and provider documentation scraped from across the internet — at a point in time, from many different versions. This creates predictable failure modes.
+
+### Schema Drift
+
+The AI generates attributes from an older provider version that no longer exist or have been renamed.
+
+**Example:** An AI trained on AWS provider 3.x documentation generates:
+
+```hcl
+resource "aws_instance" "this" {
+  security_groups = ["sg-0123456"]  # Deprecated in provider 4.0
+}
+```
+
+The current AWS provider 5.x uses `vpc_security_group_ids`. The deprecated attribute still exists in some contexts but silently ignores VPC security groups — your instance launches with no security group association, wide open to any traffic.
+
+`terraform validate` catches this: `An argument named "security_groups" is not expected here.`
+
+This is a schema drift failure mode. The AI's knowledge is real, but outdated.
+
+### Hallucinated Attributes
+
+The AI invents resource attributes that do not exist in the provider schema at all. This is different from schema drift — the attribute was never valid in any version.
+
+**Example:**
+
+```hcl
+resource "aws_cloudwatch_metric_alarm" "cpu_high" {
+  alarm_type = "threshold"  # Does not exist in the AWS provider
+}
+```
+
+The AI generated something that looks plausible but has no meaning to Terraform. `terraform validate` catches it immediately.
+
+Hallucinated attributes occur when the AI is pattern-matching across training data from multiple providers and versions, generating field names that "look like" valid IaC syntax.
+
+### Version Mismatch
+
+The AI generates syntax valid in a different version of Terraform itself — not the provider, but the core HCL language.
+
+**Example:** Using `count` and `for_each` on the same resource:
+
+```hcl
+resource "aws_instance" "this" {
+  count    = var.create ? 1 : 0
+  for_each = toset(var.names)  # Error: cannot use both count and for_each
+}
+```
+
+Or generating the `lifecycle` meta-argument syntax incorrectly:
+
+```hcl
+lifecycle {
+  prevent_destroy = var.protect  # Error: cannot use a variable in a lifecycle block
+}
+```
+
+These are Terraform language constraints that AI frequently violates because training data contains examples from different Terraform versions and many tutorial examples that contain bugs.
+
+### Missing Dependencies
+
+The AI generates resources in the wrong order or forgets to declare dependency relationships.
+
+**Example:**
+
+```hcl
+resource "aws_sns_topic_subscription" "email" {
+  topic_arn = aws_sns_topic.alerts.arn  # Reference is fine
+  protocol  = "email"
+  endpoint  = var.notification_email
+  # Missing: depends_on = [aws_sns_topic.alerts] is implied by the reference,
+  # but AI sometimes generates standalone resources that reference ARNs as
+  # hardcoded strings instead of resource references — breaking the implicit dependency
+}
+```
+
+`terraform plan` catches ordering issues. If the AI generates an ARN as a hardcoded string instead of a resource reference, the dependency is lost — resources may be created in the wrong order.
+
+### The Junior Admin Analogy
+
+**DevOps analogy:** Think of AI as a junior admin who memorized the AWS and Terraform docs intensively — but from two years ago. Their knowledge is deep and mostly accurate. They know the patterns. But they sometimes reference deprecated features they learned first, they occasionally confuse attributes between similar resources, and they have no knowledge of changes made after their study period ended.
+
+You would not let that junior admin `terraform apply` without review. You would `terraform plan` first. The same discipline applies to AI-generated IaC.
+
+---
+
+## 2. Why AI Errors in IaC Are Especially Dangerous
+
+Not all AI errors carry the same risk. A wrong answer in a chat conversation is annoying. A wrong Terraform resource in a production apply can:
+
+- Delete a database that has no backup
+- Create security groups that expose services to the internet
+- Provision dozens of non-free-tier resources and cost hundreds of dollars overnight
+- Leave infrastructure in a broken intermediate state that is harder to clean up than to rebuild
+
+This is the **blast radius** problem. AI errors in IaC have blast radius because infrastructure changes are often irreversible, expensive, or both.
+
+### terraform plan Is Your Safety Net
+
+The single most important habit when using AI for Terraform: **always run `terraform plan` before `terraform apply`, and read the plan output.**
+
+The plan shows you exactly what Terraform will create, change, and destroy. An AI error shows up in the plan as something unexpected — a deletion you did not intend, a resource type you did not request, an attribute value that is clearly wrong.
+
+In the lab, you saw this pattern: generate with AI, then validate with `terraform validate` (syntax check), then `terraform plan` (logic check). This is not optional. It is the same discipline as code review before merge.
+
+### GitOps Amplifies Errors
+
+Track B introduced a new failure mode: ArgoCD's `selfHeal: true` and `automated: prune: true` sync policy means that whatever is in Git, ArgoCD will faithfully apply to the cluster — automatically, within 3 minutes.
+
+If AI generated incorrect YAML and you committed it to your fork before reviewing — ArgoCD would deploy that incorrect YAML to your cluster within the next sync cycle. No `kubectl apply` command, no manual step. The error propagates automatically.
+
+**DevOps analogy:** Like configuring auto-scaling with a misconfigured health check. The system faithfully does the wrong thing, at scale, without human intervention. Auto-scaling on a misconfigured check will scale you to zero (or to the maximum) while your monitoring stays green. GitOps on a misconfigured Application CRD will faithfully apply the bad configuration on every sync until someone notices.
+
+### kubectl apply --dry-run Catches Errors Early
+
+For Kubernetes resources, `kubectl apply --dry-run=client` is the equivalent of `terraform validate` — it checks syntax and schema without making any API calls to the cluster.
+
+`kubectl diff` is the equivalent of `terraform plan` — it shows what would change in the cluster if you applied the manifest.
+
+Run both before `kubectl apply` when working with AI-generated Kubernetes YAML.
+
+---
+
+## 3. Context Engineering for IaC Quality
+
+The failure modes above are not random. They are predictable, and they are addressable through context engineering.
+
+### CLAUDE.md as the IaC Context File
+
+In both lab tracks, the first step was creating a `CLAUDE.md` file. This is the context engineering artifact for your project — it encodes the system state, constraints, and vocabulary that AI needs to generate correct, environment-specific infrastructure code.
+
+Without CLAUDE.md:
+- AI guesses which Terraform provider version to use
+- AI guesses whether you want free-tier or production instance types
+- AI invents vocabulary for "monitoring" and "notification" that may not match your architecture
+
+With CLAUDE.md:
+- AI knows `AWS provider >= 5.0` (prevents schema drift to 3.x attributes)
+- AI knows `t2.micro, free tier only` (prevents expensive instance types)
+- AI knows `"monitoring" = CloudWatch metric alarm on CPUUtilization` (vocabulary alignment)
+
+The CLAUDE.md is not a prompt. It is a context layer — the Layer 3 system context from Module 1's 4-layer pattern applied to an IaC project.
+
+### The Guided Generation Pattern
+
+Generic AI request:
+> "Write a Terraform module for EC2 monitoring."
+
+What you get: a plausible but generic module that may use the wrong provider version, wrong instance type, wrong alarm configuration, or no SNS notification at all.
+
+Context-guided request (after writing CLAUDE.md):
+> "Using the CLAUDE.md context and the skeleton at modules/ec2-monitored/main.tf, generate the complete Terraform resources: data aws_ami using filter for latest Amazon Linux 2, aws_instance with t2.micro using data source AMI, aws_cloudwatch_metric_alarm with threshold from var.alarm_threshold, aws_sns_topic, aws_sns_topic_subscription."
+
+What you get: a module that matches your constraints, uses the correct provider API, and follows the patterns you specified.
+
+The guided generation pattern is: provide schema + constraints + examples, not just intent. The word count of your context matters less than the precision of the version and attribute information you include.
+
+### Why Context Engineering Produces Better IaC Than Generic Requests
+
+The quality difference between generic and guided AI generation in the lab was not about how you phrased the request. The wording was simple and direct in both cases. What changed was *what information the AI had* when it started generating.
+
+This is context engineering — the skill of assembling the right information layer before requesting generation. You are not writing clever prompts. You are building a context layer that transforms a generic AI output into environment-specific infrastructure code.
+
+A Dockerfile is not a clever set of instructions — it is a precise specification of the environment. A CLAUDE.md for an IaC project is the same thing: a precise specification of the constraints the generated code must respect.
+
+---
+
+## 4. Validation as a Non-Negotiable Step
+
+Every AI-generated IaC artifact requires validation before use. This is not a workaround for AI limitations — it is the standard engineering practice applied to any code you did not write yourself.
+
+### The Validation Hierarchy
+
+```
+Syntax  →  Schema  →  Behavior  →  Integration
+```
+
+**Syntax:** Does the code parse?
+- `terraform validate` (HCL syntax + provider schema)
+- `kubectl apply --dry-run=client` (YAML syntax + K8s schema)
+- `helm lint` (Helm template syntax)
+
+**Schema:** Are the resource types and attributes valid for this version?
+- `terraform validate` also catches schema errors (unknown attributes, wrong types)
+- `kubectl apply --dry-run=server` (server-side schema validation, requires cluster access)
+- `helm template | kubectl apply --dry-run=client` (render then validate)
+
+**Behavior:** Does the configuration do what you intended?
+- `terraform plan` (shows what will be created, changed, destroyed)
+- `kubectl diff` (shows delta between current cluster state and applied manifest)
+- `helm diff upgrade` (Helm diff plugin)
+
+**Integration:** Does it work with the actual infrastructure?
+- `terraform apply` (with AWS credentials, against real account)
+- `kubectl apply` (against real cluster)
+- ArgoCD sync (watch sync status in real cluster)
+
+### The Pipeline Analogy
+
+**DevOps analogy:** The validation hierarchy is a CI/CD pipeline for your IaC. Each stage catches a different class of errors:
+
+- **Syntax check** = unit tests (fast, catches obvious failures)
+- **Plan/dry-run** = integration tests (medium speed, catches logic errors)
+- **Apply against real infra** = production deploy (slow, catches remaining issues)
+
+You would not skip your CI pipeline stages just because the developer who wrote the code is confident. You run the pipeline. The same discipline applies when AI writes the code.
+
+### When to Use Mock vs. Real
+
+Track A introduced `terraform test` with `mock_provider`. This is the IaC equivalent of unit testing with mocks:
+
+| Validation Mode | When to Use | What It Catches | What It Misses |
+|-----------------|-------------|-----------------|----------------|
+| `mock_provider` | No AWS credentials; CI validation; fast iteration | Syntax, schema, behavioral assertions | Real API schema, resource limits, IAM permissions |
+| `terraform plan` (real) | Has AWS credentials; pre-apply review | All of above + real API validation | Actual apply errors (race conditions, eventual consistency) |
+| `terraform apply` | Final deployment | Everything — real infrastructure | Nothing (this is the real thing) |
+
+**DevOps analogy:** Mock tests are like unit tests — fast, no external dependencies, cheap to run on every commit. Real plan is like integration tests — slower, requires real credentials, catches provider-specific issues. Real apply is production — you run it when everything else has passed.
+
+---
+
+## 5. Real vs. Mock: When Each Path Is Appropriate
+
+The labs were designed with two paths: real AWS credentials (Track A primary path) and mock_provider (Track A alternative). This mirrors a real-world decision you will make when designing IaC pipelines.
+
+### When Real Infrastructure Testing Is Essential
+
+- Final validation before production apply
+- Validating IAM permission boundaries (mock cannot test these)
+- Validating resource limits and quotas
+- Verifying cross-service dependencies that involve real API calls (e.g., AMI lookup)
+
+### When Mock Is Sufficient (and Preferred)
+
+- CI/CD validation on every pull request (fast, no credentials, no cost)
+- Unit-testing module logic and variable handling
+- Teaching and learning environments (the labs)
+- Rapid iteration before the code is ready for real-account testing
+
+The `mock_provider` pattern you saw in Track A is production-grade. The Terraform testing framework is designed for exactly this use case: validate that AI-generated or human-written IaC behaves as specified, before touching real infrastructure.
+
+---
+
+## Summary
+
+| Failure Mode | What AI Does | Detection Method | Prevention |
+|--------------|-------------|-----------------|-----------|
+| Schema drift | Uses deprecated attributes from old provider version | `terraform validate` | Pin provider version in CLAUDE.md |
+| Hallucinated attributes | Invents attributes that do not exist | `terraform validate` | Provide resource schema as context |
+| Version mismatch | Uses HCL syntax from wrong Terraform version | `terraform validate` | Specify Terraform version in CLAUDE.md |
+| Missing dependencies | Out-of-order resources or hardcoded ARNs | `terraform plan` | Review plan graph; use resource references not strings |
+| Wrong namespace | App deployed to wrong K8s namespace | `kubectl apply --dry-run` | Specify namespace in CLAUDE.md |
+
+**Context engineering summary:** The quality of AI-generated IaC tracks directly with the quality of your context. Versions, constraints, resource types, and vocabulary must be explicit in your CLAUDE.md before generation. Validation is not optional — it is the safety net that catches what even excellent context cannot prevent.
+
+**Next:** [Reference — Validation Commands and CLAUDE.md Templates](./module-06-reference)
