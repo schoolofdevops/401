@@ -90,15 +90,15 @@ Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
 - [x] **CONTENT-03**: QUIZ.md for every module (1-14) — 5-8 questions, concept-focused not syntax trivia
 - [x] **CONTENT-04**: Exploratory projects (PROJECTS.md) per module — 2-3 stretch ideas for advanced participants
 - [x] **CONTENT-05**: Module README.md for every module — overview, 3-5 learning objectives, prerequisites
-- [ ] **CONTENT-06**: Context engineering vocabulary enforced throughout — no "prompt engineering" language after Module 1, DevOps analogies for every AI concept
+- [x] **CONTENT-06**: Context engineering vocabulary enforced throughout — no "prompt engineering" language after Module 1, DevOps analogies for every AI concept
 
 ### Format & Delivery
 
-- [ ] **FMT-01**: Instructor facilitator guides for Day 1, Day 2, Day 3 — timing, transitions, debrief prompts
-- [ ] **FMT-02**: Udemy section outline mapping modules to Udemy sections
-- [ ] **FMT-03**: Solo fallback for all team exercises (Module 4 scoring, Module 11 fleet, Module 14 capstone)
-- [ ] **FMT-04**: Every lab step includes "Expected result:" validation so learners know if they succeeded
-- [ ] **FMT-05**: Lab deliverable stated at top of every LAB.md
+- [x] **FMT-01**: Instructor facilitator guides for Day 1, Day 2, Day 3 — timing, transitions, debrief prompts
+- [x] **FMT-02**: Udemy section outline mapping modules to Udemy sections
+- [x] **FMT-03**: Solo fallback for all team exercises (Module 4 scoring, Module 11 fleet, Module 14 capstone)
+- [x] **FMT-04**: Every lab step includes "Expected result:" validation so learners know if they succeeded
+- [x] **FMT-05**: Lab deliverable stated at top of every LAB.md
 
 ## v2 Requirements
 
@@ -186,12 +186,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONTENT-03 | Phase 4 | Complete |
 | CONTENT-04 | Phase 4 | Complete |
 | CONTENT-05 | Phase 4 | Complete |
-| CONTENT-06 | Phase 4 | Pending |
-| FMT-01 | Phase 4 | Pending |
-| FMT-02 | Phase 4 | Pending |
-| FMT-03 | Phase 4 | Pending |
-| FMT-04 | Phase 4 | Pending |
-| FMT-05 | Phase 4 | Pending |
+| CONTENT-06 | Phase 4 | Complete |
+| FMT-01 | Phase 4 | Complete |
+| FMT-02 | Phase 4 | Complete |
+| FMT-03 | Phase 4 | Complete |
+| FMT-04 | Phase 4 | Complete |
+| FMT-05 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 55 total
