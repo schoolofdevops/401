@@ -19,6 +19,22 @@ struct AppState {
     http_client: reqwest::Client,
 }
 
+/// GET / — service index: version info and available endpoints.
+async fn index() -> Json<Value> {
+    Json(json!({
+        "service": "api-gateway",
+        "version": VERSION,
+        "git_sha": GIT_SHA,
+        "endpoints": [
+            "GET /",
+            "GET /version",
+            "GET /health/live",
+            "GET /health/ready",
+            "GET /api/status",
+        ]
+    }))
+}
+
 /// GET /version — returns build metadata for this service.
 /// The Svelte dashboard polls this to display which version is deployed.
 async fn version() -> Json<Value> {
@@ -142,6 +158,7 @@ async fn fetch_version(client: &reqwest::Client, base_url: &str) -> Option<Strin
 
 fn build_router(state: Arc<AppState>) -> Router {
     Router::new()
+        .route("/", get(index))
         .route("/version", get(version))
         .route("/health/live", get(liveness))
         .route("/health/ready", get(readiness))

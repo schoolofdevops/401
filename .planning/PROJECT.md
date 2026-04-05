@@ -21,15 +21,21 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 - [ ] Module 2: Platform AI lab — AWS AI features on free tier (CloudWatch anomaly, Cost Explorer, Q Developer)
 - [ ] Module 3: Bridge content — platform AI → custom agents transition (partial, Hermes demo script)
 - [ ] Module 4: Impact Assessment exercise — Automation Quadrant scoring template
-- [ ] Module 5: Structured AI Coding lab — Ansible EC2 hardening via structured workflow
-- [ ] Module 6: AI-Assisted IaC lab — 3 tracks (Terraform RDS, Ansible PostgreSQL, K8s deployment)
+- [ ] Module 5: Structured AI Coding — Track A: Helm chart, Track B: CI/CD pipeline (participant picks)
+- [ ] Module 5: GSD Workflow lab — full /gsd:new-project → plan → execute → verify on real IaC
+- [ ] Module 5: Context engineering practical — CLAUDE.md, context window management, selective injection
+- [ ] Module 5: Memory systems lab — claude-mem (Claude Code), MCP memory (OpenCode/Crush)
+- [ ] Module 5: Plan modes lab — Claude Code plan mode, GSD plan-phase
+- [ ] Module 5: Superpowers workflow (exploratory) — TDD, debugging, code review skills
+- [ ] Module 6: AI-Assisted IaC — Track A: Terraform (real AWS free tier), Track B: K8s + Helm + ArgoCD GitOps, Track C: CI/CD with Argo Workflows + GitHub Actions
+- [ ] Reference microservices app (2-3 services + PostgreSQL on KIND) — course backbone for all labs
 - [ ] Module 9: Agent Design Patterns — reading materials mapping patterns to Hermes capabilities (partial)
 - [ ] Module 14: Capstone — presentation template, 30-day roadmap template, rubric (partial)
 - [ ] All modules: Explainer slide notes and diagram descriptions (Excalidraw sources where feasible)
 - [ ] All modules: Reading materials (concepts.md, reference.md) for every module (1-14)
 - [ ] All modules: Quiz content (QUIZ.md) for every module
 - [ ] Cross-module: Participant setup guide (environment provisioning, tool installation)
-- [ ] Cross-module: Simulated infrastructure data (mock CloudWatch, Cost Explorer, EC2, RDS, kubectl outputs)
+- [ ] Real systems first: All labs connect to real infrastructure (KIND, PostgreSQL, AWS free tier) — mock data as clearly-labeled fallback only
 - [ ] Dual-format: All labs completable solo (Udemy) and in teams (live workshop)
 - [ ] Multi-provider: Labs work with Claude Code (primary) or OpenCode (fallback), supporting Claude subscription, Google Gemini free, OpenRouter, Grok, and other free-tier providers
 

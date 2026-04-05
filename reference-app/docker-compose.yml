@@ -1,0 +1,75 @@
+# Docker Compose deployment for the reference app
+# Usage: make compose-up  (or: docker compose up --build)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: refapp
+      POSTGRES_PASSWORD: refapp-lab-password
+      POSTGRES_DB: refapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./services/catalog/migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U refapp -d refapp"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  catalog:
+    build:
+      context: .
+      dockerfile: services/catalog/Dockerfile
+      args:
+        GIT_SHA: ${GIT_SHA:-dev}
+    environment:
+      DATABASE_URL: postgres://refapp:refapp-lab-password@postgres:5432/refapp
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+      args:
+        GIT_SHA: ${GIT_SHA:-dev}
+    environment:
+      DATABASE_URL: postgres://refapp:refapp-lab-password@postgres:5432/refapp
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+      args:
+        GIT_SHA: ${GIT_SHA:-dev}
+    environment:
+      CATALOG_URL: http://catalog:8081
+      WORKER_URL: http://worker:8082
+    ports:
+      - "8080:8080"
+    depends_on:
+      - catalog
+      - worker
+
+  dashboard:
+    build:
+      context: dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+
+volumes:
+  pgdata:

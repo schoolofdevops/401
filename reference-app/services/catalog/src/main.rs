@@ -28,6 +28,23 @@ struct Item {
     created_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// GET / — service index: version info and available endpoints.
+async fn index() -> Json<Value> {
+    Json(json!({
+        "service": "catalog",
+        "version": VERSION,
+        "git_sha": GIT_SHA,
+        "endpoints": [
+            "GET /",
+            "GET /version",
+            "GET /health/live",
+            "GET /health/ready",
+            "GET /items",
+            "GET /items/:id",
+        ]
+    }))
+}
+
 /// GET /version — returns build metadata for this service.
 async fn version() -> Json<Value> {
     Json(json!({
@@ -122,6 +139,7 @@ async fn get_item(
 
 fn build_router(state: Arc<AppState>) -> Router {
     Router::new()
+        .route("/", get(index))
         .route("/version", get(version))
         .route("/health/live", get(liveness))
         .route("/health/ready", get(readiness))

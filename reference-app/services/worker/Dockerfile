@@ -1,6 +1,6 @@
 # Multi-stage build for worker service
 # Stage 1: Build the Rust binary
-FROM rust:1.87-slim AS builder
+FROM rust:1.88-slim AS builder
 
 # Install system dependencies needed for compilation
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*

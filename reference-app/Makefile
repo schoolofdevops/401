@@ -1,4 +1,4 @@
-.PHONY: deploy destroy build load-images status cluster db monitoring app
+.PHONY: deploy destroy build load-images status cluster db monitoring app compose-up compose-down compose-logs
 
 CLUSTER_NAME    := lab
 APP_NAMESPACE   := app
@@ -44,11 +44,11 @@ monitoring:
 
 build:
 	docker build --build-arg GIT_SHA=$(shell git rev-parse --short HEAD 2>/dev/null || echo "dev") \
-		-t reference-app/api-gateway:$(IMAGE_TAG) services/api-gateway/
+		-f services/api-gateway/Dockerfile -t reference-app/api-gateway:$(IMAGE_TAG) .
 	docker build --build-arg GIT_SHA=$(shell git rev-parse --short HEAD 2>/dev/null || echo "dev") \
-		-t reference-app/catalog:$(IMAGE_TAG) services/catalog/
+		-f services/catalog/Dockerfile -t reference-app/catalog:$(IMAGE_TAG) .
 	docker build --build-arg GIT_SHA=$(shell git rev-parse --short HEAD 2>/dev/null || echo "dev") \
-		-t reference-app/worker:$(IMAGE_TAG) services/worker/
+		-f services/worker/Dockerfile -t reference-app/worker:$(IMAGE_TAG) .
 	docker build -t reference-app/dashboard:$(IMAGE_TAG) dashboard/
 
 load-images:
@@ -70,3 +70,25 @@ status:
 
 destroy:
 	kind delete cluster --name $(CLUSTER_NAME)
+
+# --- Docker Compose (no K8s required) ---
+
+compose-up:
+	GIT_SHA=$(shell git rev-parse --short HEAD 2>/dev/null || echo "dev") \
+		docker compose up --build -d
+	@echo ""
+	@echo "=== Docker Compose Deployment ==="
+	@echo "Dashboard:   http://localhost:3000"
+	@echo "API Gateway: http://localhost:8080"
+	@echo "Catalog:     http://localhost:8081"
+	@echo "Worker:      http://localhost:8082"
+	@echo "PostgreSQL:  localhost:5432"
+	@echo ""
+	@echo "Logs: make compose-logs"
+	@echo "Stop: make compose-down"
+
+compose-down:
+	docker compose down
+
+compose-logs:
+	docker compose logs -f
