@@ -1,0 +1,195 @@
+---
+id: module-05a-quiz
+title: "Quiz: Structured AI Coding"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of structured AI workflows, context engineering for IaC, and validation practices"
+---
+
+# Quiz: Structured AI Coding
+
+These questions test your understanding of structured AI coding, context engineering for infrastructure, and the validation practices from the lab. Questions focus on conceptual understanding — not syntax trivia.
+
+---
+
+### Question 1: The Infrastructure Specificity Problem
+
+Why does a bare request ("Write a Helm chart for my app") typically produce worse output than a structured request with context?
+
+A) AI models are not trained on Helm chart examples
+B) Without system context, AI generates statistically plausible code that matches training patterns rather than your specific environment
+C) Bare requests exceed the context window limit
+D) AI tools refuse to generate IaC without explicit constraints
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Without system context, AI generates statistically plausible code that matches training patterns rather than your specific environment**
+
+AI training data contains Helm charts from many Kubernetes versions, many environments, and many tutorials — including outdated examples. Without your environment as context (Kubernetes version, operator setup, label conventions, naming patterns), the AI cannot distinguish between what is correct in general and what is correct for your specific cluster.
+
+The result is output that looks syntactically correct but contains environment-specific errors: deprecated API versions, selector mismatches, label conventions that won't be recognized by your operators.
+
+Context engineering solves this by providing the AI with your system context before generation begins — not after, when fixing errors is more expensive.
+
+</details>
+
+---
+
+### Question 2: The 5-Phase Workflow
+
+What are the 5 phases of the structured AI coding workflow, in order?
+
+A) Plan, Build, Test, Review, Deploy
+B) Brainstorm, Design, Blueprint, Implement, Validate
+C) Analyze, Design, Code, Lint, Apply
+D) Gather, Architect, Scaffold, Generate, Verify
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Brainstorm, Design, Blueprint, Implement, Validate**
+
+The 5-phase structured workflow:
+
+1. **Brainstorm** — identify gaps and requirements before writing anything
+2. **Design** — provide full context (4-layer model) to lock architecture
+3. **Blueprint** — generate structure (skeletons only) before implementation details
+4. **Implement** — fill in the complete specification with exact production values
+5. **Validate** — run lint, dry-run, and integration tests before deploying
+
+This mirrors the change management process in DevOps: RFC → Design review → Staging → Apply → Monitoring. You would not skip from RFC straight to production; similarly, you should not skip from "describe the goal" straight to implementation.
+
+</details>
+
+---
+
+### Question 3: The Brainstorm Phase
+
+Which phase of the structured workflow is specifically designed to surface missing requirements before implementation begins?
+
+A) Design
+B) Blueprint
+C) Brainstorm
+D) Validate
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) Brainstorm**
+
+The Brainstorm phase exists to catch missing requirements before any implementation begins. In the Track A lab, Step 0 (manual gap analysis) and Phase 1 (Brainstorm) serve the same purpose: identify what the baseline Helm chart lacks before asking AI to generate anything.
+
+The expected output of Phase 1 is a list of missing components — HPA, PDB, ServiceMonitor, NOTES.txt — that substantially overlaps with your own manual analysis. Where they diverge (AI found something you missed, or you know a constraint AI doesn't), that divergence contains information.
+
+Phase 1 is not about generating code. It is about getting agreement on scope before any generation happens.
+
+</details>
+
+---
+
+### Question 4: The Blueprint Phase
+
+What is the purpose of the Blueprint phase, and why does it occur before the Implement phase?
+
+A) Blueprint generates documentation; Implement generates code — documentation should come first
+B) Blueprint creates structural scaffolds (skeletons) to catch API version and naming issues cheaply, before full implementation details are added
+C) Blueprint runs validation tools; Implement applies fixes from those validation results
+D) Blueprint generates test files; Implement generates production code
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Blueprint creates structural scaffolds (skeletons) to catch API version and naming issues cheaply, before full implementation details are added**
+
+The Blueprint phase asks AI to generate skeleton YAML files — only `apiVersion`, `kind`, `metadata`, and `spec: {}`. No implementation details.
+
+This approach catches structural problems early:
+- Wrong `apiVersion` (e.g., `apps/v1beta1` instead of `apps/v1`) — caught in a 5-line skeleton, not after 50 lines of implementation
+- Wrong naming convention (hardcoded names instead of Helm template variables) — visible in the metadata block
+- Missing labels (ServiceMonitor selector won't match) — caught in metadata before spec is populated
+
+Fixing an incorrect `apiVersion` in a skeleton costs 10 seconds. Fixing it after Phase 4 means discarding a full implementation. The Blueprint phase is cheap error detection.
+
+</details>
+
+---
+
+### Question 5: Validation Tools
+
+Name two validation tools used for Helm charts and explain what each catches.
+
+A) `helm lint` catches syntax errors; `helm install` validates runtime behavior
+B) `helm lint` catches template and values issues; `helm template | kubectl apply --dry-run=client` validates against the Kubernetes API
+C) `yamllint` catches YAML formatting; `actionlint` catches Kubernetes-specific issues
+D) `kubectl get` validates rendering; `kubectl apply` validates syntax
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) `helm lint` catches template and values issues; `helm template | kubectl apply --dry-run=client` validates against the Kubernetes API**
+
+The two-stage validation approach for Helm:
+
+**`helm lint`:**
+- Catches Helm template syntax errors (`{{ .Values.typo }}` where the key doesn't exist)
+- Validates `Chart.yaml` structure
+- Checks for common issues like missing required values
+- Fast, runs without a cluster
+
+**`helm template | kubectl apply --dry-run=client -f -`:**
+- Renders the full manifest and submits to Kubernetes API in dry-run mode
+- Catches API version rejections (e.g., deprecated `autoscaling/v2beta1`)
+- Validates field names and value types against the CRD schema
+- Requires cluster access but does not apply any changes
+
+The two tools complement each other: `helm lint` validates the Helm layer; `kubectl apply --dry-run` validates the Kubernetes layer. AI-generated IaC must pass both gates before deployment.
+
+</details>
+
+---
+
+### Question 6: Gap Analysis and Context Engineering
+
+Why is the Step 0 gap analysis (manual baseline review) described as a context engineering exercise?
+
+A) Because you are writing structured text that will be sent to the AI
+B) Because gap analysis generates the gap list that becomes the context you provide to AI — what exists, what's missing, what constraints apply
+C) Because gap analysis is done with AI assistance
+D) Because the analysis is stored in a context window for later retrieval
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Because gap analysis generates the gap list that becomes the context you provide to AI — what exists, what's missing, what constraints apply**
+
+Gap analysis is context engineering because it produces the three elements that make AI output environment-specific:
+
+1. **What exists (baseline):** The current Helm chart has Deployments, probes, resource requests — this tells AI what it must not duplicate or conflict with
+2. **What's missing (gap):** No HPA, PDB, ServiceMonitor, NOTES.txt — this is the specification
+3. **What constraints apply (environment):** Kubernetes 1.32, kube-prometheus-stack in monitoring namespace, `release: prometheus` label requirement — this prevents generic output
+
+Without this context, AI fills in the gaps with training-data defaults. With this context, AI fills in the gaps with your environment's requirements.
+
+This is the same principle as Module 1's Layer 3 context (infrastructure topology) — you cannot give AI the right context without first understanding your own baseline. The manual review step is not busywork; it is the prerequisite for effective context engineering.
+
+</details>
+
+---
+
+## Score Interpretation
+
+| Score | Interpretation |
+|-------|---------------|
+| 6/6 | Strong conceptual foundation — ready for Module 5b and Module 6 |
+| 4–5/6 | Good understanding — review the explanations for any you missed |
+| 2–3/6 | Re-read concepts.mdx, focus on the 5-phase workflow and context engineering sections |
+| 0–1/6 | Work through the Track A or Track B lab again before proceeding |
+
+## What's Next
+
+The structured workflow and context engineering skills from this module apply directly to Module 6 (AI-Assisted IaC), where you'll use the same approach on Terraform and Kubernetes manifests at larger scale.
+
+Module 5b deepens the workflow side: GSD orchestrated workflows, CLAUDE.md system context, memory systems, and plan modes.
+
+**Continue to:** [Module 5b — AI Workflow Tools](../../module-05b-ai-workflows/)

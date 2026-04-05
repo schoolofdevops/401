@@ -1,0 +1,160 @@
+---
+id: module-05a-concepts
+title: "Concepts: Structured AI Coding"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "Why unstructured AI input produces dangerous infrastructure code — and how to fix it"
+---
+
+# Concepts: Structured AI Coding
+
+You spent the lab using a 5-phase workflow to produce a production-quality Helm chart. You experienced the difference between Phase 1 (brainstorm without constraints) and Phase 2 (design with a full context block). Now let's understand *why* the structure matters — what's actually happening when you give an AI model rich context versus a bare request.
+
+---
+
+## 1. Why "Just Ask the AI" Fails for Infrastructure
+
+Every DevOps team discovers this the hard way. Someone pastes a bare request into Claude Code or Crush:
+
+```
+Write a Helm chart for my app
+```
+
+The AI produces something that looks correct. It has `Deployment`, `Service`, a container spec. But look closer:
+
+- `apiVersion: apps/v1beta1` — deprecated three Kubernetes versions ago
+- `cpu: "1000"` — missing the `m` suffix, interpreted as 1000 cores (will schedule on nothing)
+- No `livenessProbe` — the container will never be restarted on deadlock
+- ServiceMonitor uses `app: my-app` for selector — won't match your actual labels
+- HPA targeting a non-existent metric
+
+None of these are syntax errors. They pass `helm lint`. They may even deploy. They fail in production.
+
+**This is the infrastructure specificity problem.** Generic AI output is dangerous for IaC because:
+
+1. AI training data includes deprecated APIs, outdated examples, and tutorials that were never meant for production
+2. Without your system context, AI cannot know your Kubernetes version, your Prometheus operator setup, your naming conventions, or your resource constraints
+3. AI generates plausible code that matches statistical patterns in training data — not code validated against your environment
+
+### The New Hire Analogy
+
+Imagine a new hire on your platform team. Technically skilled. Never seen your environment before. You say: "Write a Helm chart for the reference app."
+
+What do they produce? Something generic. Maybe based on a tutorial they found. They cannot produce environment-specific, production-quality output because they don't have the context yet.
+
+Now imagine the same new hire, but before they start you give them: the architecture diagram, the runbook, the existing chart to read, the Kubernetes version and constraints doc, the Prometheus operator setup, and the naming conventions guide.
+
+Now their output is specific, correct, and deployable.
+
+**Context engineering is exactly this** — you are the senior engineer handing that new hire everything they need to do the job right. The "prompt" (your task instruction) barely changes. What changes is the information they receive.
+
+---
+
+## 2. The 5-Phase Structured Workflow
+
+The lab taught a specific workflow. Here it is as a reusable pattern:
+
+| Phase | What You Do | What AI Does | Analogy |
+|-------|-------------|--------------|---------|
+| **Brainstorm** | Describe the gap or goal broadly | Identifies what's missing, asks clarifying questions | RFC — what problem are we solving? |
+| **Design** | Provide full 4-layer context | Produces architecture, not code | Design review — agree on approach before building |
+| **Blueprint** | Ask for structural skeletons only | Generates scaffolds with empty specs | Staging — structural contract before deployment |
+| **Implement** | Provide exact production values | Fills in complete specifications | `terraform apply` — execute against the agreed plan |
+| **Validate** | Run lint, dry-run, integration tests | Explains errors, suggests fixes | CI gate — confirm behavior in a safe environment |
+
+This mirrors the change management process you already use. You would never merge an IaC PR that skipped design review and went straight to production. The same principle applies here — structured phases catch problems before they become production incidents.
+
+### Why Each Phase Exists
+
+**Brainstorm** catches missing requirements before implementation begins. In the Track A lab, your manual gap analysis (Step 0) and the Brainstorm phase output should have substantially overlapped. Where they diverged, that's your signal — either AI found something you missed, or you have domain knowledge AI lacks (both are valuable).
+
+**Design** locks the architecture. The 4-layer context block you built in Phase 2 is what transforms the output from generic to specific. This is the most important phase — everything that follows is executing on the design.
+
+**Blueprint** creates structural scaffolds before implementation details. This catches API version and naming convention problems cheaply. A skeleton YAML with an incorrect `apiVersion` costs nothing to fix; the same error discovered after full implementation means discarding work.
+
+**Implement** fills in the production values. By this phase, AI already knows your structure. You're providing exact numbers, not asking AI to guess them.
+
+**Validate** proves correctness. AI-generated IaC must pass the same gates as human-written IaC. `helm lint`, `helm template`, `kubectl apply --dry-run=client` — these are not optional. They are the equivalent of code review.
+
+### The Anti-Pattern: Skipping to Implement
+
+The most common mistake is treating AI as a code generator and jumping straight to Phase 4. You get fast output. The output looks complete. Then:
+
+- `helm template` shows template rendering errors (missing helpers, wrong variables)
+- `kubectl apply --dry-run` rejects the manifest (wrong API version, field validation fails)
+- ServiceMonitor is created but Prometheus never picks it up (selector mismatch)
+
+Each of these requires a debugging cycle. With the structured workflow, the Design phase catches selector mismatches. The Blueprint phase catches API version problems. The structured approach is slower for a single iteration — faster across all iterations including debugging.
+
+---
+
+## 3. Gap Analysis as Context Engineering
+
+The Track A lab starts with Step 0: manual baseline analysis. You looked at the existing Helm chart and inventoried what was there versus what production quality requires.
+
+This is context engineering in practice.
+
+**The gap list is the context.** When you feed the AI a structured list of what exists (baseline), what's missing (gap), and what constraints apply (environment), you are performing a context engineering exercise — not writing a clever request.
+
+Compare:
+
+```
+# Unstructured (no context engineering):
+"Make this Helm chart production-ready"
+
+# Structured (gap analysis as context):
+"I have a Helm chart with Deployments, probes, and resource requests.
+Missing: HPA, PDB, ServiceMonitor, NOTES.txt.
+Environment: KIND cluster, Kubernetes 1.32, kube-prometheus-stack in monitoring namespace.
+Constraint: ServiceMonitor requires release: prometheus label for operator discovery.
+Add these four capabilities."
+```
+
+The second version produces directly usable YAML. The first produces generic examples that need environment-specific editing.
+
+**The security audit analogy:** Incident response teams say "you can't defend what you haven't inventoried." The same principle applies here — you can't give AI the right context without first understanding your own baseline. Step 0 (manual gap analysis) is not busywork. It is the prerequisite for effective context engineering.
+
+**What the AI needs to know:**
+
+- What exists (the baseline chart and its capabilities)
+- What's missing (your gap list from Step 0)
+- What constraints apply (Kubernetes version, operator versions, label conventions)
+- What success looks like (the validation criteria in Phase 5)
+
+When you provide all four, AI produces infrastructure-specific, production-quality output.
+
+---
+
+## 4. Validation: The Human Still Matters
+
+The structured workflow ends at Phase 5: Validate. This phase exists because AI-generated IaC, like all IaC, needs validation before it goes anywhere near production.
+
+**The validation tools you used in the lab:**
+
+- `helm lint` — catches template syntax errors and Helm-specific issues
+- `helm template` — renders the full manifest for visual inspection
+- `kubectl apply --dry-run=client` — validates against Kubernetes API without applying
+- `actionlint` — lints GitHub Actions workflow syntax (Track B)
+- `yamllint` — validates YAML structure and style
+
+These tools do not know whether the IaC is AI-generated or human-written. They validate correctness either way. The structured workflow doesn't replace validation — it reduces the number of validation failures you encounter.
+
+**The junior engineer analogy:** AI is a brilliant junior engineer who writes fast and never gets tired. But like all junior engineers, their work needs review. The structured workflow makes their work more reviewable by producing structured, phased output instead of a monolith. Validation (Phase 5) is the code review step.
+
+**The critical insight:** The goal of the structured workflow is not to produce perfect AI output. The goal is to produce AI output that is specific enough, structured enough, and documented enough to be reviewable by you — the domain expert. You are still in the loop. You are the senior engineer doing the code review. The structured workflow makes that review feasible.
+
+---
+
+## Summary
+
+| Problem | Cause | Structured Workflow Response |
+|---------|-------|------------------------------|
+| Wrong API versions | AI uses training data patterns, not your environment | Design phase provides exact versions as constraints |
+| Generic output | No system context | 4-layer context block at Phase 2 anchors output to your environment |
+| Missing requirements | No brainstorming step | Phase 1 (Brainstorm) surfaces gaps before implementation |
+| Hard to review | Monolithic generation | Phased output (design doc → skeletons → implementation) is reviewable |
+| Unvalidated IaC | No validation gate | Phase 5 mandates lint, dry-run, integration test |
+
+**Context engineering is the skill that makes the structured workflow work.** Each phase is a context engineering checkpoint — you are curating what the AI sees at each step to produce output that is correct for your environment, not just statistically plausible.
+
+**Next:** [Reference — Structured AI Coding Cheat Sheet](./module-05a-reference)
