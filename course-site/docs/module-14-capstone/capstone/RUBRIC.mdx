@@ -1,0 +1,131 @@
+---
+id: module-14-rubric
+title: "Capstone: Evaluation Rubric"
+sidebar_label: "Evaluation Rubric"
+sidebar_position: 3
+description: "Self-scoring evaluation rubric for the capstone presentation — scored 1-5 on five dimensions"
+---
+
+# Capstone: Evaluation Rubric
+
+Use this rubric to evaluate your capstone presentation. Each dimension is scored 1-5. The total score indicates deployment readiness — not course completion.
+
+:::info Solo Learner
+
+Self-scoring replaces peer assessment for online learners. Be honest — the rubric is a tool for YOUR deployment readiness, not a grade. A score of 15 that reflects an honest assessment of gaps is more useful than a score of 25 that papers over weak spots.
+
+:::
+
+---
+
+## Dimension 1: Problem Statement Clarity
+
+Does the presentation clearly define the operational problem being solved?
+
+| Score | Description |
+|-------|-------------|
+| **1 — Needs Work** | Problem is vague or describes a general direction ("reduce toil," "improve observability"). No specific task, frequency, or time metric. |
+| **2** | A specific task is named but no quantification. "We review RDS logs every morning" — but no frequency, no time cost, no before/after contrast. |
+| **3 — Meets Standard** | Specific operational task named with rough time savings described. Frequency and approximate time are present. "Daily 20-minute review" is enough for score 3. |
+| **4** | Task named, frequency quantified, time quantified, and a clear before/after contrast. Both the time cost AND the quality variability (e.g., "diagnosis takes 30 min to 3 hours depending on who is on call") are described. |
+| **5 — Excellent** | All of the above plus: measured error rate or quality metric (missed incidents, incorrect diagnoses, etc.). Problem is stated in terms that a manager unfamiliar with the domain could understand why it is worth solving. |
+
+**Score this dimension:** _____ / 5
+
+---
+
+## Dimension 2: Agent Design Quality
+
+Is the agent design specific, justified, and technically sound?
+
+| Score | Description |
+|-------|-------------|
+| **1 — Needs Work** | No pattern named. Autonomy level not stated. The design is described in vague terms ("it analyzes logs and suggests fixes"). |
+| **2** | Pattern named but not justified. Autonomy level stated but no promotion path. The design explains what the agent does but not why the design choices were made. |
+| **3 — Meets Standard** | Pattern named with a one-sentence justification. Autonomy level stated with promotion criteria defined. Toolset described at the category level (terminal, web). |
+| **4** | Pattern named with explicit comparison to alternatives — "I chose investigator over advisor because..." or "I chose L1 over L2 because..." Toolset defined with specific allowed/blocked commands. Promotion path is specific with measurable criteria. |
+| **5 — Excellent** | All of the above plus: tradeoffs discussed honestly (what the chosen design cannot do, what would require a different pattern), skill decision tree structure explained, SKILL.md design choices justified. |
+
+**Score this dimension:** _____ / 5
+
+---
+
+## Dimension 3: Live Demo Quality
+
+Does the demonstration show an agent producing actionable output on real or realistic data?
+
+| Score | Description |
+|-------|-------------|
+| **1 — Needs Work** | Agent errors during demo, or agent output is generic ("no issues found," "I analyzed the logs") with no specific findings. Or: demo is described verbally without showing actual output. |
+| **2** | Agent runs without errors but output is not clearly tied to real operational data. Mock data is too simple (single-row table, no variation) to demonstrate realistic analysis. |
+| **3 — Meets Standard** | Agent produces useful output on real or mock data that a real operator could act on. The output includes a specific finding or recommendation. The demo takes 3-5 minutes as specified. |
+| **4** | Agent output is actionable and includes some reasoning visibility — the output shows why the agent reached its conclusion, not just what the conclusion is. Context provided to the agent (SKILL.md content, system context) is explained. |
+| **5 — Excellent** | All of the above plus: agent handles at least one non-trivial scenario (an edge case, a "nothing wrong" scenario, or a scenario requiring multi-step retrieval). The output could be copied directly into an incident ticket or operational report without editing. |
+
+**Score this dimension:** _____ / 5
+
+---
+
+## Dimension 4: Governance Spec Completeness
+
+Is the governance specification well-defined and production-appropriate?
+
+| Score | Description |
+|-------|-------------|
+| **1 — Needs Work** | No governance spec. No boundaries defined. The presentation describes what the agent does but not what it cannot do, what requires approval, or what is logged. |
+| **2** | Some boundaries described ("it's read-only") but no explicit DO/APPROVE/LOG structure. Audit logging mentioned but not specified. |
+| **3 — Meets Standard** | Basic DO/APPROVE/LOG structure present. At least one explicit allowed category and one explicit blocked category. Basic audit logging described (where, retention). |
+| **4** | Complete DO/APPROVE/LOG with specific command-level detail (e.g., "`aws rds describe-*` allowed, `aws rds delete-*` blocked"). Approval gate defined including what the approval request looks like. Promotion criteria stated. |
+| **5 — Excellent** | All of the above plus: blast radius analysis (if something goes wrong, what is the worst case and why is that acceptable given the governance spec?), escalation path defined, and the governance spec is connected to the agent's actual Hermes config (the spec is not aspirational — it is configured). |
+
+**Score this dimension:** _____ / 5
+
+---
+
+## Dimension 5: 30-Day Plan Realism
+
+Is the deployment roadmap actionable and grounded in the specific agent and infrastructure?
+
+| Score | Description |
+|-------|-------------|
+| **1 — Needs Work** | Roadmap is vague or missing. "We'll set it up after the workshop" with no specific milestones. |
+| **2** | Some milestones listed but they are generic ("install Hermes," "run the agent") without connection to the specific agent, infrastructure, or promotion criteria. |
+| **3 — Meets Standard** | Weekly milestones are present and connected to the specific agent. Week 1 includes connecting to real infrastructure. Week 2 includes documentation of what the agent got right/wrong. |
+| **4** | Milestones have success criteria — not just "run the agent" but "agent completes one morning slow query review and produces output that the RDS lead reviews and approves." Month 2 promotion decision date set. |
+| **5 — Excellent** | All of the above plus: rollback plan for each milestone (if this milestone fails, what do you do?), specific colleague named for Week 4 feedback, 30-day track record review date committed in the Commitment Section of the roadmap template. |
+
+**Score this dimension:** _____ / 5
+
+---
+
+## Self-Scoring Worksheet
+
+| Dimension | Score |
+|-----------|-------|
+| 1. Problem Statement Clarity | _____ |
+| 2. Agent Design Quality | _____ |
+| 3. Live Demo Quality | _____ |
+| 4. Governance Spec Completeness | _____ |
+| 5. 30-Day Plan Realism | _____ |
+| **Total** | _____ / 25 |
+
+---
+
+## Score Interpretation
+
+| Total | Interpretation |
+|-------|---------------|
+| **20-25** | Ready to deploy. Your agent is well-designed, demonstrated, governed, and you have a realistic deployment plan. Deploy in Week 1 as planned. |
+| **15-19** | Nearly ready. Identify the dimensions with the lowest scores and address them before Week 1. Common fix: strengthen the governance spec or add specificity to the roadmap. |
+| **10-14** | Refine before deploying. One or two dimensions need substantial work. Revisit the presentation template for those dimensions and rebuild the weak sections. |
+| **Below 10** | Revisit agent design before deploying. Core elements — the problem statement, the design justification, or the demo — are not ready for production. Complete the week-by-week roadmap explicitly: Week 1 should be strengthening the capstone, not deploying to production. |
+
+---
+
+## What Happens After You Score
+
+**For live workshop:** After self-scoring, share your scores with your team. Identify the one dimension each person scored lowest and discuss what a "5" would look like for that dimension. This takes 5 minutes and produces more useful feedback than a full group review of every dimension.
+
+**For solo learner:** After self-scoring, write one sentence describing what you would need to change to improve your lowest-scoring dimension by one point. That one sentence is your most actionable post-course improvement target.
+
+**Back to:** [Presentation Template](./module-14-presentation)

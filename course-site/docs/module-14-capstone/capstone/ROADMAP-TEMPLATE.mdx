@@ -1,0 +1,173 @@
+---
+id: module-14-roadmap
+title: "Capstone: 30-Day Deployment Roadmap"
+sidebar_label: "30-Day Roadmap"
+sidebar_position: 2
+description: "Post-workshop implementation roadmap — weekly milestones for moving your agent from workshop to production"
+---
+
+# Capstone: 30-Day Deployment Roadmap
+
+This template is your post-workshop implementation plan. Use it to commit to specific milestones before leaving the workshop (or completing the course). The goal is to move your agent from the workshop environment to actual use in your organization within 30 days.
+
+:::info Solo Learner
+
+You do not need a team for this roadmap. Every milestone is designed for individual completion. "Share with a teammate" in Week 4 means sharing the output with one colleague — it does not require a formal review process.
+
+:::
+
+---
+
+## Before You Fill This In
+
+Review your capstone presentation. The roadmap should connect directly to:
+- The specific agent you built (domain, pattern, autonomy level)
+- The infrastructure you will wire it to (real RDS instance, real KIND cluster, real Cost Explorer account)
+- The promotion criteria you defined in the governance spec
+
+Fill in the brackets `[like this]` with your specific details as you work through the template.
+
+---
+
+## Week 1: Foundation
+
+**Objective:** Get the agent running against your real infrastructure (read-only).
+
+### Actions
+
+| # | Action | Done When |
+|---|--------|-----------|
+| 1 | Install Hermes in your work environment (laptop or team VM) | `hermes --version` returns successfully |
+| 2 | Configure your LLM provider: `hermes login --provider [claude-code / google-ai-studio / openrouter]` | `hermes chat "hello"` returns a response |
+| 3 | Copy your Module 10 agent profile to your work environment | Profile directory exists with SOUL.md + config.yaml + skills/ |
+| 4 | Update the agent's database/cluster connection to point to your real infrastructure | `hermes run "[read-only diagnostic task]"` returns real data |
+| 5 | Verify the skill runs correctly on real data: `hermes run "[first read-only scenario]"` | Agent output matches expected format, no errors |
+
+**Success criteria:** The agent completes one read-only diagnostic task on your real infrastructure and produces output that a colleague could act on.
+
+**If something blocks you:** Most common Week 1 blocker is LLM provider configuration (token expiry, rate limits, firewall). Check your team's acceptable use policy for AI tools before connecting to production data.
+
+**Rollback plan:** If the agent produces unexpected errors on real data, disconnect from production and re-run against the mock data from Module 10. The agent should be fully functional against mock data before connecting to real infrastructure.
+
+---
+
+## Week 2: First Real Run
+
+**Objective:** Run the agent on one real operational task and document honestly what it got right and wrong.
+
+### Actions
+
+| # | Action | Done When |
+|---|--------|-----------|
+| 1 | Select one specific operational scenario: `[describe the exact task — e.g., "morning slow query review for orders-db"]` | Scenario defined and documented |
+| 2 | Run the agent against real data for this scenario | Agent completes run without errors |
+| 3 | Review the output: Is it correct? Is it actionable? Is it complete? | Output reviewed, findings documented |
+| 4 | Document what the agent got right | List of correct findings |
+| 5 | Document what the agent got wrong or missed | List of failures with "why did it fail?" for each |
+| 6 | Document what context was missing from the SKILL.md | List of gaps |
+
+**Success criteria:** You have a written document (even a few paragraphs) recording what the agent produced, whether it was accurate, and specifically what context would have made it more accurate.
+
+**What to record:**
+
+```
+Date: [date]
+Scenario: [what you ran]
+Input context: [what data the agent had access to]
+Output: [paste key parts of the agent's output]
+What was correct: [list]
+What was wrong/missing: [list]
+SKILL.md gaps identified: [list]
+```
+
+**Rollback plan:** If the agent produces a recommendation you are unsure about, do not act on it until you have verified it independently. In Week 2, treat all agent output as advisory regardless of the autonomy level — you are still evaluating its accuracy.
+
+---
+
+## Week 3: Skill Iteration
+
+**Objective:** Refine the SKILL.md based on Week 2 observations. Verify the improvements against real scenarios.
+
+### Actions
+
+| # | Action | Done When |
+|---|--------|-----------|
+| 1 | List the specific SKILL.md gaps from Week 2 | Gaps documented with "what the agent should have done" for each |
+| 2 | Update SKILL.md: add the missing decision branches | SKILL.md has new branches for each identified gap |
+| 3 | Run the Week 2 scenario again — does the updated skill fix the gaps? | Agent output improves for the Week 2 failures |
+| 4 | Run 4 additional scenarios in the same domain | 5 total scenarios run |
+| 5 | Track accuracy: `[N]/5 scenarios produced correct, actionable output` | Accuracy score recorded |
+
+**Success criteria:** SKILL.md updated with at least one new decision branch. Accuracy tracked across 5 real scenarios. You know your agent's accuracy rate in its domain.
+
+**The key skill iteration question:** When the agent failed in Week 2, was it because the SKILL.md decision tree was incomplete, or because the agent needed different data to be retrieved first? These require different fixes: incomplete decision tree → add branches; wrong data → add a retrieval step earlier in the skill flow.
+
+**Rollback plan:** Keep a copy of the original SKILL.md before making changes. If the updated skill produces worse results than the original, you can restore and take a different approach.
+
+---
+
+## Week 4: Production Trial
+
+**Objective:** Run the agent on a scheduled basis, set up audit logging, and get one piece of external feedback.
+
+### Actions
+
+| # | Action | Done When |
+|---|--------|-----------|
+| 1 | Schedule the first automated run: `hermes cron add "[agent-name]" --schedule "0 7 * * 1-5" --task "[morning review task]"` | Cron job added, first scheduled run completes |
+| 2 | Configure audit log output: verify agent runs are logged to `[cloudwatch log group / file / slack channel]` | Audit logs visible after first scheduled run |
+| 3 | Review the first automated run output: is the output at the same quality as manual runs? | Automated run produces comparable output to manual runs |
+| 4 | Share the output from one run with `[colleague name]` for feedback | Colleague has reviewed and provided feedback |
+| 5 | Document the feedback: what did they find useful, what was missing, what would they want to see differently? | Feedback recorded |
+
+**Success criteria:** The agent runs on schedule at least twice in Week 4. Audit logs exist. One colleague has reviewed an output and provided feedback.
+
+**What "production trial" means:** This is not full production deployment — you are running the agent on real data but treating all output as advisory. You are verifying that automated runs work, that logging is functional, and that the output quality is consistent. This is L1 at scale before any promotion.
+
+**Rollback plan:** If scheduled runs produce unexpected errors or incorrect output, pause the cron job (`hermes cron pause [agent-name]`) and investigate. Do not let a broken cron job run unattended — automated failures accumulate.
+
+---
+
+## Month 2: Expansion
+
+**Objective:** Add capability and consider promotion based on the 30-day track record.
+
+### Actions
+
+| # | Action | Done When |
+|---|--------|-----------|
+| 1 | Review the 30-day track record: count accurate vs. inaccurate outputs | Track record documented |
+| 2 | If track record meets L1→L2 criteria from your governance spec: initiate team review | Team review scheduled or completed |
+| 3 | Add one new skill or expand the existing skill to a new scenario | New skill or branch authored, tested against mock data |
+| 4 | Identify the next Module 10 track to add: `[database health / cost optimization / K8s health]` | Next track identified, initial planning started |
+| 5 | Document lessons learned from Month 1 for the next agent build | Lessons recorded in a document you can reference |
+
+**The promotion decision:** L1→L2 promotion is not automatic when the track record threshold is met. It requires a team review. Schedule that conversation explicitly — it will not happen unless you schedule it. Bring the track record data, the failure analysis from Weeks 2-3, and the SKILL.md update history.
+
+**If the track record does not meet criteria:** Identify the failure pattern, update the SKILL.md again, and reset the tracking window. Promotion is earned — if the agent is not ready, a month of additional iteration is a better outcome than a premature promotion that fails in production.
+
+---
+
+## Commitment Section
+
+Fill this in before the workshop ends (or before completing the Udemy course). Making the commitment specific and time-bound increases the probability of follow-through.
+
+```
+My agent: [domain + pattern + autonomy level — e.g., "RDS investigator at L1"]
+
+Week 1 first milestone (by [date]):
+[specific action — e.g., "Agent runs against dev-rds-01 and produces output by Tuesday"]
+
+Week 2 scenario I will run (by [date]):
+[specific task — e.g., "Morning slow query review on 2026-05-12"]
+
+Who I will share Week 4 output with:
+[name and role — e.g., "Alex (SRE lead)"]
+
+My 30-day promotion decision date:
+[date — e.g., 2026-06-04 — the date you will review the track record]
+```
+
+---
+
+**Continue to:** [Evaluation Rubric](./module-14-rubric)

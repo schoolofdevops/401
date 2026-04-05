@@ -1,0 +1,171 @@
+---
+id: module-14-presentation
+title: "Capstone: Presentation Template"
+sidebar_label: "Presentation Template"
+sidebar_position: 1
+description: "Five-section template for the capstone agent demonstration — covers problem, design, demo, governance, and 30-day plan"
+---
+
+# Capstone: Presentation Template
+
+Your capstone presentation covers five sections. Each section has guiding questions to structure your content, a description of what excellent looks like, and a warning about the most common mistake.
+
+**Timing:** Aim for 8-10 minutes total for the live presentation. The structure is tight — every section should be concise and direct.
+
+:::info Solo Learner
+
+For self-paced (Udemy) completion, use this template as a written document. Complete each section in writing, then optionally record a screen capture of your agent running for the demo section. A complete written capstone is a valid deliverable.
+
+:::
+
+---
+
+## Section 1: Problem Statement
+
+**Time allocation:** 1-2 minutes
+
+### Guiding Questions
+
+1. What specific operational task are you automating? Not "observability" — what specific task within observability?
+2. What does the "before" state look like? What does a human do today that your agent will do or assist with?
+3. How often does this task occur? How long does it take a human to do it? What is the error rate (missed incidents, incorrect diagnosis, etc.)?
+
+### What Good Looks Like
+
+> "Every morning, an on-call SRE spends 20-30 minutes reviewing RDS slow query logs from overnight. That review happens 365 days a year. Roughly 60% of mornings have nothing actionable — but the review still takes 20 minutes to confirm that. On the 40% of mornings where there is an issue, the time to diagnosis varies from 30 minutes to 3 hours depending on who is on call and how familiar they are with our query patterns. Our agent automates the overnight review — the SRE gets a digest with either 'nothing actionable' or 'root cause identified, recommended action attached' — every morning at 07:00."
+
+This is good because: specific task (RDS slow query review), quantified frequency (daily), quantified time (20-30 minutes), quantified impact (60%/40% split), clear before/after contrast.
+
+### Common Mistake
+
+**Vague scope.** "We want to reduce operational toil" is not a problem statement — it is a wish. "We want AI to help with observability" is not a problem statement — it is a direction. Your problem statement must describe one specific, repeated operational task that a named person does a certain number of times per week.
+
+---
+
+## Section 2: Agent Design
+
+**Time allocation:** 2-3 minutes
+
+### Guiding Questions
+
+1. Which of the four patterns does your agent implement — advisor, investigator, proposal, or guardian? Why this pattern over the alternatives?
+2. What autonomy level (L1-L4) are you starting at? What is your promotion path?
+3. What tools does the agent have? What commands can it run? What is explicitly blocked?
+4. What is the skill that encodes your operational expertise? What does the decision tree look like?
+
+### What Good Looks Like
+
+> "This is an investigator agent at L1. It traces RDS performance issues to root cause through a four-step retrieval loop: pg_stat_statements for top queries, Performance Insights for query plan history, CloudWatch for correlated metrics, and our internal runbook knowledge base for known patterns. I chose investigator over advisor because the output needs to be a causal chain, not a single recommendation — on-call engineers need to understand *why* the query is slow, not just that it is slow.
+>
+> I am starting at L1 because this is a new domain for automated analysis. Promotion to L2 requires 30 days of consistent accuracy confirmed by the RDS lead. L3 (proposal) would add execution of parameter changes — that requires change management sign-off.
+>
+> The agent has terminal access to read-only psql commands and aws cloudwatch get-metric-statistics. It does not have access to anything that writes to the database."
+
+This is good because: pattern named with justification, alternatives acknowledged, autonomy level and promotion path stated, toolset defined with explicit scope, read-only vs write distinction made.
+
+### Common Mistake
+
+**Naming without justifying.** Saying "it is an investigator agent" without explaining why you did not choose proposal is incomplete. The interesting design decision is always: why this pattern *rather than* the obvious alternative? Prepare to answer that question.
+
+---
+
+## Section 3: Live Demo
+
+**Time allocation:** 3-5 minutes
+
+### Guiding Questions
+
+1. What scenario are you running the agent against? Real production data, mock data, or the lab environment?
+2. What context did you provide to the agent before it ran? What is in the SKILL.md? What is in the SOUL.md?
+3. What did the agent produce? Show the output — do not paraphrase it.
+4. Is the output actionable? Would a real on-call engineer read this and know what to do?
+
+### What Good Looks Like
+
+Run the agent live during the presentation, or show a terminal log from a run you completed earlier. Show the actual output — not a slide with "the agent found three issues." The output should include:
+
+- The agent's analysis steps (what data it retrieved)
+- The conclusion (root cause or recommendation)
+- Any reasoning visibility (why it reached that conclusion)
+- The specific recommended action (if advisor/investigator) or proposed commands (if proposal)
+
+**Solo learner:** A terminal recording (using `asciinema record`) or a screen capture video is the standard for self-paced submission. Export your terminal session to show the agent running against mock data.
+
+### Common Mistake
+
+**Demo without context.** Showing the agent output without explaining what you gave it (the SKILL.md, the system context, the scenario) leaves the audience unable to evaluate whether the output is good. The output is only meaningful in relation to the context that produced it. Show both.
+
+---
+
+## Section 4: Governance Spec
+
+**Time allocation:** 1-2 minutes
+
+### Guiding Questions
+
+1. What can the agent do entirely on its own (DO)? What requires explicit human approval before it acts (APPROVE)? What gets recorded regardless of what it does (LOG)?
+2. What is explicitly blocked — commands, resource patterns, or domains the agent cannot touch?
+3. What is your audit logging strategy? How long are logs kept? Who can review them?
+4. What are the promotion criteria for the next autonomy level? What would have to be true before you remove the approval gates?
+
+### What Good Looks Like
+
+> "DO: retrieve data from any of the approved read-only commands at any time — no approval needed.
+>
+> APPROVE: any proposed parameter change to a production RDS instance. The approval request includes the specific `aws rds modify-db-parameter` command, the parameter name, current value, proposed value, the query pattern that justified the change, and an expected impact description. Changes to non-production instances do not require approval.
+>
+> LOG: all agent runs, all retrieved data, all proposed changes (approved or rejected), all approval decisions with the approver identity. Logs retained 90 days in CloudWatch Logs.
+>
+> Blocked explicitly: any command containing 'delete', 'terminate', 'drop', or 'truncate'. Any action on instances outside the `rds-dev-*` or `rds-staging-*` naming pattern without explicit override.
+>
+> Promotion to L3 (autonomous parameter changes): 90-day L2 track record with the change management lead's sign-off."
+
+### Common Mistake
+
+**Governance as an afterthought.** Presenting a capable agent with no defined governance looks incomplete — and it is a deployment risk. Even a simple governance spec ("read-only, nothing writes, everything logged to CloudWatch") is better than no spec. Governance is not bureaucracy — it is what allows the agent to be trusted in production.
+
+---
+
+## Section 5: 30-Day Plan
+
+**Time allocation:** 1-2 minutes
+
+### Guiding Questions
+
+1. What will you do in Week 1 to move from the workshop environment to your real infrastructure?
+2. What specific task will you run the agent against in Week 2? What will you document?
+3. By Month 2, what will have changed — new skills, different autonomy level, expanded scope?
+4. What is your rollback plan if the agent produces wrong output in production?
+
+### What Good Looks Like
+
+> "Week 1: Install Hermes on my work laptop, configure with my team's Claude Code subscription token, and wire the agent's database connection to our dev RDS instance. Verify the read-only skill runs against real pg_stat_statements data.
+>
+> Week 2: Run the agent on one real morning's worth of slow query data. Document what it got right, what it missed, and what context it needed that was not in the SKILL.md.
+>
+> Week 3: Update SKILL.md based on Week 2 findings. Specifically: add decision branches for the two query patterns I know we have that the agent did not recognize. Run against five real scenarios and track accuracy.
+>
+> Week 4: Schedule the first automated morning run using hermes cron. Set up CloudWatch log stream for audit output. Share one output with our RDS lead for feedback.
+>
+> Month 2: If 30-day accuracy review passes, promote to L2. Add a second skill for connection pool monitoring."
+
+This is good because: specific actions, specific timeframes, names the technical steps, includes documentation and feedback loops, connects to the promotion criteria from Section 2.
+
+### Common Mistake
+
+**Roadmap without rollback.** What happens if the agent produces a recommendation that turns out to be wrong, and someone follows it? What is your signal that something went wrong? A simple rollback trigger — "if the agent's accuracy drops below 80% for 5 consecutive days, we suspend automated runs and review the SKILL.md" — shows that you have thought about failure modes, not just success scenarios.
+
+---
+
+## Presentation Checklist
+
+Before you present, verify:
+
+- [ ] Problem statement includes a specific frequency or time metric (not just "it takes too long")
+- [ ] Agent pattern named with justification — why this pattern, not the alternatives
+- [ ] Autonomy level stated with promotion path defined
+- [ ] Demo uses real or realistic data — not "hello world" output
+- [ ] Governance spec covers DO / APPROVE / LOG — even if the spec is simple
+- [ ] 30-day plan has specific Week 1 actions — not "we'll figure it out"
+
+**Continue to:** [30-Day Deployment Roadmap Template](./module-14-roadmap)

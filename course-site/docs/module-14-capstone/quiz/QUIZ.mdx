@@ -1,0 +1,182 @@
+---
+id: module-14-quiz
+title: "Quiz: Capstone Design Judgment"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Scenario-based questions on capstone evaluation, deployment readiness, and agent design"
+---
+
+# Quiz: Capstone Design Judgment
+
+These questions test your ability to apply the capstone evaluation framework to real scenarios. Questions draw on the rubric dimensions, deployment readiness concepts, and the connection between problem definition and agent design.
+
+---
+
+### Question 1: Rubric Dimension Application — Problem Statement
+
+A participant presents this problem statement: "Our DevOps team wants to use AI to help with our Kubernetes cluster management because we spend a lot of time on operational tasks and AI could make us more efficient."
+
+What rubric score does this problem statement receive, and why?
+
+A) Score 4 — the domain (Kubernetes) and general problem (operational efficiency) are clearly defined
+B) Score 1 — the statement is vague with no specific task, no frequency, and no time metric; "operational tasks" and "more efficient" are undefined
+C) Score 3 — it names Kubernetes as the domain, which is specific enough to meet standard
+D) Score 2 — the team is named and the general direction is clear, but the specific task needs to be named
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Score 1 — the statement is vague with no specific task, no frequency, and no time metric; "operational tasks" and "more efficient" are undefined**
+
+The rubric score 1 description is: "Problem is vague or describes a general direction. No specific task, frequency, or time metric."
+
+This statement scores 1 because:
+- "Kubernetes cluster management" is a domain, not a task. What specific management task?
+- "Operational tasks" is undefined. Debugging pod restarts? Reviewing resource utilization? Investigating HPA behavior?
+- "More efficient" is not quantified. More efficient by how much? Measured how?
+
+The minimum for a score 3 is: a specific operational task named with rough time savings described. "We review Kubernetes events for OOMKilled pods each morning — it takes 15-20 minutes and happens daily" would score 3. Adding the 40%/60% split or incident data would score 4-5.
+
+The domain name alone is not specificity. Every DevOps team uses Kubernetes. The question is: what specific, repeated, measurable task within Kubernetes management does this agent solve?
+
+</details>
+
+---
+
+### Question 2: Roadmap Planning — Missing Elements
+
+A participant's 30-day roadmap includes: Week 1: Install Hermes. Week 2: Run the agent. Week 3: Fix any issues. Week 4: Share with team. Month 2: Deploy to production.
+
+According to the roadmap rubric criteria, what is missing from this plan? (Select the most complete answer.)
+
+A) The roadmap is missing Month 2 details — it says "deploy to production" but does not specify which environment
+B) The roadmap milestones lack success criteria — there is no "done when" statement for any week, and Week 2 does not include documentation of what the agent got right/wrong
+C) The roadmap is missing a compliance review — production AI deployments require security sign-off
+D) Week 3 should specify which SKILL.md branches need fixing before proceeding to Week 4
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) The roadmap milestones lack success criteria — there is no "done when" statement for any week, and Week 2 does not include documentation of what the agent got right/wrong**
+
+The rubric distinguishes between:
+- Score 2: generic milestones without connection to the specific agent or success criteria
+- Score 3: weekly milestones connected to the specific agent, Week 2 includes documentation of accuracy
+- Score 4: milestones with success criteria — "not just 'run the agent' but 'agent completes one morning review and the RDS lead reviews and approves the output'"
+
+This roadmap is a score 2 at best. "Run the agent" (Week 2) is a milestone without a success criterion — it does not specify what "success" looks like when the agent runs, what will be documented, or how accuracy will be measured. Week 3 ("fix any issues") is not connected to the Week 2 documentation exercise.
+
+Option D is partially right but incomplete — specifying which SKILL.md branches to fix is important, but the root problem is the missing success criteria across all weeks.
+
+</details>
+
+---
+
+### Question 3: Design Pattern Recall — Capstone Scenario
+
+A participant is building a capstone agent that monitors AWS Cost Explorer data on a weekly basis, identifies spending anomalies, and sends a structured report to the finance operations channel with the top 3 anomalies, likely causes, and recommended actions. The agent does not modify any AWS resources.
+
+Which pattern and autonomy level best fit this agent?
+
+A) Investigator at L1 — the agent performs multi-step retrieval (Cost Explorer, EC2 metadata, tagging data) to trace anomalies to root cause, and outputs advisory recommendations without taking action
+B) Proposal at L3 — the agent identifies anomalies and prepares cost optimization actions for approval
+C) Guardian at L1 — the agent monitors spending and blocks anomalous resource creation
+D) Advisor at L2 — the agent produces trusted cost recommendations that the finance team acts on directly
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: A) Investigator at L1 — the agent performs multi-step retrieval (Cost Explorer, EC2 metadata, tagging data) to trace anomalies to root cause, and outputs advisory recommendations without taking action**
+
+The scenario describes:
+- Multi-step retrieval (Cost Explorer data → likely causes → recommended actions)
+- Causal analysis (tracing anomalies to likely causes)
+- Advisory output (no resource modifications, sends a report)
+
+This is investigator behavior: the agent retrieves from multiple sources, constructs a causal analysis, and returns findings. It operates at L1 because it takes no action — it observes, analyzes, and reports.
+
+Why not D (Advisor at L2)? The advisor pattern is single-step: it observes and makes one recommendation. This agent traces anomalies to "likely causes" through retrieval across multiple data sources (Cost Explorer + EC2 metadata + tagging data) — that is multi-step retrieval characterizing the investigator pattern. The L2 distinction (advisory vs assistive) is about trust level, not output type — and a cost anomaly agent without a track record should start at L1 regardless of whether the output looks trustworthy.
+
+Why not B (Proposal at L3)? Proposal agents prepare execution plans and execute them on approval. This agent does not propose execution of any cost optimization changes — it only reports.
+
+</details>
+
+---
+
+### Question 4: Rubric Application — Governance Score
+
+A participant describes their agent's governance specification as: "The agent is read-only — it cannot modify any resources. Everything is logged to a log file on the server where Hermes runs."
+
+What score does this governance spec receive, and what would improve it?
+
+A) Score 5 — read-only is the highest safety guarantee; any agent that cannot write cannot cause harm
+B) Score 2 — the spec describes the boundary (read-only) but lacks explicit DO/APPROVE/LOG structure, the log location is local with no retention policy, and no approval gate is defined
+C) Score 3 — basic allowed/blocked categories are implied by "read-only," and logging is described
+D) Score 1 — the spec does not include compliance sign-off, which is required for production governance
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Score 2 — the spec describes the boundary (read-only) but lacks explicit DO/APPROVE/LOG structure, the log location is local with no retention policy, and no approval gate is defined**
+
+The rubric score 2 description is: "Some boundaries described but no explicit DO/APPROVE/LOG structure. Audit logging mentioned but not specified."
+
+This spec scores 2 because:
+- "Read-only" describes the DO boundary but is implicit, not explicit (no list of allowed commands)
+- No APPROVE gate is described — for a read-only agent, this is fine, but it should be explicitly stated as "no approval gate required — agent does not take actions"
+- "Log file on the server" is not a real audit logging spec — what is the format? What retention? Who can access it? What happens if the log file grows large or the disk fills?
+
+Score 3 requires: explicit DO/APPROVE/LOG structure, at least one explicit allowed category and one blocked category. Improving to score 3: "DO: any `aws cost-explorer get-cost-and-usage*` and `aws ec2 describe-*` commands. APPROVE: not applicable — agent is read-only and takes no actions that require approval. LOG: all agent runs to CloudWatch Logs group `/hermes/cost-agent` with 90-day retention."
+
+Why not A? "Cannot cause harm" is not true for read-only agents in all contexts — a read-only agent that accesses sensitive financial or customer data has its own governance requirements around data access. Read-only reduces the blast radius but does not eliminate governance obligations.
+
+</details>
+
+---
+
+### Question 5: Organizational Buy-In Strategy
+
+A participant has built a strong capstone agent (Score: 22/25 on the rubric). They present it to their team lead, who says: "I like the idea, but I'm not comfortable deploying AI to production — there are too many unknowns." What is the most effective response strategy based on the concepts reading?
+
+A) Explain that the agent is read-only at L1, so the risks are minimal, and there is no reason to be cautious
+B) Propose a 30-day pilot in advisory mode on dev infrastructure, reviewing output weekly, with a specific decision date for whether to expand
+C) Ask the team lead to read the governance spec in detail — it addresses their concerns thoroughly
+D) Escalate to the team lead's manager, who has already approved the deployment
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Propose a 30-day pilot in advisory mode on dev infrastructure, reviewing output weekly, with a specific decision date for whether to expand**
+
+The concepts reading introduces the "pilot pattern": "Do not propose 'AI for production.' Propose 'a 30-day pilot where the agent runs in advisory mode on dev infrastructure, we review its output weekly, and we decide at day 30 whether to expand.'"
+
+This framing works because:
+- It is time-bounded — not "forever" but "30 days"
+- It is reversible — advisory mode on dev infrastructure has near-zero risk
+- It generates evidence — weekly review produces the track record that answers "is this agent accurate?"
+- It converts skepticism into a process — the team lead's concerns are answered by the data from the pilot, not by an argument
+
+Why not A? Dismissing the team lead's concern as unreasonable is counterproductive. Their caution is legitimate — AI in production is a real change. The goal is to earn trust, not to argue against caution.
+
+Why not C? Asking the team lead to read the governance spec in full puts the burden on them. The pilot framing does the same job without requiring them to evaluate technical details.
+
+Why not D? Escalating over the team lead's head is the most likely path to a permanently blocked project. The team lead will operate the agent — their buy-in is not optional.
+
+</details>
+
+---
+
+## Score Interpretation
+
+| Score | Interpretation |
+|-------|---------------|
+| 5/5 | Strong capstone judgment — ready to present, deploy, and iterate |
+| 3-4/5 | Solid foundation — review the explanations for questions you missed |
+| 1-2/5 | Re-read concepts.mdx and the rubric before presenting — focus on the governance spec and roadmap sections |
+| 0/5 | Work through all five capstone templates (presentation, roadmap, rubric) before the session |
+
+## Course Completion
+
+Completing this quiz marks the end of the structured course content. The work that follows — deploying, iterating, promoting — is where the real learning happens.
+
+The 30-day roadmap you committed to in the capstone is the bridge between this course and that work. Execute it.

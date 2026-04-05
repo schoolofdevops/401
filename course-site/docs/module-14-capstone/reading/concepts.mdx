@@ -1,0 +1,96 @@
+---
+id: module-14-concepts
+title: "Concepts: Capstone — From Prototype to Production"
+sidebar_label: "Concepts"
+sidebar_position: 1
+description: "Why structured demonstration matters, deployment readiness signals, and how to build organizational buy-in for agent deployment"
+---
+
+# Concepts: Capstone — From Prototype to Production
+
+You built an agent. It works in the workshop environment. Now you face the actual challenge: moving it from a working prototype to something your organization trusts enough to run against production infrastructure, on a schedule, without a human babysitting it.
+
+This transition — prototype to production — is where most workshop AI projects stall. This module is about preventing that stall.
+
+---
+
+## 1. Why Structured Demonstration Matters
+
+The capstone presentation is not a formality. It is a forcing function that makes you articulate three things that are easy to leave implicit when you are in "build mode":
+
+**1. Why this problem?** You chose a specific operational domain. Why that one? What makes it worth automating? If you cannot answer this in 60 seconds, you will struggle to convince a colleague or manager that the deployment is worth the configuration effort.
+
+**2. Why this design?** You chose the investigator pattern, or the proposal pattern. You chose L1. You blocked certain commands. Why? The design decisions are where most of the judgment in agent architecture lives — and where most of the risk lives too. Articulating the design forces you to defend it, which surfaces assumptions you did not know you were making.
+
+**3. What happens next?** The 30-day roadmap is the commitment mechanism. Without a roadmap, "I will set it up after the workshop" becomes "I never set it up after the workshop." With a roadmap, you have a week-by-week plan that connects the workshop build to real infrastructure, with specific milestones that can be reviewed.
+
+**DevOps analogy:** This is the same discipline as writing an RFC before a significant infrastructure change. The RFC is not just documentation — the process of writing it forces you to think through design choices, risk surface, and rollback procedures before you are committed to a path. The capstone presentation is an RFC for your agent deployment.
+
+---
+
+## 2. Deployment Readiness — What Separates a Prototype from a Production Agent
+
+A Hermes agent that works in a workshop environment has demonstrated one thing: the code runs and the LLM produces output. That is necessary but not sufficient for production deployment. What else is required?
+
+### A Defined Blast Radius
+
+Production agents operate on real infrastructure. When an agent makes a wrong recommendation or executes an incorrect plan, what is the worst-case impact? A wrong read-only analysis wastes 30 seconds. An incorrect `aws rds modify-db-parameter` command could destabilize a database that serves your production application.
+
+Defining the blast radius is not pessimism — it is how you choose the right autonomy level and governance boundaries. If the worst-case impact of an agent error is "sends a wrong Slack message," L3 autonomy is probably safe. If the worst-case impact is "modifies a production database parameter without a maintenance window," L3 requires the proposal pattern with an explicit approval gate and a rollback procedure.
+
+### Verified Accuracy in the Target Domain
+
+A prototype demonstrates that the agent can produce output. A production-ready agent has demonstrated that its output is *correct* in the specific operational scenarios it will face. This requires running the agent against realistic data, reviewing the output, and building a track record.
+
+This is the purpose of the Week 2 documentation exercise in the roadmap: you are not just running the agent, you are measuring it. The track record you build in Weeks 2-3 is the evidence for the L1→L2 promotion decision in Month 2.
+
+### Operational Observability
+
+If the agent runs on a schedule and something goes wrong at 02:00, how will you find out? A production agent needs audit logging, ideally routed somewhere you will see it. CloudWatch Logs, a Slack channel, or a simple log file that is included in your existing morning review are all acceptable. What is not acceptable is an agent that runs and fails silently.
+
+### Human Override Capability
+
+At every autonomy level below L5, there must be a way for a human to stop the agent. For a cron-scheduled agent, this means knowing the command to pause the job (`hermes cron pause [agent-name]`). For an approval-gated agent, this means the approval request timing out gracefully rather than executing on its own after some delay.
+
+---
+
+## 3. Building Organizational Buy-In
+
+The most well-designed agent in the world will not deploy to production if the people who operate that infrastructure do not trust it. Building that trust is a people problem, not a technical one.
+
+### The Rubric as a Communication Tool
+
+The five dimensions of the evaluation rubric — problem statement clarity, agent design quality, demo quality, governance spec completeness, roadmap realism — map directly to the questions a skeptical manager or security reviewer will ask:
+
+1. *Why are we doing this?* — Problem Statement
+2. *What exactly does it do and is the design sound?* — Agent Design
+3. *Does it actually work?* — Live Demo
+4. *Is it safe?* — Governance Spec
+5. *What is the plan?* — 30-Day Roadmap
+
+Presenting the capstone with a rubric score is not about defending your grade. It is about showing that you applied a structured evaluation framework to your own work — which signals exactly the kind of disciplined thinking that builds trust in technical proposals.
+
+### Start With the Skeptic
+
+When proposing an agent deployment to your team, find the most skeptical person in the room first. Their objections are the objections everyone else has but is not saying. If you can satisfy the skeptic's questions about governance and blast radius, the rest of the team's concerns follow. The governance spec dimension of the rubric is the one that skeptics focus on — be ready to describe the blocked commands, the approval gates, and the audit logging in specific terms.
+
+### The Pilot Pattern
+
+Do not propose "AI for production." Propose "a 30-day pilot where the agent runs in advisory mode on dev infrastructure, we review its output weekly, and we decide at day 30 whether to expand." This framing is much easier to approve than an open-ended "AI in production." The roadmap template is designed for exactly this framing: Week 1-4 is the pilot, Month 2 is the expansion decision.
+
+**DevOps analogy:** This is the same as proposing a canary deployment rather than a full rollout. You are not asking for trust — you are proposing a controlled way to earn trust.
+
+---
+
+## Summary
+
+| Concept | What It Means for Your Deployment |
+|---------|----------------------------------|
+| Structured demonstration | Forces you to articulate problem, design, and next steps — the RFC for your agent |
+| Blast radius analysis | Determines the right autonomy level and governance boundaries |
+| Track record requirement | Week 2-3 documentation is the evidence for the L1→L2 promotion decision |
+| Operational observability | Audit logging is not optional for production-scheduled agents |
+| Buy-in via rubric | The five rubric dimensions map to the questions skeptics will ask |
+| Pilot pattern | Frame deployment as a 30-day pilot, not "AI in production" |
+
+**Next:** [Reference — Presentation Timing and Anti-Patterns](./module-14-reference)

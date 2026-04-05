@@ -1,0 +1,120 @@
+---
+id: module-14-exploratory
+title: "Exploratory: Capstone Extension Projects"
+sidebar_label: "Exploratory Projects"
+sidebar_position: 1
+description: "Stretch projects for a second agent design and fleet architecture extension of the capstone"
+---
+
+# Exploratory: Capstone Extension Projects
+
+These are **exploratory stretch projects** — not required for course completion. They are for participants who want to extend the capstone work into a second agent design or a fleet architecture before leaving the workshop.
+
+Both projects are completable individually. No team required.
+
+---
+
+## Project 1: Second Agent Design
+
+**Estimated time:** 45 minutes
+**Prerequisites:** Module 14 capstone presentation complete
+**Tool required:** Text editor — this is a design document exercise
+
+### What You Will Build
+
+Design a second agent for a different operational domain than your capstone. Write the full capstone package for it: problem statement, design spec, governance spec, and 30-day roadmap. The goal is to demonstrate that the design frameworks from this course generalize — you can design a new agent for a new domain in under an hour.
+
+### Challenge
+
+The challenge is scope discipline. A second agent design tends to sprawl — you know more now, so you want to build something more sophisticated. Resist the scope creep. The second agent design should be *simpler* than the first, because you have less operational domain experience in the new area. Start with the advisor pattern at L1. Leave complexity for after you have a track record.
+
+### What to Write
+
+**Dimensions 1-2 (problem + design) as a design document:**
+
+1. **Problem statement** — Name the specific operational task in the new domain. Include one metric (frequency, time cost, or error rate). No metric, no valid problem statement.
+
+2. **Pattern selection** — Which pattern? Why this pattern and not the first one you used for your capstone? (You are explicitly required to use a different pattern or autonomy level than your primary capstone.)
+
+3. **Toolset** — What does this agent have access to? What is explicitly blocked? Be specific.
+
+4. **SKILL.md outline** — Write the top-level decision tree for this agent's main skill. You do not need to write the full SKILL.md, just the first 3-4 decision branches: "If [condition], then retrieve [data source]. If [result], then [action or escalate to]..."
+
+5. **Governance spec** — DO/APPROVE/LOG in 3 bullet points.
+
+6. **30-day roadmap** — Three milestones: end of Week 1, end of Week 2, Month 2. Each milestone with a success criterion.
+
+### Expected Outcome
+
+A 1-2 page document that completes all six sections. If you handed this to a colleague with a Hermes setup, they should have enough information to start building the agent.
+
+### Reflection Question
+
+After completing both designs: what did you do differently the second time? What framework muscle have you built that was not there at the start of Module 9? Write 2-3 sentences answering this — it is the evidence of what you actually learned.
+
+---
+
+## Project 2: Fleet Architecture
+
+**Estimated time:** 60 minutes
+**Prerequisites:** Module 14 capstone complete, Module 11 reading complete (fleet patterns)
+**Tool required:** Text editor
+
+### What You Will Build
+
+Extend your capstone agent into a three-agent fleet. Design a coordinator agent and one additional specialist agent that works alongside your capstone agent. Write the delegation spec: how the coordinator routes work, what each specialist agent does, and how results are aggregated.
+
+### The Fleet Pattern
+
+A fleet coordinator does one thing: receives a task, determines which specialist agent should handle it, delegates, and aggregates the results. It does not do the specialist work itself. The specialists each do one thing well.
+
+Your fleet will have:
+- **Coordinator** — receives the top-level task, decides who does what, assembles the final output
+- **Your capstone agent** — the specialist for your primary domain
+- **New specialist** — a second domain expert you design in this project
+
+### What to Design
+
+**Step 1: Define the top-level task**
+What task would a coordinator agent receive that requires both your capstone agent AND a second specialist?
+
+Example: Your capstone agent is an RDS investigator. The top-level task is "investigate this production incident." The coordinator needs your RDS investigator plus a Kubernetes specialist — because incidents often span both layers.
+
+**Step 2: Design the second specialist**
+Apply the Module 9 pattern framework: what pattern, what autonomy level, what tools. Keep it simple — the point of this project is fleet composition, not specialist depth.
+
+**Step 3: Write the delegation spec**
+For your coordinator, write the decision tree that determines when it calls each specialist:
+
+```
+TASK received: [top-level task description]
+
+IF task_contains("database" OR "rds" OR "query" OR "connection"):
+    delegate_to: [your capstone agent]
+    with_context: [what context to pass]
+
+IF task_contains("pod" OR "deployment" OR "kubernetes" OR "k8s"):
+    delegate_to: [second specialist]
+    with_context: [what context to pass]
+
+IF task_contains both:
+    delegate_to: both
+    aggregate_results: summarize findings from both specialists
+    present: combined incident report
+```
+
+**Step 4: Define the output aggregation**
+When both specialists complete their analysis, how does the coordinator assemble the final output? What is the output format? Who receives it?
+
+**Step 5: Governance for the fleet**
+The coordinator itself needs a governance spec. It also needs to respect the governance specs of each specialist — it cannot instruct a specialist to bypass its own blocked commands. Write 3 bullet points describing the fleet-level governance.
+
+### Expected Outcome
+
+A fleet architecture document with: coordinator design (role, SOUL.md identity statement), delegation decision tree (which specialist for which task type), second specialist design (pattern, autonomy, tools), output aggregation spec, and fleet governance spec.
+
+### Why This Matters
+
+Single agents solve single-domain problems. Fleets solve cross-domain problems. Most real operational incidents involve more than one system — network + application + database, or billing + compute + network. The fleet architecture is how you scale from "AI helps with one thing" to "AI helps with incident response across the full stack."
+
+This project plants the design seed. The full implementation is in Module 11. But having designed the architecture here, the Module 11 lab will be a familiar pattern rather than a new concept.

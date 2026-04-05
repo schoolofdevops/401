@@ -1,0 +1,124 @@
+---
+id: module-14-reference
+title: "Reference: Capstone Preparation"
+sidebar_label: "Reference"
+sidebar_position: 2
+description: "Presentation timing guide, preparation checklist, and common capstone anti-patterns"
+---
+
+# Reference: Capstone Preparation
+
+Quick reference for preparing and delivering the capstone. Use this the day before your presentation.
+
+---
+
+## Presentation Timing Guide
+
+Total time: 8-10 minutes (live workshop). For solo learners, the written document has no time constraint.
+
+| Section | Target Time | Common Overrun Cause |
+|---------|------------|---------------------|
+| 1. Problem Statement | 1-2 min | Spending too long on background context — cut to the specific task |
+| 2. Agent Design | 2-3 min | Explaining *what* the agent does instead of *why* the design choices were made |
+| 3. Live Demo | 3-5 min | Demo errors, waiting for LLM response, over-explaining the output |
+| 4. Governance Spec | 1-2 min | Reading out the entire blocked command list — summarize, don't enumerate |
+| 5. 30-Day Plan | 1-2 min | Over-detailing Week 1 at the expense of Month 2 |
+
+**Timing discipline:** The 8-10 minute constraint is not arbitrary. It mirrors real organizational constraints — a manager who will give you 10 minutes to pitch an agent deployment proposal. If you cannot cover all five sections in 10 minutes, you have too much material. Cut the low-value content before the presentation, not during it.
+
+---
+
+## Preparation Checklist
+
+Complete these before your presentation session.
+
+### Technical
+
+- [ ] Agent runs against real or realistic mock data without errors
+- [ ] Agent output is saved and ready to show — do not rely on live LLM calls during demo if network is unreliable
+- [ ] Hermes profile, SKILL.md, and SOUL.md are accessible (terminal open, right directory)
+- [ ] Governance spec is implemented in config.yaml — you are showing real config, not aspirational config
+
+### Content
+
+- [ ] Problem statement includes at least one number (frequency, time, error rate)
+- [ ] Pattern choice is justified with comparison to alternatives
+- [ ] Autonomy level and promotion path are defined
+- [ ] Governance spec covers DO/APPROVE/LOG at minimum
+- [ ] 30-day roadmap has Week 1 actions specific enough to be done on Monday
+
+### For Live Workshop Teams
+
+- [ ] Roles assigned: who presents which section
+- [ ] Demo responsibility assigned: who runs the terminal
+- [ ] Questions prepared: what are the two most likely objections from the audience?
+
+---
+
+## Common Capstone Anti-Patterns
+
+These are the mistakes that appear most often in capstone presentations. Review them before you present.
+
+### Anti-Pattern 1: Demo-Only Without Governance
+
+**What it looks like:** An impressive demo (agent produces correct output, handles edge cases) followed by "for governance, we would add some guardrails."
+
+**Why it fails:** "We would add" signals the governance was not actually designed. The governance spec is not an add-on — it is part of the design. An agent with no governance spec is not ready for production even if the demo is impressive.
+
+**Fix:** Design the governance spec before the demo, not after. Even "read-only, everything logged to CloudWatch" is a governance spec. Have it configured before you present.
+
+---
+
+### Anti-Pattern 2: Roadmap Without Success Criteria
+
+**What it looks like:** "Week 1: install Hermes. Week 2: run the agent. Week 3: iterate. Week 4: deploy."
+
+**Why it fails:** These milestones cannot be verified. When Week 2 ends, how will you know if it was successful? Without success criteria, the roadmap is a list of activities, not a deployment plan.
+
+**Fix:** For each week, add one sentence: "Done when: [specific verifiable outcome]." Even a simple criterion — "agent produces output on at least 3 real scenarios" — makes the milestone checkable.
+
+---
+
+### Anti-Pattern 3: Vague Problem Statement Followed by Impressive Technical Design
+
+**What it looks like:** "We want to improve our operational efficiency [unclear what this means] ... and to do that, we have built this sophisticated multi-skill investigator agent with RAG-backed retrieval and production-grade governance..."
+
+**Why it fails:** The technical sophistication is wasted if the problem is not clearly defined. An audience that does not understand why the agent exists will not trust it regardless of how well it is built.
+
+**Fix:** Write the problem statement first. Do not write the technical design until the problem is specific enough to state in one sentence with a number in it.
+
+---
+
+### Anti-Pattern 4: Pattern Named Without Autonomy Level
+
+**What it looks like:** "This is an investigator agent." (Full stop. No autonomy level, no justification for why it does not execute actions, no promotion criteria.)
+
+**Why it fails:** Pattern and autonomy level are separate decisions. An investigator can run at L1 or L2. The autonomy level determines what the agent does after the investigation — and that is the operationally important question.
+
+**Fix:** Always state both: "This is an investigator agent at L1. L2 would mean trusted advisory output — we will promote when we have a 30-day track record."
+
+---
+
+### Anti-Pattern 5: Self-Score Inflation
+
+**What it looks like:** A rubric score of 23/25 for a capstone that has a vague problem statement and no governance spec.
+
+**Why it fails:** The rubric is a deployment readiness assessment. Inflating the score means deploying an agent before it is ready. An honest score of 14 with a clear understanding of what needs to improve is more useful than an inflated 23 that papers over gaps.
+
+**Fix:** For each dimension below 4, write one sentence: "This score would be higher if: [specific change]." That sentence is your post-course improvement target.
+
+---
+
+## Score Calibration Examples
+
+Use these examples to calibrate your self-scoring for Dimension 1 (Problem Statement Clarity).
+
+| Example | Score |
+|---------|-------|
+| "We want to reduce toil in our operations team." | 1 |
+| "We want to automate RDS monitoring." | 2 |
+| "Our on-call SREs spend 20 minutes every morning reviewing slow query logs." | 3 |
+| "Our on-call SREs spend 20 minutes daily reviewing slow query logs. 60% of days have nothing actionable. On the 40% that do, diagnosis takes 30 min to 3 hours." | 4 |
+| Same as above, plus: "In Q4 2025, we had 3 incidents where slow queries caused customer-visible latency that could have been caught earlier with automated morning review." | 5 |
+
+**Back to:** [Concepts](./module-14-concepts)
