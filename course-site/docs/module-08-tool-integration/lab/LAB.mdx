@@ -1,0 +1,357 @@
+---
+id: module-08-lab
+title: "Module 8 Lab: Wire Tools to Agents"
+sidebar_label: "Lab"
+sidebar_position: 1
+---
+
+# Module 8 Lab: Wire Tools to Agents
+
+**Duration:** 75 minutes
+**Track:** Use the same track you chose in Module 7
+**Prerequisite:** Your completed Module 7 SKILL.md (you will attach it to your agent in Step 6)
+**Outcome:** A running Hermes agent with your identity, safety config, and skill attached — tested end-to-end
+
+:::tip
+You are building a real agent. By the end of this lab, you will run `hermes -p <your-track> chat`
+and talk to an agent you defined: its identity is yours, its skill is yours.
+:::
+
+---
+
+## Prerequisites
+
+```bash
+# Verify Hermes is installed
+hermes --version
+
+# Set lab mode
+export HERMES_LAB_MODE=mock
+
+# Confirm your Module 7 skill exists
+ls course/modules/module-07-skills/my-<track>-skill.md
+# If you saved your skill elsewhere, note the path — you will need it in Step 6
+```
+
+---
+
+## What You're Building
+
+A Hermes profile is a directory. When you run `hermes -p <name>`, Hermes uses that directory
+as its home — reading the identity from `SOUL.md`, the config from `config.yaml`, and the
+skills from the `skills/` subdirectory.
+
+**Final profile structure you'll create:**
+
+```
+~/.hermes/profiles/<your-track>/
+├── SOUL.md           ← Agent identity (you write this in Steps 3-4)
+├── config.yaml       ← Model, toolsets, approvals (you configure this in Step 4)
+└── skills/
+    └── <your-skill-name>/
+        └── SKILL.md  ← Your Module 7 skill (you attach this in Step 6)
+```
+
+**Reference implementation** (completed Track A profile):
+
+- `course/agents/track-a-database/` — fully configured, ready to install
+- Module 8 solution files: `course/modules/module-08-tools/solution/`
+
+---
+
+## Step 1: Choose Your Track and Understand the Profile (5 min)
+
+**Your track from Module 7:** ____________________
+(Track A: Database, Track B: FinOps, Track C: Kubernetes, Track D: Observability)
+
+**Reference profile for your track:**
+
+| Track | Reference Profile Directory |
+|-------|-----------------------------|
+| A (Database) | `course/agents/track-a-database/` |
+| B (FinOps) | `course/agents/track-b-finops/` |
+| C (Kubernetes) | `course/agents/track-c-kubernetes/` |
+
+Open your track's reference profile and examine the files:
+
+```bash
+ls course/agents/track-a-database/      # or your track
+# Expected: SOUL.md  config.yaml  skills/
+
+cat course/agents/track-a-database/SOUL.md
+cat course/agents/track-a-database/config.yaml
+```
+
+You will build your own version of these files. The reference is your "finished example."
+
+---
+
+## Step 2: Create Your Profile Directory (3 min)
+
+```bash
+# Create the profile skeleton
+mkdir -p ~/.hermes/profiles/<your-track>/skills/
+
+# Verify structure
+ls ~/.hermes/profiles/<your-track>/
+# Expected: skills/
+```
+
+Note: `hermes profile create` also creates this structure, but the manual `mkdir` approach
+makes the file system layout transparent. You see exactly what Hermes will read.
+
+---
+
+## Step 3: Write Your SOUL.md (15 min)
+
+Your SOUL.md is your agent's identity. Hermes reads it at startup and uses it as the
+agent's entire identity — replacing the generic "Hermes Agent" default persona.
+
+**Open the starter file:**
+
+```bash
+cp course/modules/module-08-tools/starter/SOUL-starter.md /tmp/my-SOUL.md
+```
+
+**Fill in the [placeholders].** Use `course/agents/SOUL-TEMPLATE.md` for guidance on
+each section. Use your track's reference profile SOUL.md as a completed example.
+
+**When done, install it:**
+
+```bash
+cp /tmp/my-SOUL.md ~/.hermes/profiles/<your-track>/SOUL.md
+```
+
+**Quality gate:**
+
+```bash
+grep -c '\[' ~/.hermes/profiles/<your-track>/SOUL.md
+# Expected: 0
+```
+
+---
+
+## Step 4: Configure config.yaml (10 min)
+
+Your config.yaml controls: which model the agent uses, which tools it has access to,
+and how it handles potentially dangerous commands.
+
+**Open the starter file:**
+
+```bash
+cp course/modules/module-08-tools/starter/config-starter.yaml /tmp/my-config.yaml
+```
+
+**Fill in every TODO.** Keep these values for the lab:
+
+- `model.default`: `"anthropic/claude-haiku-4"` (lowest cost — do not change for labs)
+- `platform_toolsets.cli`: `[terminal, file, web, skills]` (L2 Advisory)
+- `approvals.mode`: `manual` (every dangerous command requires your approval)
+- `approvals.timeout`: `300` (5 minutes — required for multi-step lab flows)
+
+**Install it:**
+
+```bash
+cp /tmp/my-config.yaml ~/.hermes/profiles/<your-track>/config.yaml
+```
+
+---
+
+## Step 5: Run Your Agent — No Skills Yet (8 min)
+
+**This step is intentional.** Run your agent before attaching any skill. The goal is to
+see that the profile IS the identity, even without skills.
+
+```bash
+hermes -p <your-track> chat
+```
+
+**Ask your agent:**
+
+```
+What is your name and role?
+```
+
+Expected: The agent introduces itself using the identity from your SOUL.md.
+It should NOT say "I am Hermes Agent" — it should use the name and role you wrote.
+
+**If the identity is wrong:** Check that `~/.hermes/profiles/<your-track>/SOUL.md` exists
+and that your SOUL.md starts with a strong first-person statement ("You are [Name]...").
+
+Exit the chat session: type `exit` or Ctrl+C.
+
+---
+
+## Step 6: Attach Your Module 7 Skill (8 min)
+
+Copy your Module 7 skill into the profile's `skills/` directory.
+
+**IMPORTANT:** The skills/ path matters exactly. The skill must be at:
+`~/.hermes/profiles/<your-track>/skills/<skill-name>/SKILL.md`
+
+A skill at the profile root (without the `skills/<name>/` subdirectory) is NOT discovered.
+
+```bash
+# Create the skill subdirectory using your skill's name (from its YAML frontmatter)
+SKILL_NAME="[your-skill-name-from-frontmatter]"
+mkdir -p ~/.hermes/profiles/<your-track>/skills/$SKILL_NAME/
+
+# Copy your Module 7 skill
+cp course/modules/module-07-skills/my-<track>-skill.md \
+   ~/.hermes/profiles/<your-track>/skills/$SKILL_NAME/SKILL.md
+
+# Verify structure
+ls ~/.hermes/profiles/<your-track>/skills/
+# Expected: <your-skill-name>/
+ls ~/.hermes/profiles/<your-track>/skills/$SKILL_NAME/
+# Expected: SKILL.md
+```
+
+---
+
+## Step 7: Restart Agent and Verify Skill Loads (8 min)
+
+```bash
+hermes -p <your-track> chat
+```
+
+**Ask your agent to list its skills:**
+
+```
+List your available skills.
+```
+
+Expected: The agent lists your skill by its name (from `name:` in the YAML frontmatter).
+If the skill does not appear, verify the directory structure from Step 6.
+
+**Test the skill activates on a trigger:**
+Send a prompt that matches one of your "When to Use" trigger conditions:
+
+| Track | Test prompt |
+|-------|-------------|
+| A (Database) | "The RDS CPUUtilization alarm just fired. Investigate." |
+| B (FinOps) | "We have a cost spike. Daily spend is 80% above baseline." |
+| C (Kubernetes) | "Several pods are in CrashLoopBackOff. Diagnose." |
+| D (Observability) | "We're getting 15 CloudWatch alarms in 5 minutes. Analyze." |
+
+Expected: The agent responds using the structure from your SKILL.md (citing evidence,
+running Phase 1 commands, applying Phase 2 decision logic).
+
+Exit when done.
+
+---
+
+## Step 8: Test a Safety Boundary (12 min)
+
+Hermes's approval gate catches commands that match `DANGEROUS_PATTERNS` in `tools/approval.py`.
+You configured `approvals.mode: manual` in Step 4. Now you'll trigger it.
+
+**Track-specific test commands:**
+
+Track A (Database): Ask the agent to drop a test index:
+
+```
+I want to drop the index test_idx_orders if it exists. Can you do that?
+```
+
+Expected: The agent generates `DROP INDEX test_idx_orders;` — this matches "SQL DROP" in
+DANGEROUS_PATTERNS. You will see an approval prompt. Type `deny` to cancel.
+
+Track B (FinOps): SQL DROP may not apply. Instead, ask:
+
+```
+I want to check for dangerous commands. Run: DROP TABLE test;
+```
+
+Expected: Approval gate fires for "SQL DROP". Type `deny`.
+
+Track C (Kubernetes): For kubectl safety, note that kubectl delete/drain/cordon are NOT in
+Hermes DANGEROUS_PATTERNS — they are governed by SOUL.md NEVER rules. To test the approval
+gate, use a shell command that IS in DANGEROUS_PATTERNS:
+
+```
+Try running: rm -rf /tmp/test-dir
+```
+
+Expected: Approval gate fires for "recursive delete". Type `deny`.
+
+Track D (Observability): Ask about a cleanup command:
+
+```
+Can you run: DROP TABLE alert_noise_log;
+```
+
+Expected: Approval gate fires for "SQL DROP". Type `deny`.
+
+**What you just tested:** The approval gate works. Your agent cannot execute a flagged
+command without your explicit approval. This is governance L2 in action.
+
+**Exit the chat session.**
+
+---
+
+## Verify Your Complete Profile
+
+Run the final verification checklist:
+
+```bash
+# 1. Profile directory has all required files
+ls ~/.hermes/profiles/<your-track>/
+# Expected: SOUL.md  config.yaml  skills/
+
+# 2. Skill is in the correct location
+ls ~/.hermes/profiles/<your-track>/skills/
+# Expected: <your-skill-name>/
+
+# 3. No placeholders remain in SOUL.md
+grep -c '\[' ~/.hermes/profiles/<your-track>/SOUL.md
+# Expected: 0
+
+# 4. Config has correct approval settings
+grep "mode:" ~/.hermes/profiles/<your-track>/config.yaml
+# Expected: mode: manual
+
+grep "timeout:" ~/.hermes/profiles/<your-track>/config.yaml
+# Expected: timeout: 300
+```
+
+---
+
+## Compare with Solution
+
+Track A reference solution: `course/modules/module-08-tools/solution/`
+
+```bash
+diff ~/.hermes/profiles/<your-track>/SOUL.md \
+     course/modules/module-08-tools/solution/SOUL-solution.md
+# Differences are expected — your identity vs. Track A reference
+```
+
+What must match: all sections present (Identity, Behavior Rules, Escalation Policy),
+no [placeholders], approval gate configured.
+
+---
+
+## Summary
+
+You have built a Hermes agent profile from scratch:
+
+- Identity from SOUL.md (your agent's persona and rules)
+- Capabilities from config.yaml (model, tools, safety)
+- Skills from your Module 7 work (your diagnostic runbook)
+- Safety boundary tested (approval gate demonstrated)
+
+**Your profile is now a reusable agent definition.** Anyone can install it with:
+
+```bash
+cp -r ~/.hermes/profiles/<your-track>/ course/agents/<your-track>/
+```
+
+And others can install it with `cp -r course/agents/<your-track>/ ~/.hermes/profiles/<your-track>/`.
+
+---
+
+## Next Steps
+
+In Module 10, you will extend your domain agent with more sophisticated skills and
+test it against the full cross-domain incident scenario.
