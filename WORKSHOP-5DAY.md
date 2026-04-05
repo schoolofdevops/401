@@ -1,18 +1,17 @@
-# Agentic DevOps — 5-Day Corporate Workshop Master Plan
+# Agentic DevOps — Workshop Master Plan
 
-> **This is the single source of truth** for expanding the existing 3-day/14-module course
-> into a 5-day/20-module corporate workshop + Udemy bestseller course.
+> **Single source of truth** for the Agentic DevOps workshop and Udemy course.
+> Organized as a sequential module catalog — adapt to 3-day, 4-day, or 5-day delivery
+> by marking modules as core vs. optional.
 >
-> Each module will be built in its own conversation session. This document provides
-> the shared context every session needs to stay aligned.
+> Each module gets built in its own conversation session. This document provides
+> the shared context every session needs.
 
-**Version:** 2026 Edition (5-Day Corporate)
 **Trainer:** Gourav Shah (Initcron)
-**Duration:** 5 Full Days (6 hours/day, ~30 hours total)
 **Level:** Intermediate to Advanced
 **Delivery:** Conceptual Explainers → Live Demos → Guided Hands-On Labs
-**Also converts to:** Udemy Bestseller Course
-**Base repo:** This repo (`course/`) — all 3-day content already built and merged
+**Also:** Udemy Bestseller Course (self-paced)
+**Base repo:** This repo (`course/`) — existing 3-day content already built and merged
 
 ---
 
@@ -29,61 +28,52 @@ PILLAR 1                  PILLAR 2                  PILLAR 3
 Use what's already        Understand how             Build agents that
 there                     it all works               work for you
 
-Days 1–2                  Days 2–3                   Days 4–5
 Platform AI, MCP,         How AI works, Context      Agent patterns,
-Harnesses, Coding         Eng, Memory, RAG,          Hermes, Triggers,
-Agents                    Tools, Skills              Fleet, Governance
+AI-assisted coding        Eng, Harnesses, Memory,    Hermes, Triggers,
+                          RAG, Tools, Skills         Fleet, Governance
 ```
 
 ---
 
 ## Core Philosophy: Domain Expertise IS Your Superpower
 
-**Recurring theme (not a one-off module).** Introduced Day 1, reinforced in every lab.
+Recurring theme, not a one-off module. Introduced in M02, reinforced in every lab.
 
 ```
 Domain Expertise → Better Vocabulary → Better Context → Better Results
 ```
 
-A DevOps engineer who says "create a K8s deployment with HPA, PDB, resource limits, and
-liveness/readiness probes" gets a precise artifact. A generalist who says "deploy my app
-to Kubernetes" gets a generic template. Same AI, wildly different results — because of
-VOCABULARY. Your 5 years of experience is what makes AI 10x useful.
-
-This addresses the "AI will replace me" fear head-on. AI amplifies expertise; it doesn't
-substitute for it.
+AI amplifies expertise; it doesn't substitute for it. The DevOps engineer who says
+"create a K8s deployment with HPA, PDB, resource limits, and liveness/readiness probes"
+gets a precise artifact. The generalist who says "deploy my app to Kubernetes" gets a
+generic template. Same AI, wildly different results — because of VOCABULARY.
 
 ---
 
 ## Decisions (Locked)
 
-These are resolved and should not be revisited without explicit discussion.
-
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Reference app | **Keep existing Rust app** | Already built with Helm, monitoring, mock data. All 7+ labs designed around it. 30+ files would need rebuilding if switched. |
-| Pillar 2 name | **Agentic Engineering** | MLOps/LLMOps would be misleading (broader discipline). "Engineering" signals hands-on discipline. |
-| Impact Assessment | **Folded into M16** (Domain Agents) | Automation Quadrant becomes the intro to "which agent should you build?" on Day 4. Saves a module slot. |
-| Primary coding agent | **Claude Code** | Most participants have Claude Pro/Team. Sub-agents built in. |
-| Fallback coding agent | **Goose** (Block, open source) | Desktop app, zero install, works with free Gemini. Mention Crush as another option. |
-| Agent building platform | **Hermes** (Nous Research) | Open source, auto-installs Python, works with free Gemini/OpenRouter/Groq. |
-| LLM fallback | **Google Gemini free tier** | 1M tokens/month free. Universal fallback for participants without Claude subscription. |
-| Mock infrastructure | **Keep dual-mode (mock/live)** | `HERMES_LAB_MODE=mock` for offline, `live` for real infra. Least barrier to entry. |
-| Master plan location | **This file in course/ repo** | Co-located with content. Module-building sessions reference it directly. |
-| Context eng > prompts | **Locked from 3-day version** | "Context engineering" throughout. Zero "prompt engineering" violations. |
-| Haiku as default model | **Locked from 3-day version** | All labs designed for cheapest model. Sonnet only for complex reasoning. |
+| Reference app | Keep existing Rust app | Built with Helm, monitoring, mock data. All labs designed around it. |
+| Pillar 2 name | Agentic Engineering | MLOps would be misleading. "Engineering" signals discipline. |
+| Impact Assessment | Folded into M16 | Automation Quadrant becomes intro to domain agents. |
+| Primary coding agent | Claude Code | Most participants have Claude Pro/Team. Sub-agents built in. |
+| Fallback coding agent | Crush (Charm, formerly OpenCode) | Open source, terminal-based, works with free Groq/Gemini via `/connect`. |
+| Agent building | Hermes (Nous Research) | Open source, works with free Gemini/OpenRouter/Groq. |
+| LLM fallback | Google Gemini free tier | 1M tokens/month free. Universal fallback. |
+| Mock infra | Keep dual-mode (mock/live) | `HERMES_LAB_MODE=mock` for offline, `live` for real infra. |
+| Context eng > prompts | Locked | Zero "prompt engineering" violations. |
+| Infrastructure | Docker/local-first | ALL labs have a Docker/KIND/local path. Cloud (AWS) always optional. |
 
 ---
 
 ## Target Audience
 
-Technology professionals from companies like Adobe, Walmart, Cisco, Visa, Accenture, startups.
+Tech professionals from companies like Adobe, Walmart, Cisco, Visa, Accenture, startups.
+Roles: Software Developers, DevOps Engineers, SREs, DBAs, Platform Engineers.
 
-**Roles:** Software Developers, DevOps Engineers, SREs, DBAs, Platform Engineers
-
-**What they know:** Software development workflows, CI/CD (GitHub Actions), Docker, Kubernetes basics, at least one IaC tool (Terraform/Ansible), git, CLI tools.
-
-**What's new:** AI coding agents, MCP, context engineering, agentic workflows, agent building.
+**Know:** Dev workflows, CI/CD, Docker, K8s basics, Terraform/Ansible, git, CLI tools.
+**New to them:** AI coding agents, MCP, context engineering, agentic workflows, agent building.
 
 ---
 
@@ -91,429 +81,659 @@ Technology professionals from companies like Adobe, Walmart, Cisco, Visa, Accent
 
 | Purpose | Primary | Fallback | Free Path |
 |---------|---------|----------|-----------|
-| AI Coding | Claude Code (Claude sub) | Goose (open source) | Goose + Gemini free tier |
-| Agent Building | Hermes (open source) | Claude Code sub-agents | Hermes + Gemini free tier |
+| AI Coding | Claude Code | Crush (open source) | Crush + Gemini free |
+| Agent Building | Hermes | Claude Code sub-agents | Hermes + Gemini free |
 | LLM Provider | Claude (subscription) | Google Gemini | 1M tokens/month free |
-| Cloud Infra | AWS Free Tier | Mock mode | `HERMES_LAB_MODE=mock` — no cloud needed |
-| Kubernetes | KIND (local) | — | Zero cost, runs on laptop |
-| Monitoring | Prometheus + Grafana (local) | — | Bundled with reference app |
-| Chat Interface | Telegram (free) | Discord (free) | Hermes has built-in gateways |
-| Observability AI | Demo only (trainer screen) | — | Datadog/Grafana Sift shown, not required |
+| Infrastructure | KIND + Docker (local) | Mock mode | `HERMES_LAB_MODE=mock` |
+| Cloud (optional) | AWS Free Tier | Mock data | Static JSON fixtures |
+| Kubernetes | KIND (local) | — | Zero cost |
+| Monitoring | Prometheus + Grafana (local) | — | Bundled with ref app |
+| Chat Interface | Telegram (free) | Discord (free) | Hermes built-in |
 
-**Corporate install constraints:** Claude Code = npm (standard). Goose = desktop app (no deps). Hermes = git clone + auto-installer (provisions own Python). KIND = single binary. All low-friction.
-
----
-
-## 5-Day Structure
-
-```
-DAY 1: Foundations + AI-Augmented DevOps          (Pillar 1 begins)
-       "See what AI can already do for you"
-       ├── M01  Welcome + AI Trinity Framework + Environment Setup
-       ├── M02  AI Foundations for DevOps Teams
-       ├── M03  Platform AI — Features Already in Your Stack
-       └── M04  Connecting to Everything with MCP
-
-DAY 2: Harnesses + Agentic Engineering            (Pillar 1→2)
-       "From using AI to understanding AI"
-       ├── M05  Claude Code & Agentic Harnesses (Superpowers / GSD)
-       ├── M06  How AI Actually Works — The Engine Under the Hood
-       ├── M07  Context Engineering — Beyond Prompts
-       └── M08  Agent Memory & Knowledge (Memory, RAG, Vectors)
-
-DAY 3: Tool Wiring + AgentDev                     (Pillar 2 contd.)
-       "From understanding AI to building with AI"
-       ├── M09  Wiring Tools to Agents (CLI, Wrappers, MCP)
-       ├── M10  Agentic Skills — Teaching Agents Your Runbooks
-       ├── M11  AgentDev — AI-Assisted Infrastructure as Code
-       └── M12  AgentDev — Multi-File Projects with GSD + Sub-Agents
-
-DAY 4: Building Agents                            (Pillar 3 begins)
-       "From building with AI to building AI agents"
-       ├── M13  Agent Design Patterns & Autonomy Levels
-       ├── M14  Building Your First Agent with Hermes
-       ├── M15  Triggers, Scheduling & Chat Interfaces
-       └── M16  Domain Agents — Real-World Use Cases
-
-DAY 5: Enterprise + Capstone                      (Pillar 3 contd.)
-       "From single agents to production agent systems"
-       ├── M17  Multi-Agent Systems & Sub-Agents
-       ├── M18  Governance — Making Agents Enterprise-Safe
-       ├── M19  Capstone — Build Your Agentic DevOps System
-       └── M20  30-Day Deployment Roadmap + What's Next
-```
+**Infrastructure philosophy:** Every lab runs locally with Docker + KIND. AWS is always
+an optional enhancement, never a requirement. Participants without cloud access complete
+100% of the course using mock data and local infrastructure.
 
 ---
 
-## Module Details + Content Status
+## Module Catalog
 
-### Legend
+20 modules in sequential order. Each module has a delivery tag:
 
 | Tag | Meaning |
 |-----|---------|
-| **REUSE** | Existing content maps directly. Minor edits (renumbering, framing). |
-| **ADAPT** | Existing content partially covers this. Needs expansion or restructuring. |
-| **NEW** | Content doesn't exist. Needs to be created from scratch. |
+| **CORE** | Must include in any delivery format (3/4/5 day) |
+| **RECOMMENDED** | Include in 4+ day delivery. Can condense or skip for 3-day. |
+| **OPTIONAL** | Include in 5-day delivery. Skip or set as self-study for shorter formats. |
+
+Content status tags:
+
+| Tag | Meaning |
+|-----|---------|
+| **REUSE** | Existing content maps directly. Minor edits needed. |
+| **ADAPT** | Existing content partially covers this. Needs expansion. |
+| **NEW** | Needs to be created from scratch. |
 
 ---
 
-### DAY 1: Foundations + AI-Augmented DevOps
+### PILLAR 1: AI-Augmented DevOps
+*"Use what's already there"*
+
+---
 
 #### M01 — Welcome + AI Trinity Framework + Environment Setup
-**Duration:** 75 min (30 concept + 45 setup lab)
-**Status:** ADAPT
-**Existing content:** `setup/SETUP.md`, `setup/verify.sh`, `reference-app/Makefile`
-**New content needed:**
-- AI Trinity Framework explainer (concept + Excalidraw diagrams)
-- Evolution timeline: Manual → Scripted → Automated → Agentic
-- Human-in-the-loop philosophy explainer
-- Setup lab expanded: deploy reference app + connect MCP servers
-**Explainer diagrams (3):**
-1. The Evolution (Manual → Scripted → Automated → Agentic)
-2. The AI Trinity Framework (three pillars)
-3. The 5-Day Journey Map
+**Delivery:** CORE · **Status:** ADAPT
 
-**Lab deliverable:** Working environment — cloud infra + K8s app + AI agent connected
+**Existing:** `setup/SETUP.md`, `setup/verify.sh`, `reference-app/Makefile`
+
+**Concept (Explainer):**
+- Why Agentic DevOps matters in 2026: Manual → Scripted → Automated → Agentic
+- The AI Trinity Framework: three pillars, three stages
+- Driving analogy: Passenger → Mechanic → Driver
+- What agents DON'T replace (human-in-the-loop philosophy)
+- Your domain expertise IS your superpower (first introduction)
+- Workshop roadmap: what we build by the end
+
+**New content needed:**
+- AI Trinity Framework explainer + diagrams
+- Evolution timeline explainer
+- Setup lab expanded: deploy ref app + install AI tools
+
+**Diagrams (3):**
+1. Evolution: Manual → Scripted → Automated → Agentic
+2. AI Trinity Framework (three pillars)
+3. Workshop Journey Map
+
+**Lab:** Deploy workshop environment (Docker/local-first)
+- Verify tools: docker, kind, kubectl, helm, git, Claude Code or Crush
+- Deploy reference app to KIND (`make deploy`)
+- Connect MCP servers (kubectl, github, postgres)
+- Smoke test: cross-platform query via Claude Code or Crush
+- Optional: deploy AWS free-tier infra (provided Terraform)
+- Optional: connect AWS MCP server
+
+**Deliverable:** Working local environment — K8s app + monitoring + AI agent connected
 
 ---
 
 #### M02 — AI Foundations for DevOps Teams
-**Duration:** 60 min (40 concept + 20 lab)
-**Status:** ADAPT
-**Existing content:** `course-site/docs/module-01-foundations/` (lab, reading, quiz)
+**Delivery:** CORE · **Status:** ADAPT
+
+**Existing:** `course-site/docs/module-01-foundations/` (lab, reading, quiz)
+
+**Concept (Explainer):**
+- How LLMs work — through a DevOps lens
+  - LLM = experienced colleague who read every Stack Overflow answer but needs clear instructions
+- Tokens, context windows, temperature — through operational analogies
+  - Context window = war room whiteboard (limited space)
+  - Temperature = creative vs. conservative dial
+- The AI Spectrum: Chat → Copilot → Agent → Squad
+- Agent anatomy: Brain (LLM) + Skills (runbooks) + Tools (CLI/MCP) + Guardrails (approvals)
+- **Domain Expertise Framework:** Expertise → Vocabulary → Context → Results
+  - Before/after example with K8s terminology
+  - Your 5 years of experience is what makes AI 10x useful
+
 **New content needed:**
-- Domain Expertise → Vocabulary → Context → Results framework (NEW explainer)
-- AI Spectrum: Chat → Copilot → Agent → Squad (expand existing)
-- Agent anatomy with DevOps examples (expand from `reading/agent-anatomy.md`)
-- Before/after vocabulary comparison exercise in lab
-**Explainer diagrams (4):**
-1. The AI Spectrum (Chat → Copilot → Agent → Squad)
+- Domain Expertise framework explainer + diagram
+- Vocabulary comparison exercise in lab
+- Expand AI Spectrum section
+
+**Diagrams (4):**
+1. AI Spectrum (Chat → Copilot → Agent → Squad)
 2. Agent Anatomy (Brain + Skills + Tools + Guardrails)
-3. Domain Expertise Chain (with before/after examples)
+3. Domain Expertise Chain (Expertise → Vocabulary → Context → Results)
 4. Context Window as War Room Whiteboard
 
-**Lab deliverable:** Optimized prompt template + proof that vocabulary matters
+**Lab:** First AI conversation with real operational data
+- CloudWatch alarm JSON from reference app (local Prometheus alert data as alternative)
+- Progressive exercise: vague → structured → context-rich
+- Vocabulary comparison: "non-DevOps" vs. "SRE with 5 years" — same alarm
+
+**Deliverable:** Optimized context template + proof that vocabulary matters
 
 ---
 
 #### M03 — Platform AI — Features Already in Your Stack
-**Duration:** 75 min (25 concept + 50 lab)
-**Status:** REUSE
-**Existing content:** `course-site/docs/module-02-platform-ai/` (lab, reading, quiz)
-**Changes:** Renumber from M2→M03. Add Excalidraw diagrams. Minor framing updates.
-**Explainer diagrams (3):**
-1. Platform AI Landscape (AWS, Datadog, Grafana features)
-2. The Platform AI Gap (covers vs. missing)
-3. Before/After: Manual vs. Platform AI
+**Delivery:** CORE · **Status:** REUSE
 
-**Lab deliverable:** Written assessment of platform AI capabilities and gaps
+**Existing:** `course-site/docs/module-02-platform-ai/` (lab, reading, quiz)
+
+**Concept (Explainer):**
+- Platform AI = AI features built into tools you already pay for
+- AWS: Q Developer, DevOps Guru, Cost Anomaly Detection, RDS Performance Insights
+- Observability AI: Datadog Watchdog, Grafana Sift, CloudWatch anomaly detection
+- What platform AI does well / where it falls short
+- The gap between platform AI and custom agents
+
+**Changes from existing:** Renumber M2→M03. Add Excalidraw diagrams.
+
+**Diagrams (3):**
+1. Platform AI Landscape (features across AWS, Datadog, Grafana)
+2. The Platform AI Gap (covers vs. missing)
+3. Before/After: Manual investigation vs. Platform AI
+
+**Lab:** Discover platform AI (hands-on + trainer demo)
+- Hands-on (free tier): RDS Performance Insights, CloudWatch Anomaly Detection, Cost Explorer, Q Developer
+- Trainer demo (paid tools): DevOps Guru, Datadog Watchdog, Grafana Sift
+- Local alternative: explore Grafana Sift on local Grafana (bundled with ref app)
+
+**Deliverable:** Written assessment of platform AI capabilities and gaps
 
 ---
 
 #### M04 — Connecting to Everything with MCP
-**Duration:** 75 min (25 concept + 50 lab)
-**Status:** ADAPT
-**Existing content:** `course-site/docs/module-03-bridge/` (demo, reading, quiz)
+**Delivery:** CORE · **Status:** ADAPT
+
+**Existing:** `course-site/docs/module-03-bridge/` (demo, reading, quiz)
+
+**Concept (Explainer):**
+- MCP = the USB-C of AI (universal connector analogy)
+- MCP architecture: Client ↔ Server ↔ Tool/Resource
+- MCP vs. direct CLI vs. API calls — when to use what
+- MCP ecosystem: servers for AWS, K8s, GitHub, Postgres, Datadog, Grafana
+- Claude Code + MCP vs. Crush + MCP (both work)
+
 **New content needed:**
-- Full MCP explainer (USB-C analogy, architecture, ecosystem)
-- Hands-on MCP wiring lab (not just demo observation)
+- Full MCP explainer (existing was a "bridge" demo, needs hands-on lab)
 - Cross-platform query exercises against reference app
-- Goose + MCP alternative path
-**Explainer diagrams (3):**
-1. MCP as USB-C (universal connector analogy)
+
+**Diagrams (3):**
+1. MCP as USB-C (universal connector)
 2. MCP Architecture (Client → Server → Tool/Resource)
 3. Before/After: 5 separate tools vs. one agent with MCP
 
-**Lab deliverable:** Claude Code connected to 4+ MCP servers, cross-platform queries working
+**Lab:** Cross-platform intelligence (local-first)
+- Build on MCP connections from M01 setup
+- Cross-platform queries: "Which pods restarted and what were the DB metrics?"
+- Add PostgreSQL direct MCP server (connecting to KIND-hosted Postgres)
+- Optional: same queries via Crush
+
+**Deliverable:** 4+ MCP servers connected, cross-platform queries working
 
 ---
 
-### DAY 2: Harnesses + Agentic Engineering
+### PILLAR 2: Agentic Engineering
+*"Understand how it all works"*
 
-#### M05 — Claude Code & Agentic Harnesses
-**Duration:** 90 min (25 concept + 65 lab)
-**Status:** NEW
-**Existing content:** Was listed as gap in COMPLETED-HANDOFF.md (Module 5 lab not built)
-**New content needed (all):**
-- Superpowers workflow explainer (Brainstorm → Design → Blueprint → Implement → Validate)
-- GSD workflow explainer (spec-driven for multi-file)
-- Lab: Superpowers workflow → Ansible playbook for reference app EC2 hardening
-- Before/after comparison: unstructured prompt vs. Superpowers
-- Goose/Crush fallback instructions
-**Explainer diagrams (3):**
-1. Superpowers Workflow (5-phase pipeline)
-2. GSD Workflow (spec → implement → validate)
-3. Harness Comparison (unstructured vs. Superpowers vs. GSD)
+**Sequence rationale:** Context Engineering is THE foundational skill. You need to
+understand how AI processes context BEFORE learning structured workflows (harnesses)
+that leverage it. Then: apply harnesses to real IaC projects, extend agent knowledge
+with memory/RAG, and finally build the components (tools, skills) that agents in
+Pillar 3 will use.
 
-**Lab deliverable:** Validated Ansible playbook created through structured workflow
+```
+How AI Works → Context Eng → Superpowers → IaC → GSD → Memory → Tools → Skills
+(foundation)   (core skill)  (workflow)    (apply) (scale) (extend) (wire) (encode)
+```
 
 ---
 
-#### M06 — How AI Actually Works — The Engine Under the Hood
-**Duration:** 60 min (45 concept + 15 interactive)
-**Status:** NEW
-**Existing content:** Some foundation in M01 reading (`concepts.mdx` covers tokenization, inference)
-**New content needed:**
-- Prefill and Decode phases with timing
-- TTFT and token generation speed
-- Context window mechanics (why more isn't always better)
-- Temperature/top-p with DevOps sweet spot
-- Interactive exercise: measure TTFT with different context sizes
-**Explainer diagrams (3):**
-1. AI Processing Pipeline (Input → Prefill → Decode → Output)
-2. Context Window as RAM (what fills it, what gets pushed out)
-3. Temperature Dial (Creative ↔ Consistent) with DevOps sweet spot
+#### M05 — How AI Actually Works — The Engine Under the Hood
+**Delivery:** RECOMMENDED · **Status:** NEW
 
-**Lab deliverable:** Mental model of AI processing (no code deliverable — interactive exercise)
+**Existing:** Some foundation in M01 reading (tokenization, inference basics)
+
+**Concept (Explainer):**
+- Full journey: what happens when you type in Claude/ChatGPT
+- Prefill phase: reads entire input (like reading the whole email before replying)
+- Decode phase: generates token by token (like typing reply word by word)
+- TTFT (Time to First Token): why there's a pause
+- Why this matters for agents: longer context = longer prefill = slower
+- Context windows as RAM (there's a ceiling, more isn't always better)
+- Temperature: creativity vs. consistency dial (DevOps sweet spot = low)
+
+**Diagrams (3):**
+1. AI Processing Pipeline (Input → Prefill → Decode → Output with timing)
+2. Context Window as RAM
+3. Temperature Dial with DevOps sweet spot
+
+**Interactive exercise:** Experiment with context sizes, measure TTFT, visualize tokens
+
+**Deliverable:** Mental model of AI processing (no code — interactive exercise)
 
 ---
 
-#### M07 — Context Engineering — Beyond Prompts
-**Duration:** 75 min (30 concept + 45 lab)
-**Status:** ADAPT
-**Existing content:** M01 reading has context engineering content, CLAUDE.md philosophy section
-**New content needed:**
-- Full Context Stack explainer (system prompt → CLAUDE.md → skills → memory → tools → conversation)
-- Context budgeting concept (signal-to-noise, what to include vs. exclude)
+#### M06 — Context Engineering — Beyond Prompts
+**Delivery:** CORE · **Status:** ADAPT
+
+**Existing:** M01 reading has context engineering content, CLAUDE.md philosophy,
+module-05b has CLAUDE.md creation lab
+
+**Concept (Explainer):**
+- Prompt = the question. Context = the environment you set up BEFORE asking.
+  - Like giving a new hire the codebase, docs, and runbook before asking them to fix a bug
+- The Context Stack: system prompt → CLAUDE.md → skills → memory → tools → conversation
+- Context budgeting: signal-to-noise ratio, what to include vs. exclude
 - Domain Expertise reinforced: your knowledge IS the context
-- Lab: build CLAUDE.md for reference app project
-- Comparison exercise: same question with minimal vs. rich context
-**Explainer diagrams (4):**
-1. Prompt vs. Context Engineering (iceberg analogy)
+  - "check voting-app PostgreSQL for long-running transactions blocking COPY" vs. "check if DB is slow"
+
+**New content needed:** Expand M01 content into full module. CLAUDE.md building lab.
+
+**Diagrams (4):**
+1. Prompt vs. Context Engineering (iceberg — prompt is the visible tip)
 2. The Context Stack (layers)
 3. Context Budget (priority order)
 4. Domain Expertise in Action (same question, different vocabulary, different results)
 
-**Lab deliverable:** CLAUDE.md + system prompt template for the reference app
+**Lab:** Build your context stack
+- Create CLAUDE.md for reference app project
+- Design system prompt for operational agent
+- Experiment: minimal context vs. rich context → measure quality difference
+
+**Deliverable:** CLAUDE.md + system prompt template
+
+**Why this comes before harnesses:** Superpowers and GSD workflows are structured
+approaches to APPLYING context engineering. You need the foundation first — otherwise
+harnesses feel mechanical without understanding WHY they work.
 
 ---
 
-#### M08 — Agent Memory & Knowledge
-**Duration:** 75 min (35 concept + 40 lab)
-**Status:** NEW
-**Existing content:** None
-**New content needed (all):**
-- Memory types: short-term, long-term, shared
-- Vectorization and embeddings (GPS coordinates analogy)
-- Semantic search vs. keyword search
-- RAG pipeline: Query → Vectorize → Search → Retrieve → Augment → Generate
-- Agentic RAGs: agents that decide what/when to look up
+#### M07 — Agentic Harnesses: The Superpowers Workflow
+**Delivery:** CORE · **Status:** ADAPT
+
+**Existing:** `course-site/docs/module-05a-structured-coding/` (2 track labs with
+starter/solution, reading, quiz)
+
+**Concept (Explainer):**
+- Agentic Harnesses = structured workflows wrapping AI coding agents
+- Superpowers: Brainstorm → Design → Blueprint → Implement → Validate
+  - Like an architect — you don't start pouring concrete without plans
+- Each phase builds context for the next (context engineering in action!)
+- Provider-agnostic: works with Claude Code, Crush, any coding agent
+- Before/after: unstructured "just build it" vs. 5-phase structured approach
+
+**Diagrams (3):**
+1. Superpowers Workflow (5-phase pipeline with context flow)
+2. Before/After: Unstructured vs. Superpowers quality comparison
+3. Harness as Context Pipeline (each phase adds context)
+
+**Lab:** Superpowers workflow in action (choose a track)
+- Track A (K8s/Platform): Build production Helm chart with HPA, PDB, probes, ServiceMonitor
+- Track B (DevOps/Release): Build GitHub Actions CI/CD pipeline with matrix testing, OIDC, staging/prod
+- Track C (Infra): Build Ansible playbook for server hardening
+- Each track: explicit 5-phase walkthrough, before/after quality comparison
+- All tracks run locally (KIND for Track A, dry-run for Track B, localhost for Track C)
+
+**Deliverable:** Production-quality artifact via structured 5-phase workflow
+
+**Note:** M07 teaches the WORKFLOW (Superpowers as a pattern). M08 applies it to IaC
+with domain-specific depth (failure modes, validation, drift). Different purpose.
+
+---
+
+#### M08 — AgentDev: AI-Assisted Infrastructure as Code
+**Delivery:** CORE · **Status:** ADAPT
+
+**Existing:** `course-site/docs/module-06-ai-iac/` (2 track labs with starter/solution,
+reading, quiz — Terraform Track A, GitOps Track B)
+
+**Concept (Explainer):**
+- Context engineering for IaC generation: what AI needs to know about your infra
+- Common AI failure modes in IaC: generic names, missing security groups, hardcoded values,
+  no state locking, wrong defaults
+- Validation pipeline: generate → lint → plan → review → test → apply
+- Starter-to-solution technique: give AI a skeleton, let it fill in the details
+- Human review checkpoints: AI proposes, human validates
+
+**Diagrams (3):**
+1. IaC Generation Pipeline (with validation gates)
+2. Common AI IaC Failures (gallery of pitfalls)
+3. Human-AI IaC Workflow (review checkpoints)
+
+**Lab:** Generate real IaC for reference app (choose a track)
+- Track A (Terraform): EC2/CloudWatch/SNS module — uses Terraform mock provider for
+  local validation, AWS free tier optional
+- Track B (GitOps): ArgoCD-based deployment of reference app on KIND — fully local
+- Both tracks: starter-to-solution technique, guided generation, validation pipeline
+
+**Deliverable:** Production-quality IaC artifact, validated locally
+
+**Why this isn't repetitive with M07:** M07 teaches the 5-phase workflow as a general
+pattern (using Helm/CI/CD/Ansible as vehicles). M08 dives deep into IaC-specific
+concerns: failure modes, drift, validation pipelines, state management. The focus
+shifts from "how to structure your AI interaction" to "what domain knowledge IaC needs."
+
+---
+
+#### M09 — AgentDev: GSD + Multi-File Projects + Sub-Agents
+**Delivery:** RECOMMENDED · **Status:** ADAPT
+
+**Existing:** `course-site/docs/module-05b-ai-workflows/` (GSD lab, CLAUDE.md,
+memory, plan modes)
+
+**Concept (Explainer):**
+- When Superpowers isn't enough: multi-file, multi-component projects
+- GSD workflow: write spec first, let agent implement (spec-driven development)
+- Sub-agents in Claude Code: coordinator spawns specialists
+- Plan modes: Claude Code `/plan` vs. GSD `plan-phase`
+- Cross-session memory: how to maintain context across conversations
+
+**Diagrams (3):**
+1. GSD Workflow (Spec → Implement → Review → Iterate)
+2. Sub-Agents (coordinator → specialists)
+3. Superpowers vs. GSD: When to Use Which
+
+**Lab:** Build multi-file project via GSD
+- Write a GSD spec for a monitoring stack extension for the reference app
+- Watch sub-agent delegation in action
+- Compare: Superpowers (single artifact) vs. GSD (multi-file output)
+
+**Deliverable:** Multi-file project delivered via spec-driven workflow
+
+---
+
+#### M10 — Agent Memory & Knowledge
+**Delivery:** RECOMMENDED · **Status:** NEW
+
+**Existing:** Module 05b has memory systems basics
+
+**Concept (Explainer):**
+- Memory problem: agents are stateless (colleague with amnesia)
+- Memory types: short-term (conversation), long-term (persistent), shared (team)
+- **Vectorization & Embeddings:**
+  - Embeddings = converting text to numbers capturing MEANING
+  - GPS analogy: "Paris" → [48.86, 2.35]. Similar cities have nearby coordinates.
+- **Semantic search:** finding by meaning, not keywords
+  - "pod crash" also finds "CrashLoopBackOff", "OOMKilled", "restart loop"
+- **RAG pipeline:** Query → Vectorize → Search → Retrieve → Augment → Generate
+  - Like giving the AI a library card instead of making it memorize everything
+- **Agentic RAGs:** agents that decide WHAT to look up and WHEN
 - Decision tree: Memory vs. RAG vs. Context Engineering
-- Lab: set up memory + basic RAG with reference app docs
-**Explainer diagrams (5):**
-1. The Memory Problem (stateless vs. memory-equipped agent)
+
+**Diagrams (5):**
+1. The Memory Problem (stateless vs. memory-equipped)
 2. Embeddings & Vectorization (GPS analogy)
 3. Semantic Search vs. Keyword Search
 4. RAG Pipeline (6-step flow)
 5. Decision Tree: Memory vs. RAG vs. Context
 
-**Lab deliverable:** Working memory setup + basic RAG pipeline
+**Lab:** Memory + simple RAG (local-first)
+- Set up persistent memory (Claude Memory or file-based)
+- Build basic RAG: vectorize reference app docs → query → compare with/without RAG
+- All processing local — no external vector DB required
+
+**Deliverable:** Working memory setup + basic RAG pipeline
 
 ---
 
-### DAY 3: Tool Wiring + AgentDev
+#### M11 — Wiring Tools to Agents
+**Delivery:** CORE · **Status:** REUSE
 
-#### M09 — Wiring Tools to Agents
-**Duration:** 60 min (20 concept + 40 lab)
-**Status:** REUSE
-**Existing content:** `modules/module-08-tools/LAB.md` (~350 lines, starter + solution)
-**Also:** `reading/tool-patterns.md` (611 lines)
-**Changes:** Renumber from M8→M09. Add Excalidraw diagrams. Minor framing.
-**Explainer diagrams (3):**
+**Existing:** `modules/module-08-tools/LAB.md` (~350 lines), `reading/tool-patterns.md` (611 lines)
+
+**Concept (Explainer):**
+- Tools let agents ACT, not just THINK
+- Three patterns: Direct CLI, CLI Wrappers (with safety), MCP Servers
+- When to use which: CLI for ad-hoc, wrappers for repeated+safe, MCP for complex
+- Safety config: allowed/blocked commands, credential protection
+- Never let agent run `kubectl delete namespace production` without approval
+
+**Changes from existing:** Renumber M8→M11. Add diagrams.
+
+**Diagrams (3):**
 1. Three Tool Patterns (CLI → Wrapper → MCP)
-2. Safety Layer Architecture (Agent → Wrapper → Infrastructure)
-3. Decision Matrix: which pattern for which use case
+2. Safety Layer Architecture
+3. Decision Matrix: which pattern when
 
-**Lab deliverable:** Working safe tool wrappers with safety configuration
+**Lab:** Build safe tool wrappers (existing lab, runs locally with KIND)
+
+**Deliverable:** Working safe tool wrappers for kubectl and aws cli
 
 ---
 
-#### M10 — Agentic Skills — Teaching Agents Your Runbooks
-**Duration:** 90 min (30 concept + 60 lab)
-**Status:** REUSE
-**Existing content:** `modules/module-07-skills/LAB.md` (~400 lines), 4 SKILL.md files, SKILL-TEMPLATE.md, RUBRIC.md
-**Also:** `reading/skills-guide.md` (618 lines)
-**Changes:** Renumber from M7→M10. Add Excalidraw diagrams. Frame as "Domain Expertise made tangible."
-**Explainer diagrams (3):**
+#### M12 — Agentic Skills — Teaching Agents Your Runbooks
+**Delivery:** CORE · **Status:** REUSE
+
+**Existing:** `modules/module-07-skills/LAB.md` (~400 lines), 4 SKILL.md files, SKILL-TEMPLATE.md, RUBRIC.md, `reading/skills-guide.md` (618 lines)
+
+**Concept (Explainer):**
+- Agentic Skill = structured, machine-readable runbook
+  - Converting tribal knowledge from Post-it notes into SOP for humans AND agents
+- SKILL.md format: metadata, steps, commands, decision trees, escalation
+- Skill lifecycle: Design → Validate → Version → Deploy → Improve
+- Domain Expertise made tangible: your SRE knowledge becomes a machine-readable skill
+
+**Changes from existing:** Renumber M7→M12. Add diagrams. Frame as "expertise made tangible."
+
+**Diagrams (3):**
 1. From Runbook to Skill (before/after)
 2. Anatomy of a SKILL.md
-3. Skill Lifecycle (Design → Validate → Version → Deploy → Improve)
+3. Skill Lifecycle
 
-**Lab deliverable:** Complete SKILL.md with peer review
+**Lab:** Write domain-specific skills (existing lab, 4 tracks)
+- Track A (SRE): EC2 health check
+- Track B (DevOps): Deployment safety check
+- Track C (DBA): RDS slow query investigation
+- Track D (Observability): Alert noise analyzer
 
----
+**Deliverable:** Complete SKILL.md with peer review
 
-#### M11 — AgentDev: AI-Assisted Infrastructure as Code
-**Duration:** 90 min (20 concept + 70 lab)
-**Status:** NEW
-**Existing content:** Was listed as gap in COMPLETED-HANDOFF.md (Module 6 lab not built)
-**New content needed (all):**
-- Superpowers workflow applied to IaC
-- Common AI failure modes in IaC (missing security groups, hardcoded values, etc.)
-- Human review checkpoint concept
-- Lab: 3 tracks generating IaC for the reference app
-  - Track A (Terraform): RDS module + CloudWatch alarms
-  - Track B (Ansible): PostgreSQL setup + monitoring agents
-  - Track C (Kubernetes): Deployment with HPA, PDB, probes
-**Explainer diagrams (3):**
-1. IaC Generation Pipeline (5-phase with Superpowers)
-2. Common AI IaC Failures (and the safety net)
-3. Human-AI IaC Workflow (review checkpoints)
-
-**Lab deliverable:** Production-quality IaC artifact, validated
+**Bridge to Pillar 3:** Skills and tools built here become the building blocks for
+full agents in M14+. Pillar 2 encodes YOUR expertise; Pillar 3 gives it autonomy.
 
 ---
 
-#### M12 — AgentDev: Multi-File Projects with GSD + Sub-Agents
-**Duration:** 75 min (20 concept + 55 lab)
-**Status:** NEW
-**Existing content:** None (GSD mentioned in concepts but no lab)
-**New content needed (all):**
-- GSD workflow for multi-file projects
-- Sub-agents in Claude Code (coordinator → specialists)
-- CICD pipeline as multi-file example
-- Lab: Write GSD spec → Claude Code generates full CICD pipeline for reference app
-  - GitHub Actions workflow
-  - Dockerfile improvements
-  - K8s manifests for staging/production
-  - Sub-agent demonstration
-**Explainer diagrams (3):**
-1. GSD Workflow (Spec → Implement → Review → Iterate)
-2. Sub-Agents (coordinator → specialists)
-3. Multi-File Project Output
-
-**Lab deliverable:** Complete CICD pipeline project via GSD
+### PILLAR 3: Agentic DevOps
+*"Build agents that work for you"*
 
 ---
-
-### DAY 4: Building Agents
 
 #### M13 — Agent Design Patterns & Autonomy Levels
-**Duration:** 60 min (40 concept + 20 workshop exercise)
-**Status:** ADAPT
-**Existing content:** `reading/agent-anatomy.md` (511 lines), `reading/profile-guide.md` (583 lines)
-**New content needed:**
-- Single-agent patterns explainer (Advisor → Investigator → Proposal → Guardian)
-- Multi-agent patterns (Sequential, Parallel, Hierarchical)
-- Autonomy Spectrum (L1-L4) — exists in governance YAML but needs conceptual explainer
-- Workshop exercise: map 3 tasks to patterns, assign autonomy levels
-**Explainer diagrams (4):**
-1. Single-Agent Patterns (4 patterns)
-2. Autonomy Spectrum (L1→L4 progression)
-3. Multi-Agent Patterns (3 modes)
-4. Agent Architect Role (you become the orchestrator)
+**Delivery:** CORE · **Status:** ADAPT
 
-**Lab deliverable:** Agent architecture sketch for top automation candidate
+**Existing:** `reading/agent-anatomy.md` (511 lines), `reading/profile-guide.md` (583 lines)
+
+**Concept (Explainer):**
+- The shift: AI user → Agent Architect / Platform Engineer
+- Single-agent patterns: Advisor → Investigator → Proposal → Guardian
+- Multi-agent patterns: Sequential, Parallel, Hierarchical
+- Autonomy Spectrum: L1 Assistive → L2 Advisory → L3 Proposal → L4 Semi-autonomous
+- Choosing the right level: risk × frequency × blast radius
+
+**New content needed:** Pattern explainers, workshop exercise
+
+**Diagrams (4):**
+1. Single-Agent Patterns (4 types)
+2. Autonomy Spectrum (L1→L4)
+3. Multi-Agent Patterns (3 modes)
+4. Agent Architect Role
+
+**Exercise:** Map 3 tasks to patterns, assign autonomy levels, sketch architecture
+
+**Deliverable:** Agent architecture sketch for top automation candidate
 
 ---
 
 #### M14 — Building Your First Agent with Hermes
-**Duration:** 90 min (25 concept + 65 lab)
-**Status:** REUSE
-**Existing content:** `modules/module-10-agents/` (3 track labs, ~500 lines each, starter + solution)
-**Also:** 4 agent profiles in `agents/`, setup in `setup/install-hermes.md`
-**Changes:** Renumber from M10→M14. Add Excalidraw diagrams. Frame with Hermes architecture.
-**Explainer diagrams (3):**
-1. Agent Definition Anatomy (model + instructions + tools + skills + safety)
-2. Hermes Architecture (agent core + tools + gateways + memory)
+**Delivery:** CORE · **Status:** REUSE
+
+**Existing:** `modules/module-10-agents/` (3 track labs, ~500 lines each, starter + solution), 4 agent profiles, `setup/install-hermes.md`
+
+**Concept (Explainer):**
+- Hermes: open source, works with free Gemini, auto-installs Python
+- Agent definition: model, instructions, tools, skills, safety rules
+- Connecting to skills from M12
+- Alternative: Claude Code sub-agents
+
+**Changes from existing:** Renumber M10→M14. Add diagrams.
+
+**Diagrams (3):**
+1. Agent Definition Anatomy
+2. Hermes Architecture
 3. From Definition to Running Agent
 
-**Lab deliverable:** Working Hermes agent against reference app infrastructure
+**Lab:** Build health check agent for reference app (existing lab, 3 tracks)
+
+**Deliverable:** Working Hermes agent against reference app (local KIND cluster)
 
 ---
 
 #### M15 — Triggers, Scheduling & Chat Interfaces
-**Duration:** 75 min (25 concept + 50 lab)
-**Status:** REUSE
-**Existing content:** `modules/module-12-triggers/LAB.md` (657 lines) + cron starter YAML
-**Changes:** Renumber from M12→M15. Add Excalidraw diagrams. Add Telegram setup instructions.
-**Explainer diagrams (4):**
-1. Five Trigger Patterns (schedule, chat, webhook, code event, ticket)
-2. Webhook Flow (alarm → SNS → agent → Slack/Telegram)
-3. Chat Interface Pattern (Telegram/Slack as command center)
-4. Mission Control Dashboard concept
+**Delivery:** CORE · **Status:** REUSE
 
-**Lab deliverable:** Agent with cron + chat command + webhook trigger
+**Existing:** `modules/module-12-triggers/LAB.md` (657 lines) + cron starter
+
+**Concept (Explainer):**
+- Five trigger patterns: schedule, chat, webhook, code event, ticket
+- Hermes built-in: cron + Telegram/Discord/Slack gateways
+- Webhook architecture: monitoring → agent → report
+- Mission Control concept
+
+**Changes from existing:** Renumber M12→M15. Add diagrams.
+
+**Diagrams (4):**
+1. Five Trigger Patterns
+2. Webhook Flow
+3. Chat Interface Pattern
+4. Mission Control Dashboard
+
+**Lab:** Wire agent to triggers (existing lab)
+
+**Deliverable:** Agent with cron + chat command + webhook
 
 ---
 
 #### M16 — Domain Agents — Real-World Use Cases
-**Duration:** 75 min (20 concept + 55 lab)
-**Status:** ADAPT
-**Existing content:** Module 10 track labs cover domain agents. Module 4 Impact Assessment content.
-**New content needed:**
-- Automation Quadrant explainer (folded in from old M4)
-- Domain agent gallery (DB, Cost, K8s, RCA, Deployment Safety)
-- Scoring exercise: which tasks should become agents?
-- Lab continues the Day 4 agent project — adds domain specialization
-**Explainer diagrams (3):**
-1. Domain Agent Gallery (5 agents with responsibilities)
-2. Automation Quadrant (frequency × complexity)
-3. Agent Specialization (base agent + domain skill)
+**Delivery:** CORE · **Status:** ADAPT
 
-**Lab deliverable:** Domain agent with skills, tools, and at least one trigger
+**Existing:** Module 10 track labs, Module 4 impact assessment content
+
+**Concept (Explainer):**
+- Domain agent patterns: DB Health, Cost Anomaly, K8s Health, Incident RCA, Deploy Safety
+- Automation Quadrant: frequency × complexity (folded from old M4)
+- Agent specialization: base agent + domain skill
+
+**New content needed:** Automation Quadrant explainer, domain agent gallery
+
+**Diagrams (3):**
+1. Domain Agent Gallery
+2. Automation Quadrant (frequency × complexity)
+3. Agent Specialization (base + domain skill)
+
+**Lab:** Build domain agent (extends M14, 3 tracks)
+- Track A (DB): PostgreSQL monitoring + slow query + tuning proposals
+- Track B (Cost): Cost anomaly detection + reports (mock data or live)
+- Track C (K8s): Pod monitoring + CrashLoopBackOff diagnosis + fix proposals
+
+**Deliverable:** Domain agent with skills, tools, and trigger
 
 ---
 
-### DAY 5: Enterprise + Capstone
-
 #### M17 — Multi-Agent Systems & Sub-Agents
-**Duration:** 75 min (30 concept + 45 lab)
-**Status:** REUSE
-**Existing content:** `modules/module-11-fleet/LAB.md` (626 lines)
-**Changes:** Renumber from M11→M17. Add Excalidraw diagrams. Add Claude Code sub-agent demo.
-**Explainer diagrams (4):**
-1. Single vs. Multi-Agent (when you need more than one)
+**Delivery:** RECOMMENDED · **Status:** REUSE
+
+**Existing:** `modules/module-11-fleet/LAB.md` (626 lines)
+
+**Concept (Explainer):**
+- When single agents aren't enough: cross-domain incidents
+- Two approaches: Claude Code sub-agents, Hermes fleet
+- Fleet coordination: round-robin, skill-based, hierarchical
+- Shared memory and context across agents
+
+**Changes from existing:** Renumber M11→M17. Add diagrams. Add sub-agent demo.
+
+**Diagrams (4):**
+1. Single vs. Multi-Agent
 2. Sub-Agent Pattern in Claude Code
 3. Fleet Coordination Modes
 4. Cross-Domain Incident Resolution
 
-**Lab deliverable:** Multi-agent config coordinating 3 domain agents
+**Lab:** Multi-agent incident response (existing lab)
+
+**Deliverable:** Multi-agent config coordinating 3 domain agents
 
 ---
 
 #### M18 — Governance — Making Agents Enterprise-Safe
-**Duration:** 75 min (30 concept + 45 lab)
-**Status:** REUSE
-**Existing content:** `modules/module-13-governance/LAB.md` (720 lines), 6 governance YAMLs
-**Also:** `reading/governance-ref.md` (513 lines)
-**Changes:** Renumber from M13→M18. Add Excalidraw diagrams.
-**Explainer diagrams (4):**
-1. Governance Triad (CAN do × APPROVAL × LOGGED)
-2. Maturity Progression (L1→L4 with promotion criteria)
+**Delivery:** CORE · **Status:** REUSE
+
+**Existing:** `modules/module-13-governance/LAB.md` (720 lines), 6 governance YAMLs, `reading/governance-ref.md` (513 lines)
+
+**Concept (Explainer):**
+- Governance triad: CAN do × APPROVAL × LOGGED
+- Maturity levels: L1 → L4 with promotion criteria
+- Enterprise reqs: audit trails, RBAC, credential protection, rollback
+- Approval workflows and escalation chains
+
+**Changes from existing:** Renumber M13→M18. Add diagrams.
+
+**Diagrams (4):**
+1. Governance Triad
+2. Maturity Progression (L1→L4)
 3. Enterprise Safety Architecture
 4. Approval Workflow
 
-**Lab deliverable:** Governance config passing enterprise security standards
+**Lab:** Add governance to agent (existing lab)
+
+**Deliverable:** Governance config with maturity levels, approvals, audit
 
 ---
 
 #### M19 — Capstone: Build Your Agentic DevOps System
-**Duration:** 120 min (80 build + 40 presentations)
-**Status:** ADAPT
-**Existing content:** Module 14 partial structure
-**New content needed:**
-- Presentation template
-- Evaluation rubric
-- Build phase checklist
-- Presentation format and timing guide
-**No diagrams — this is a build + present module.**
+**Delivery:** CORE · **Status:** ADAPT
 
-**Lab deliverable:** Complete agent system — config, skills, triggers, governance
+**Existing:** Module 14 partial structure
+
+**New content needed:** Presentation template, evaluation rubric, build checklist
+
+**No diagrams — build + present module.**
+
+**Lab:** Teams finalize complete system → present with live demo
+
+**Deliverable:** Complete agent system with skills, triggers, governance
 
 ---
 
 #### M20 — 30-Day Deployment Roadmap + What's Next
-**Duration:** 45 min (30 guided + 15 reflection)
-**Status:** ADAPT
-**Existing content:** Module 14 had 30-day plan concept
-**New content needed:**
-- 30-day plan template (Week 1-4 with specific milestones)
-- "What's Next" content (landscape, community, advanced topics)
-- Reflection exercise
-**No diagrams — guided exercise module.**
+**Delivery:** OPTIONAL · **Status:** ADAPT
 
-**Lab deliverable:** Written 30-day deployment plan
+**Existing:** Module 14 had 30-day concept
+
+**New content needed:** 30-day plan template, "what's next" content
+
+**No diagrams — guided exercise.**
+
+**Deliverable:** Written 30-day deployment plan
+
+---
+
+## Delivery Format Guide
+
+### 5-Day Delivery (all 20 modules)
+All modules in sequence. Full Agentic Engineering coverage.
+
+### 4-Day Delivery (skip OPTIONAL, condense RECOMMENDED)
+- Skip: M20 (fold roadmap into M19 capstone)
+- Condense: M05 (give as pre-read), M09 (demo only), M10 (shorten lab to demo), M17 (demo only)
+- Result: ~16 modules across 4 days
+
+### 3-Day Delivery (CORE only)
+- Skip: M05, M09, M10, M17, M20
+- Condense: M04 (merge into M01 setup), M16 (merge into M14)
+- Result: ~13 modules across 3 days (close to original 14-module format)
+
+| Module | 5-Day | 4-Day | 3-Day |
+|--------|-------|-------|-------|
+| M01 Welcome + Setup | Full | Full | Full (absorb M04) |
+| M02 AI Foundations | Full | Full | Full |
+| M03 Platform AI | Full | Full | Full |
+| M04 MCP | Full | Full | Merged into M01 |
+| M05 How AI Works | Full | Pre-read | Skip |
+| M06 Context Engineering | Full | Full | Full |
+| M07 Superpowers Workflow | Full | Full | Full |
+| M08 AgentDev IaC | Full | Full | Full |
+| M09 GSD + Sub-Agents | Full | Demo only | Skip |
+| M10 Memory & RAG | Full | Demo only | Skip |
+| M11 Tool Wiring | Full | Full | Full |
+| M12 Agentic Skills | Full | Full | Full |
+| M13 Design Patterns | Full | Full | Full |
+| M14 Build First Agent | Full | Full | Full (absorb M16) |
+| M15 Triggers | Full | Full | Full |
+| M16 Domain Agents | Full | Full | Merged into M14 |
+| M17 Multi-Agent | Full | Demo only | Skip |
+| M18 Governance | Full | Full | Full |
+| M19 Capstone | Full | Full (+ roadmap) | Full (+ roadmap) |
+| M20 Roadmap | Full | Merged into M19 | Merged into M19 |
 
 ---
 
@@ -521,196 +741,143 @@ DAY 5: Enterprise + Capstone                      (Pillar 3 contd.)
 
 | Status | Modules | Count |
 |--------|---------|-------|
-| REUSE | M03, M09, M10, M14, M15, M17, M18 | 7 |
-| ADAPT | M01, M02, M04, M07, M13, M16, M19, M20 | 8 |
-| NEW | M05, M06, M08, M11, M12 | 5 |
+| REUSE | M03, M11, M12, M14, M15, M17, M18 | 7 |
+| ADAPT | M01, M02, M04, M06, M07, M08, M09, M13, M16, M19, M20 | 11 |
+| NEW | M05, M10 | 2 |
 | **Total** | | **20** |
 
-**Estimated diagrams:** ~62 across all modules (none exist yet)
-**Estimated new lab content:** ~5 complete labs to write
-**Estimated adaptation work:** ~8 modules to restructure/expand
+Estimated diagrams: ~62 (none exist yet)
+
+**Note:** Reclassified several modules from NEW to ADAPT because existing content in
+`course-site/docs/` covers significant ground. M07 reuses module-05a, M08 reuses
+module-06, M09 reuses module-05b.
 
 ---
 
-## Build Sequence (Priority Order)
+## Build Sequence
 
-Each module gets its own conversation session. This sequence ensures dependencies flow correctly and we front-load the hardest new content.
+### Phase 1: Adapt Existing Modules (highest leverage — most content exists)
+1. M06 — Context Engineering (expand from M01 reading + module-05b CLAUDE.md lab)
+2. M07 — Superpowers Workflow (adapt from module-05a, add Track C)
+3. M08 — AgentDev IaC (adapt from module-06, add local-first paths)
+4. M09 — GSD + Sub-Agents (adapt from module-05b, add sub-agent content)
 
-### Phase 1: Fill Critical Lab Gaps (NEW labs)
-Build the 5 modules that don't exist yet. These are the hardest and most important.
+### Phase 2: New Content
+5. M05 — How AI Works (conceptual only, no lab infrastructure needed)
+6. M10 — Memory & RAG (new lab)
 
-| Order | Module | Dependency | Estimated Effort |
-|-------|--------|------------|-----------------|
-| 1 | M05 | None (standalone workflow) | Medium — Ansible lab |
-| 2 | M06 | None (conceptual only) | Light — no lab, diagrams + reading |
-| 3 | M08 | M06 concepts | Heavy — RAG pipeline lab |
-| 4 | M11 | M05 harness patterns | Heavy — 3-track IaC lab |
-| 5 | M12 | M11 + M05 GSD | Medium — CICD pipeline lab |
+### Phase 3: Adapt Remaining Modules
+7. M01 — Trinity Framework + setup expansion (local-first)
+8. M02 — Domain Expertise framework addition
+9. M04 — MCP expansion from bridge module
+10. M13 — Design Patterns explainers
+11. M16 — Domain Agents + Automation Quadrant
+12. M19/M20 — Capstone + Roadmap templates
 
-### Phase 2: Adapt Existing Modules (expand + restructure)
-These have existing content that needs framing updates for the 5-day flow.
+### Phase 4: Diagrams for REUSE Modules
+13-19. Add Excalidraw diagrams to M03, M11, M12, M14, M15, M17, M18
 
-| Order | Module | Main Change |
-|-------|--------|-------------|
-| 6 | M01 | Add Trinity Framework explainer, expand setup lab |
-| 7 | M02 | Add Domain Expertise framework, vocabulary exercise |
-| 8 | M04 | Expand from bridge demo to full MCP hands-on lab |
-| 9 | M07 | Expand M01 context eng content into full module |
-| 10 | M13 | Add design patterns explainers (was noted gap) |
-| 11 | M16 | Merge Impact Assessment + domain agent framing |
-| 12 | M19 | Create capstone templates, rubric |
-| 13 | M20 | Create 30-day plan template, "what's next" content |
-
-### Phase 3: Add Diagrams to REUSE Modules
-These modules are content-complete but need Excalidraw visuals.
-
-| Order | Module | Diagrams Needed |
-|-------|--------|----------------|
-| 14 | M03 | 3 diagrams |
-| 15 | M09 | 3 diagrams |
-| 16 | M10 | 3 diagrams |
-| 17 | M14 | 3 diagrams |
-| 18 | M15 | 4 diagrams |
-| 19 | M17 | 4 diagrams |
-| 20 | M18 | 4 diagrams |
-
-### Phase 4: Video Transcripts (Udemy)
-Generate voiceover transcripts for all 20 modules using the voiceover-video skill.
-
-### Phase 5: Instructor Guides
-Update Day 1-3 guides + create Day 4-5 guides for the expanded workshop.
+### Phase 5: Video Transcripts (Udemy)
+### Phase 6: Instructor Guides (update for expanded format)
 
 ---
 
-## Module-Building SOP
+## How to Build a Module (Session Protocol)
 
-Each module gets built in its own conversation session. Here's the process:
+### Starting a New Session
 
-### Starting a Module Session
+Open a new conversation and provide this context:
 
-Every session should begin by reading:
-1. This file (`WORKSHOP-5DAY.md`) — for overall context and the specific module brief
-2. `CLAUDE.md` — for repo conventions and constraints
-3. `COMPLETED-HANDOFF.md` — for understanding what's already built
-4. Any existing content referenced in the module's "Existing content" field above
+```
+I'm building content for the Agentic DevOps workshop.
+
+Read these files for context:
+1. course/WORKSHOP-5DAY.md — the master plan (find the module I'm building)
+2. course/CLAUDE.md — repo conventions
+3. course/COMPLETED-HANDOFF.md — what's already built
+
+I want to build Module [NN] — [Name].
+
+[Any specific notes about what you want for this module]
+```
+
+If the module has **Existing content** listed, also tell the session to read those files.
 
 ### What Each Session Produces
 
-For **NEW** modules:
 ```
 modules/module-NN-name/
-├── README.md              # Module overview, objectives, prerequisites
+├── README.md              # Overview, objectives, prerequisites
 ├── explainer/
-│   ├── EXPLAINER.md       # Concept notes for each explainer diagram
-│   └── diagrams/          # Excalidraw PNG exports (generated via skill)
+│   ├── EXPLAINER.md       # Concept notes (what to explain, analogies, key points)
+│   └── diagrams/          # Excalidraw exports
 ├── reading/
-│   ├── concepts.md        # Core concepts (standalone readable text)
-│   └── reference.md       # Quick-reference material
+│   ├── concepts.md        # Core concepts (standalone readable)
+│   └── reference.md       # Quick-reference
 ├── lab/
-│   ├── LAB.md             # Step-by-step lab instructions
-│   ├── starter/           # Starting files for participants
-│   └── solution/          # Complete reference solutions
+│   ├── LAB.md             # Step-by-step instructions
+│   ├── starter/           # Starting files
+│   └── solution/          # Reference solutions
 ├── quiz/
 │   └── QUIZ.md            # 5-7 questions + answers
 └── exploratory/
     └── PROJECTS.md        # Optional stretch projects
 ```
 
-For **ADAPT** modules:
-- Update existing content in place
-- Add new sections (e.g., Domain Expertise framework)
-- Create any missing components (diagrams, expanded lab sections)
+### Quality Checklist
 
-For **REUSE** modules:
-- Add Excalidraw diagrams only
-- Minor renumbering and framing edits
-
-### Quality Checks
-
-Every module session should verify:
-- [ ] Lab uses ONLY components deployed in previous modules (check dependency chain)
-- [ ] Lab works in mock mode (`HERMES_LAB_MODE=mock`) for offline participants
-- [ ] Lab has both starter/ and solution/ files where applicable
-- [ ] No "prompt engineering" terminology — use "context engineering"
+- [ ] Lab only uses infrastructure from earlier modules
+- [ ] ALL labs have Docker/KIND/local-first path (AWS always optional)
+- [ ] Lab works in mock mode (`HERMES_LAB_MODE=mock`)
+- [ ] Has starter/ and solution/ where applicable
+- [ ] No "prompt engineering" — use "context engineering"
 - [ ] Domain Expertise theme reinforced where natural
-- [ ] Free-tier path documented (Goose + Gemini fallback)
-- [ ] Completable solo (no team-exercise dependencies for Udemy)
-- [ ] Estimated timing fits within module duration
-- [ ] References correct module numbers (new 5-day numbering)
+- [ ] Free-tier path documented (Crush + Gemini fallback)
+- [ ] Solo-completable (no team dependencies for Udemy)
+- [ ] Correct module numbers (new numbering)
+
+### After Completing a Module
+
+Update `COMPLETED-HANDOFF.md` with what was built, any deviations, and known issues.
 
 ---
 
 ## Infrastructure Dependency Chain
 
-Each module ONLY uses infrastructure available from earlier modules. This chain must be respected.
-
 ```
-M01 (setup) deploys:
-├── KIND cluster with reference app (Helm)
-├── PostgreSQL (via Helm in KIND)
-├── Prometheus + Grafana (via Helm in KIND)
-├── AWS free tier (EC2 t2.micro, optional RDS db.t3.micro)
-├── MCP servers connected (kubectl, aws, github, postgres)
-└── Mock data available (HERMES_LAB_MODE=mock as default)
+M01 (setup) deploys → everything depends on this
+├── Docker + KIND cluster (REQUIRED — local, free)
+├── Reference app via Helm (on KIND)
+├── PostgreSQL via Helm (on KIND)
+├── Prometheus + Grafana via Helm (on KIND)
+├── MCP servers: kubectl, github, postgres (local connections)
+├── Mock data (HERMES_LAB_MODE=mock default)
+└── AWS free tier (OPTIONAL — never required)
 
-M01 → everything depends on this
-M05 → needs EC2 from M01 (Ansible target)
-M08 → needs reference app docs (already in repo)
-M09 → needs kubectl + aws cli from M01
-M10 → needs reference app + Claude Code from M01
-M11 → needs all M01 infra + M05 harness knowledge
-M12 → needs M11 IaC + M05 GSD knowledge
-M14 → needs all M01 infra + M10 skills + Hermes install
-M15 → needs M14 agent + Telegram (free, instant setup)
-M16 → continues M14 agent
-M17 → needs M16 agents (team exercise combines tracks)
+M06 → needs ref app from M01 (to build CLAUDE.md for)
+M07 → needs M06 context eng knowledge, ref app from M01
+M08 → needs M07 Superpowers workflow + ref app
+M09 → needs M07 + M08 (builds on both workflows)
+M10 → needs ref app docs (in repo)
+M11 → needs kubectl + mock-aws from M01
+M12 → needs ref app + Claude Code from M01
+M14 → needs M12 skills + M11 tools + Hermes installed
+M15 → needs M14 agent + Telegram (free)
+M16 → continues M14
+M17 → needs M16 agents (team combines tracks)
 M18 → needs M16 agent
 M19 → needs everything
 ```
 
 ---
 
-## Coordination Between Sessions
+## Custom Skills to Build
 
-Since each module is built in a separate conversation, coordination happens through files:
+| Skill | Purpose | Build When |
+|-------|---------|------------|
+| `module-builder` | Scaffolds module directory with all files | Before Phase 1 |
+| `lab-writer` | Writes step-by-step labs following conventions | Before Phase 1 |
+| `quiz-generator` | Generates quiz from lab + reading | Before Phase 3 |
+| `diagram-planner` | Plans Excalidraw diagrams from concepts | Before Phase 4 |
 
-1. **This document** (`WORKSHOP-5DAY.md`) — overall plan, read at session start
-2. **Module README.md** — each module's README documents what it covers and its dependencies
-3. **Lab files** — each LAB.md explicitly lists prerequisites
-4. **`COMPLETED-HANDOFF.md`** — update after each module is complete
-5. **Git commits** — each session should commit its work with clear messages
-
-After completing a module, update `COMPLETED-HANDOFF.md` with:
-- What was built
-- Any deviations from this plan
-- Dependencies verified
-- Known issues or testing needed
-
----
-
-## Custom Skills to Consider Building
-
-As we develop content, these production skills could speed up the work:
-
-| Skill | Purpose | When to Build |
-|-------|---------|---------------|
-| `module-builder` | Scaffolds a new module directory with all required files | Before Phase 1 |
-| `lab-writer` | Writes step-by-step lab guides following our conventions | Before Phase 1 |
-| `quiz-generator` | Generates quiz questions from lab + reading content | Before Phase 2 |
-| `diagram-planner` | Plans Excalidraw diagrams from module concepts | Before Phase 3 |
-| `udemy-transcript` | Generates voiceover transcripts in trainer's voice | Before Phase 4 |
-
-The `excalidraw-bw` and `voiceover-video` skills already exist. We may need to tune them after testing.
-
----
-
-## What Participants Take Home (Day 5)
-
-1. The AI Trinity Framework as their adoption roadmap
-2. Working AI coding agent setup (Claude Code or Goose) with MCP connections
-3. Understanding of how AI works (prefill/decode, context, memory, RAG)
-4. Domain-specific agentic skills (SKILL.md files)
-5. Production-quality IaC generated by AI
-6. A complete CICD pipeline generated through GSD workflow
-7. A working Hermes agent with triggers (cron, chat, webhook) and governance
-8. A 30-day deployment plan for their organization
+Existing skills: `excalidraw-bw`, `voiceover-video` (tune after testing)
