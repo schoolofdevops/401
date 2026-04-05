@@ -1,0 +1,330 @@
+---
+id: reading-tool-patterns
+title: "Hermes Tool Integration Patterns: CLI, MCP, and Wrappers"
+sidebar_label: "Tool Integration Patterns"
+sidebar_position: 3
+description: "CLI vs MCP vs mock wrapper patterns, DANGEROUS_PATTERNS mechanical safety gate, approval modes, and fleet delegation tools"
+---
+
+:::info Reference Document
+This document explains WHY the Hermes tool architecture is designed the way it is. This is the reference for understanding what tools your agents can use, how to configure that access, and why certain boundaries are enforced.
+:::
+
+**Companion labs:** [Module 8 — Tool Integration](../module-08-tool-integration/) | [Module 8 Reference](../module-08-tool-integration/reading/module-08-reference)
+
+---
+
+## 1. What Is a Tool in an Agent Context?
+
+A tool is anything an agent can call to interact with the outside world: run a command, read a file, call an API, query a service, or delegate work to another agent. Tools are the **only** mechanism by which an agent affects or observes the environment outside its context window.
+
+This definition has an important implication: an agent without tools is a chatbot. It can reason about infrastructure all day but cannot observe real state, run diagnostics, or execute changes.
+
+### The Governance Equation
+
+The governance question "what can this agent do?" is answered entirely by which tools are available to it. You do not control agent behavior by writing clever prompts. You control it by controlling tool access:
+
+- Remove `terminal` from `platform_toolsets.cli` → agent cannot run any shell commands, regardless of what it decides
+- Add `terminal` but set `approvals.mode: manual` → agent can run shell commands, but DANGEROUS_PATTERNS-matching commands require human approval
+- Set `command_allowlist: ["SELECT", "EXPLAIN"]` → specific patterns are pre-approved at L4 governance
+
+### Tool Discovery vs Tool Invocation
+
+**Discovery:** At session startup, the tool registry builds a list of all available tools. This list is expressed as JSON Schema function definitions and passed to the LLM in the `tools` parameter of every API call. The Brain "knows" what tools exist because they are in its context.
+
+**Invocation:** During the agent loop, the LLM emits a `tool_call` object. The registry's `dispatch()` method routes this to the correct handler. The agent cannot call a tool that is not in its schema list.
+
+---
+
+## 2. Three Tool Integration Patterns
+
+### Pattern 1: CLI Tools via Terminal Toolset
+
+The agent executes shell commands directly, using the `terminal_tool` registered in the `terminal` toolset. Any command that can be executed in a shell can be run by the agent: `aws`, `kubectl`, `psql`, `curl`, `terraform`, `ansible`, etc.
+
+**How to configure it:**
+```yaml
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+```
+
+**The tradeoff:**
+CLI is the lowest-friction integration pattern. Any tool your team already uses can be called by the agent without writing adapter code. The cost is no type safety, no versioned API contract, no structured output guarantee.
+
+**When to use it:**
+- Any standard DevOps CLI tool that the environment has installed
+- Operations that map directly to existing operational procedures in SKILL.md
+
+**DevOps analogy:** Direct SSH access to a server. Powerful, flexible, and requires strict access controls.
+
+### Pattern 2: MCP (Model Context Protocol) Tools
+
+MCP is a standardized protocol. Instead of the agent calling tools directly, tools expose themselves as MCP servers. Hermes's MCP client (registered in the `mcp` toolset) discovers available tools from connected MCP servers and registers them in the same `ToolRegistry` used for CLI tools. From the Brain's perspective, MCP tools and CLI tools look identical.
+
+**When to use it:**
+- Complex integrations that benefit from structured I/O
+- Services where you want a versioned API contract that is stable across agent updates
+- When you want to share tools across multiple agent frameworks
+
+**In the Hermes configuration:**
+```yaml
+mcp_servers:
+  kubernetes:
+    transport: stdio
+    command: "mcp-server-kubernetes"
+    args: ["--kubeconfig", "${KUBECONFIG}"]
+```
+
+**DevOps analogy:** The Container Runtime Interface (CRI) in Kubernetes. CRI is a standardized interface that lets Kubernetes talk to any container runtime without knowing the runtime's internal API. MCP does the same for AI tool integration.
+
+### Pattern 3: Mock Wrapper Scripts
+
+A thin shell script placed earlier in `PATH` than the real CLI tool. The wrapper intercepts calls to the CLI tool and routes them either to pre-baked mock data files or to the real tool, based on `HERMES_LAB_MODE`.
+
+**How it works:**
+```bash
+if [[ "$HERMES_LAB_MODE" != "mock" ]]; then
+  exec "$(command -v aws)" "$@"   # pass through to real aws CLI
+fi
+# MOCK MODE: serve pre-baked JSON
+case "$1 $2" in
+  "rds describe-db-instances")
+    cat "$MOCK_DATA_DIR/rds/describe-db-instances.json"
+    ;;
+esac
+```
+
+**The scenario selection mechanism:**
+```bash
+SCENARIO="${HERMES_LAB_SCENARIO:-clean}"
+if [[ "$SCENARIO" == "messy" ]]; then
+  cat "$MOCK_DATA_DIR/rds/describe-db-instances-slow.json"
+else
+  cat "$MOCK_DATA_DIR/rds/describe-db-instances.json"
+fi
+```
+
+**Why not LocalStack?** LocalStack Community Edition reached end-of-life on March 23, 2026. Mock wrappers are zero-dependency, work offline, are perfectly reproducible, and easy to extend.
+
+**Setup:**
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=messy    # or: clean
+export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"
+```
+
+**Mock banner:**
+```
+╔══════════════════════════════════════════╗
+║            [ MOCK MODE ]                 ║
+║   Data source: pre-baked JSON files      ║
+║   Set HERMES_LAB_MODE=live for real AWS  ║
+╚══════════════════════════════════════════╝
+```
+
+### Choosing the Right Pattern
+
+**Use CLI tools when:** The tool already exists as a CLI binary your team uses operationally.
+
+**Use MCP when:** You need structured I/O that a CLI tool cannot provide cleanly, or when you want to reuse the same integration across multiple agent frameworks.
+
+**Use wrappers when:** You are in a lab or testing environment. Wrappers are also ideal for smoke testing: `HERMES_LAB_MODE=mock` lets you verify the skill procedure is correct before running against real infrastructure.
+
+---
+
+## 3. The Hermes Tool Architecture
+
+### How tools/registry.py Enables Tool Discovery
+
+The `ToolRegistry` class in `tools/registry.py` is a singleton. Tool files call `registry.register()` at module import time:
+
+```python
+registry.register(
+    name="terminal_command",
+    toolset="terminal",
+    schema={
+        "name": "terminal_command",
+        "description": "Execute a shell command...",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "command": {"type": "string", "description": "The shell command to execute"}
+            },
+            "required": ["command"]
+        }
+    },
+    handler=execute_terminal_command,
+    check_fn=lambda: shutil.which("bash") is not None,
+    requires_env=[],
+)
+```
+
+The `check_fn` is called before including a tool in the schema list. Tools whose `check_fn()` returns False are excluded — their name never appears in the LLM's context.
+
+### Platform Toolsets Reference
+
+| Toolset | What it enables | Typical use |
+|---|---|---|
+| `terminal` | Shell command execution | Domain specialist agents running CLI tools |
+| `file` | File read/write/create/search | Agents that need to read config files, write reports |
+| `web` | Web search and page retrieval | Any agent that may need to look up documentation |
+| `skills` | Skills discovery (`skills_search`) | Agents with large skill library |
+| `mcp` | All tools from connected MCP servers | Agents using structured external integrations |
+| `memory` | Cross-session memory storage/retrieval | Agents that need to persist findings across sessions |
+| `delegate` | Subagent delegation (`delegate_task`) | Fleet coordinator and multi-agent orchestration |
+
+### How Mock Wrappers Work: Full Toolchain
+
+`HERMES_LAB_MODE` is not a Hermes configuration key — it is an environment variable that the mock wrapper scripts inspect. The routing is done at the OS level, transparent to Hermes.
+
+```
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=messy
+export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"
+hermes -p track-a chat
+```
+
+1. `hermes -p track-a chat` starts the agent with the Track A profile
+2. Agent calls `aws rds describe-db-instances` via `terminal_tool`
+3. OS resolves `aws` → finds `wrappers/aws` in PATH first
+4. `wrappers/aws` checks `HERMES_LAB_MODE=mock` → serves JSON from mock file
+5. Agent receives mock JSON, proceeds with diagnosis
+6. Agent calls `psql -c "SELECT ... FROM pg_stat_statements"` via `terminal_tool`
+7. OS resolves `psql` → finds `wrappers/mock-psql` in PATH first
+8. `wrappers/mock-psql` checks `HERMES_LAB_SCENARIO=messy` → serves pg-stat-statements-messy.json in CSV
+9. Agent receives messy data, applies decision tree, produces diagnosis
+
+Hermes itself is unaware of the mock routing. The same tool calls, the same SKILL.md procedure, the same agent configuration — only the data source changes.
+
+---
+
+## 4. DANGEROUS_PATTERNS: The Mechanical Safety Gate
+
+Before any terminal command executes, `check_all_command_guards(command, env_type)` runs. This function:
+
+1. Normalizes the command (strips ANSI escapes, null bytes, Unicode homoglyphs — obfuscation bypass prevention)
+2. Runs the normalized command against each pattern in `DANGEROUS_PATTERNS`
+3. If a match is found, checks if the pattern is already approved for this session
+4. If not approved, applies the approval mode behavior
+
+### DANGEROUS_PATTERNS Categories
+
+| Category | Example patterns |
+|---|---|
+| Destructive filesystem | `rm -rf`, `rm -r`, `find -delete`, `xargs rm` |
+| Database destruction | `DROP TABLE`, `DROP DATABASE`, `TRUNCATE TABLE`, `DELETE FROM` (without WHERE) |
+| System file writes | `> /etc/`, `tee /etc/`, `sed -i /etc/` |
+| System service control | `systemctl stop`, `systemctl disable`, `systemctl mask` |
+| Process termination | `kill -9 -1` (all processes), `pkill -9` |
+| Remote code execution | `curl ... \| bash`, `wget ... \| sh` |
+| Shell injection | `bash -c`, `python -c`, `bash -lc` |
+| Sensitive path writes | `~/.ssh/`, `~/.hermes/.env` |
+| Self-termination | `pkill hermes`, `killall gateway` |
+
+### What is NOT in DANGEROUS_PATTERNS
+
+By design, some commands that could cause damage in the wrong context are NOT in the list:
+- `kubectl delete pod`, `kubectl drain`, `kubectl cordon`
+- `aws ec2 terminate-instances`
+- `CREATE INDEX`, `ALTER TABLE`
+- `aws rds modify-db-instance`
+
+This separation is intentional and pedagogically important. DANGEROUS_PATTERNS covers commands that are catastrophically, universally dangerous. Domain-specific dangerous commands are handled by SOUL.md NEVER rules. The two-layer model keeps DANGEROUS_PATTERNS focused on clear-cut cases.
+
+**The implication for Track B and Track C:** SOUL.md NEVER rules are load-bearing for these tracks — removing them would leave no protection against the most dangerous FinOps and Kubernetes commands.
+
+---
+
+## 5. Approval Modes
+
+### manual (L2 governance)
+
+The agent thread blocks. The user sees:
+```
+⚠️  DANGEROUS COMMAND: SQL DROP
+    DROP TABLE users
+    [o]nce  |  [s]ession  |  [a]lways  |  [d]eny
+```
+
+- `once`: approve this instance only
+- `session`: approve for the duration of this session
+- `always`: add to `command_allowlist` in config (permanent)
+- `deny`: block; agent receives `{"approved": False, ...}` and must report it cannot proceed
+
+The 5-minute timeout (`timeout: 300`) is important — without it, the agent would be blocked indefinitely waiting for approval input.
+
+### smart (L3 governance)
+
+An auxiliary LLM reviews the flagged command:
+
+```python
+prompt = """You are a security reviewer for an AI coding agent.
+Command: {command}
+Flagged reason: {description}
+
+APPROVE if the command is clearly safe
+DENY if genuinely dangerous
+ESCALATE if uncertain
+
+Respond with exactly one word: APPROVE, DENY, or ESCALATE"""
+```
+
+- `APPROVE`: false positive → auto-approved, session-level
+- `DENY`: genuinely dangerous → blocked without user prompt
+- `ESCALATE`: uncertain → falls through to manual prompt
+
+When the auxiliary LLM is unavailable, smart mode falls back to manual.
+
+### off
+
+All DANGEROUS_PATTERNS checks are bypassed. Appropriate only for trusted local development environments. Never for production.
+
+---
+
+## 6. Fleet Delegation: Tools for Multi-Agent Coordination
+
+The `delegate_task` tool (registered in the `delegate` toolset) enables fleet coordinator patterns. When a coordinator calls `delegate_task`, it:
+
+1. Creates a new Hermes agent instance using the specified profile
+2. Passes context (coordinator's findings, the specific subtask to execute)
+3. Runs the subagent to completion
+4. Returns the subagent's final response to the coordinator
+5. The coordinator synthesizes results from all delegates into a unified finding
+
+**Delegation safety controls:**
+- `MAX_DEPTH`: maximum recursion depth for subagent delegation (prevents infinite delegation chains)
+- `MAX_CONCURRENT_CHILDREN`: limits parallel subagent spawning (prevents resource exhaustion)
+
+**Why coordinator has no skills/ directory:**
+A coordinator with domain skills would start applying those skills directly instead of delegating to specialists. Keeping `skills/` empty in the coordinator profile forces it to delegate, which keeps specialist logic in specialist agents where it can be independently governed and audited.
+
+---
+
+## 7. Quick Reference
+
+### Three Tool Patterns Comparison
+
+| Pattern | Use Case | Config Key | Example |
+|---|---|---|---|
+| CLI (terminal toolset) | Standard DevOps CLIs: aws, kubectl, psql | `platform_toolsets.cli: [terminal, ...]` | Track A running `aws rds describe-db-instances` |
+| MCP (mcp toolset) | Structured integrations: observability, ticketing | `platform_toolsets.cli: [mcp, ...]` + `mcp_servers:` | Datadog MCP server for metric queries |
+| Mock wrappers | Lab environments, testing, offline demos | `HERMES_LAB_MODE=mock` + wrappers in PATH | Track A using mock-aws and mock-psql for offline labs |
+
+### HERMES_LAB_MODE Routing Summary
+
+| Variable | Value | Effect |
+|---|---|---|
+| `HERMES_LAB_MODE` | `mock` | Wrapper intercepts CLI calls → serves mock data |
+| `HERMES_LAB_MODE` | `live` (default) | Wrapper passes through to real CLI |
+| `HERMES_LAB_SCENARIO` | `clean` (default) | Mock serves normal/healthy state data |
+| `HERMES_LAB_SCENARIO` | `messy` | Mock serves degraded/anomalous state data |
+
+### Common Configuration Mistakes
+
+| Mistake | Symptom | Fix |
+|---|---|---|
+| Coordinator has `terminal` in toolset | Coordinator runs commands directly instead of delegating | Remove `terminal` from coordinator's `platform_toolsets.cli` |
+| `HERMES_LAB_MODE` not set | Wrappers pass through to real CLI | `export HERMES_LAB_MODE=mock` before starting Hermes |
+| Wrappers not in PATH | Agent runs real CLI even with HERMES_LAB_MODE=mock | `export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"` |
+| `approvals.mode: off` in production config | DANGEROUS_PATTERNS checks bypassed | Set `approvals.mode: manual` or `smart` |
+| Missing `file` toolset | Agent cannot write diagnostic reports | Add `file` to `platform_toolsets.cli` list |
