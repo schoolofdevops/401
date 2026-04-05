@@ -42,3 +42,22 @@ export interface ServiceConfig {
 	/** URL path prefix to reach this service through nginx proxy */
 	pathPrefix: string;
 }
+
+/** A service entry from the catalog registry (/catalog/items). */
+export interface CatalogItem {
+	id: number;
+	name: string;
+	description: string | null;
+	/** "active" | "degraded" | "maintenance" */
+	status: string;
+	created_at: string;
+}
+
+/** An operational event from the worker (/worker/events/recent). */
+export interface WorkerEvent {
+	id: number;
+	source: string;
+	event_type: string;
+	payload: Record<string, unknown>;
+	created_at: string;
+}

@@ -8,7 +8,7 @@
  * Uses AbortSignal.timeout(3000) so a stalled service doesn't block the
  * entire poll cycle — critical when injecting failures during labs.
  */
-import type { ServiceConfig, ServiceHealth, SystemStatus } from './types.js';
+import type { CatalogItem, ServiceConfig, ServiceHealth, SystemStatus, WorkerEvent } from './types.js';
 
 /** Services to poll, in display order. */
 export const SERVICE_CONFIGS: ServiceConfig[] = [
@@ -154,4 +154,49 @@ export function formatTime(date: Date | undefined): string {
 		second: '2-digit',
 		hour12: false
 	});
+}
+
+/**
+ * Return a human-readable relative time string ("just now", "2 minutes ago").
+ */
+export function timeAgo(isoString: string): string {
+	const diffMs = Date.now() - new Date(isoString).getTime();
+	const secs = Math.floor(diffMs / 1000);
+	if (secs < 10) return 'just now';
+	if (secs < 60) return `${secs}s ago`;
+	const mins = Math.floor(secs / 60);
+	if (mins < 60) return `${mins}m ago`;
+	const hours = Math.floor(mins / 60);
+	if (hours < 24) return `${hours}h ago`;
+	return `${Math.floor(hours / 24)}d ago`;
+}
+
+/**
+ * Fetch the service registry from the catalog.
+ * Returns empty array on any error — never throws.
+ */
+export async function fetchCatalogItems(): Promise<CatalogItem[]> {
+	try {
+		const res = await fetch('/catalog/items', { signal: AbortSignal.timeout(5000) });
+		if (!res.ok) return [];
+		const data = await res.json();
+		return Array.isArray(data.items) ? data.items : [];
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Fetch the 50 most recent operational events from the worker.
+ * Returns empty array on any error — never throws.
+ */
+export async function fetchRecentEvents(): Promise<WorkerEvent[]> {
+	try {
+		const res = await fetch('/worker/events/recent', { signal: AbortSignal.timeout(5000) });
+		if (!res.ok) return [];
+		const data = await res.json();
+		return Array.isArray(data.events) ? data.events : [];
+	} catch {
+		return [];
+	}
 }
