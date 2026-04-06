@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "reference-app.fullname" . }}-nginx
+  labels:
+    {{- include "reference-app.labels" . | nindent 4 }}
+data:
+  default.conf: |
+    server {
+        listen 3000;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # SPA fallback — serves index.html for all unmatched routes
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        # Proxy /api-gateway/ → api-gateway service (prefix strip — no variables, resolves at startup)
+        location /api-gateway/ {
+            proxy_pass http://{{ include "reference-app.fullname" . }}-api-gateway:{{ .Values.apiGateway.service.port }}/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_read_timeout 10s;
+        }
+
+        # Proxy /catalog/ → catalog service
+        location /catalog/ {
+            proxy_pass http://{{ include "reference-app.fullname" . }}-catalog:{{ .Values.catalog.service.port }}/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_read_timeout 10s;
+        }
+
+        # Proxy /worker/ → worker service
+        location /worker/ {
+            proxy_pass http://{{ include "reference-app.fullname" . }}-worker:{{ .Values.worker.service.port }}/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_read_timeout 10s;
+        }
+
+        # Health check endpoint for container probes
+        location /nginx-health {
+            access_log off;
+            return 200 "ok\n";
+            add_header Content-Type text/plain;
+        }
+    }
