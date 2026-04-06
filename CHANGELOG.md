@@ -1,0 +1,22 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] - 2026-04-06
+
+### Added
+
+- **Module 01 — Welcome & Foundations**: Course intro, DevOps-to-AI mental model, labs, reading, quiz, and explainers
+- **Module 02 — AI Foundations**: LLMs, context engineering, prompt mechanics, hands-on labs with Claude Code
+- **Module 03 — Platform AI**: AWS built-in AI features walkthrough, platform AI patterns
+- **Module 04 — MCP (Model Context Protocol)**: MCP architecture, tool wiring, server setup labs
+- **Module 05 — Structured Coding & AI Internals**: Superpowers workflow for IaC, TDD with AI assistance, AI internals explainer
+- Reference application with dashboard (Docker/K8s topology visualization, PostgreSQL health status)
+- KIND-based Kubernetes lab infrastructure (Helm charts, nginx proxy, service mesh)
+- Course site scaffold (Docusaurus)
+- Workshop 5-day variant outline (`WORKSHOP-5DAY.md`)
+- Governance and skills framework scaffolding
+- Instructor materials and setup guides
