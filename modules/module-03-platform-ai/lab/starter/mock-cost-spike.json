@@ -354,8 +354,7 @@
           }
         }
       ],
-      "Estimated": false,
-      "_note": "EC2 costs jumped from ~$1,087 to ~$2,401. Root cause: test instances (6x m5.xlarge) launched on 2026-02-15 for performance testing, never terminated"
+      "Estimated": false
     },
     {
       "TimePeriod": {

@@ -183,9 +183,11 @@ make deploy
 1. Creates a 3-node KIND cluster named `lab` with all port mappings
 2. Installs PostgreSQL via Helm into the `db` namespace
 3. Installs Prometheus + Grafana (kube-prometheus-stack) into the `monitoring` namespace
-4. Builds four Docker images from source (API gateway, catalog, worker, dashboard)
+4. Pulls four pre-built Docker images from Docker Hub (api-gateway, catalog, worker, dashboard)
 5. Loads images into the KIND cluster
 6. Deploys the reference app via Helm into the `app` namespace
+
+> **Want to build from source?** Run `make deploy-from-source` instead. This compiles the Rust services locally and takes 5–10 minutes on first run.
 
 **Expected time:** 5–10 minutes on first run (Docker pulls base images).
 
@@ -322,7 +324,7 @@ Create the file `.mcp.json` in the course root:
   "mcpServers": {
     "kubernetes": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-kubernetes"],
+      "args": ["-y", "mcp-server-kubernetes"],
       "env": {
         "KUBECONFIG": "${HOME}/.kube/config"
       }
@@ -332,7 +334,7 @@ Create the file `.mcp.json` in the course root:
       "args": [
         "-y",
         "@modelcontextprotocol/server-postgres",
-        "postgresql://refapp:refapp-lab-password@localhost:5432/refapp"
+        "postgresql://refapp:refapp-lab-password@localhost:5433/refapp"
       ]
     },
     "github": {
@@ -346,11 +348,13 @@ Create the file `.mcp.json` in the course root:
 }
 ```
 
-> **Note on PostgreSQL:** The connection string uses the credentials from the Makefile (`refapp` / `refapp-lab-password`). The PostgreSQL service is exposed via KIND port mapping. If the port isn't forwarded yet, you may need to run:
+> **Note on PostgreSQL:** The PostgreSQL service inside KIND is ClusterIP-only (no NodePort). You must keep a port-forward running while using the postgres MCP server:
 >
 > ```bash
-> kubectl port-forward svc/postgresql 5432:5432 -n db --context kind-lab &
+> kubectl port-forward svc/postgresql 5433:5432 -n db --context kind-lab &
 > ```
+>
+> We use local port **5433** (not 5432) to avoid conflicts with any PostgreSQL instance you may have running locally — a common setup for DevOps practitioners.
 
 > **Note on GitHub:** The GitHub MCP server is optional for this lab. If you want to use it, create a personal access token at [github.com/settings/tokens](https://github.com/settings/tokens) and export it:
 >
@@ -367,7 +371,7 @@ Crush uses a similar MCP configuration. Add to your Crush config (typically `~/.
   "mcpServers": {
     "kubernetes": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-kubernetes"],
+      "args": ["-y", "mcp-server-kubernetes"],
       "env": {
         "KUBECONFIG": "${HOME}/.kube/config"
       }
@@ -377,7 +381,7 @@ Crush uses a similar MCP configuration. Add to your Crush config (typically `~/.
       "args": [
         "-y",
         "@modelcontextprotocol/server-postgres",
-        "postgresql://refapp:refapp-lab-password@localhost:5432/refapp"
+        "postgresql://refapp:refapp-lab-password@localhost:5433/refapp"
       ]
     }
   }
@@ -440,7 +444,7 @@ What schema does the refapp database have?
 
 > **Note:** If the postgres MCP connection fails, make sure the port-forward is running:
 > ```bash
-> kubectl port-forward svc/postgresql 5432:5432 -n db --context kind-lab &
+> kubectl port-forward svc/postgresql 5433:5432 -n db --context kind-lab &
 > ```
 
 ### Test 3: Cross-platform query (the real test)
@@ -463,7 +467,7 @@ This is the foundation for every lab in this course.
 
 ## Step 8: Run the Full Verification
 
-The course provides an automated verification script that checks 26 items:
+The course provides an automated verification script that checks 29+ items (exact count varies by which optional tools are installed):
 
 ```bash
 # From the course root directory

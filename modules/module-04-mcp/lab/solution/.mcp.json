@@ -9,11 +9,7 @@
     },
     "postgres": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-postgres",
-        "postgresql://refapp:refapp-lab-password@localhost:5433/refapp"
-      ]
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://refapp:refapp-lab-password@localhost:5433/refapp"]
     },
     "github": {
       "command": "npx",

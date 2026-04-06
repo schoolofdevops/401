@@ -78,18 +78,18 @@ if command -v claude >/dev/null 2>&1; then
   check "Claude Code installed" claude --version
   AI_TOOL_FOUND=1
 else
-  printf '  SKIP  Claude Code not installed (Path A — optional if using OpenCode)\n'
+  printf '  SKIP  Claude Code not installed (Path A — optional if using Crush)\n'
 fi
 
-if command -v opencode >/dev/null 2>&1; then
-  check "OpenCode installed" opencode --version
+if command -v crush >/dev/null 2>&1; then
+  check "Crush installed" crush --version
   AI_TOOL_FOUND=1
 else
-  printf '  SKIP  OpenCode not installed (Path B — optional if using Claude Code)\n'
+  printf '  SKIP  Crush not installed (Path B — optional if using Claude Code)\n'
 fi
 
 if [ "$AI_TOOL_FOUND" -eq 0 ]; then
-  printf '  FAIL  No AI coding tool found. Install Claude Code (Path A) or OpenCode (Path B).\n'
+  printf '  FAIL  No AI coding tool found. Install Claude Code (Path A) or Crush (Path B).\n'
   printf '        See setup/SETUP.md Step 4.\n'
   FAIL=$((FAIL + 1))
 fi

@@ -52,12 +52,11 @@ aws cloudwatch describe-alarms \
 ### If you're using mock data (recommended for consistency):
 
 ```bash
-# Navigate to the course repo
-cd ~/course
-
-# Examine the mock alarm data
-cat infrastructure/mock-data/cloudwatch/describe-alarms-clean.json | python3 -m json.tool | head -50
+# From your course root directory:
+cat infrastructure/mock-data/cloudwatch/describe-alarms-anomaly.json | python3 -m json.tool | head -50
 ```
+
+> **Note:** Use `describe-alarms-anomaly.json` (not `describe-alarms-clean.json`) — the clean file shows a healthy state with no active alarms, which defeats the exercise. The anomaly file has alarms in `ALARM` state to analyse.
 
 **If the mock data path doesn't exist**, use the starter file provided:
 
@@ -168,11 +167,13 @@ Use Claude Code or Crush to simulate the same exercise. Open a Kubernetes manife
 
 ```bash
 # Using Claude Code
-claude "Read the voting-app Helm chart values and tell me what security improvements you'd recommend. Then suggest what monitoring alerts we should set up."
+claude "Read reference-app/helm/reference-app/values.yaml and tell me what security improvements you'd recommend for this Kubernetes deployment. Then suggest what monitoring alerts we should set up."
 
-# Using Crush
-crush "Read the voting-app Helm chart values and tell me what security improvements you'd recommend. Then suggest what monitoring alerts we should set up."
+# Using Crush (from the course root directory, then type the prompt)
+crush
 ```
+
+> In Crush, type: `Read reference-app/helm/reference-app/values.yaml and tell me what security improvements you'd recommend. Then suggest what monitoring alerts we should set up.`
 
 ### What to observe:
 
@@ -190,12 +191,12 @@ Compare the AI's recommendations to what YOU would recommend:
 If your reference app is running on KIND with Prometheus and Grafana:
 
 ```bash
-# Check if Grafana is accessible
-kubectl port-forward svc/grafana 3000:3000 -n monitoring &
-
-# Open in browser
-echo "Open http://localhost:3000 (admin/admin)"
+# Grafana is already exposed on NodePort 30090 — no port-forward needed
+open http://localhost:30090
+# Or just open http://localhost:30090 in your browser (admin / admin)
 ```
+
+> **Note:** The Grafana service in this cluster is `monitoring-grafana` (NodePort 80:30090). If you ever need a manual port-forward (e.g., different port): `kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring`
 
 Explore the dashboards. Grafana's built-in AI features (Sift) require Grafana Cloud Pro+, but even the open-source version shows you how metric visualization alone doesn't answer "why."
 

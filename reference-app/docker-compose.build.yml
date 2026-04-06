@@ -1,0 +1,35 @@
+# Docker Compose build override — builds all services from source.
+#
+# Usage (merge with base compose file):
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up --build -d
+#   make compose-build-up
+#
+# This file only overrides the build: sections; all other config (ports,
+# env vars, depends_on, volumes) is inherited from docker-compose.yml.
+
+services:
+  catalog:
+    build:
+      context: .
+      dockerfile: services/catalog/Dockerfile
+      args:
+        GIT_SHA: ${GIT_SHA:-dev}
+
+  worker:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+      args:
+        GIT_SHA: ${GIT_SHA:-dev}
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+      args:
+        GIT_SHA: ${GIT_SHA:-dev}
+
+  dashboard:
+    build:
+      context: dashboard
+      dockerfile: Dockerfile

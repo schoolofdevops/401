@@ -1,4 +1,4 @@
-.PHONY: deploy destroy build publish load-images status cluster db monitoring app \
+.PHONY: deploy deploy-from-source destroy build publish pull-images load-images status cluster db monitoring app \
         compose-up compose-down compose-logs compose-build-up
 
 CLUSTER_NAME    := lab
@@ -15,8 +15,10 @@ GIT_SHA         := $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
 
 # --- Kubernetes (KIND) deployment ---
 
-# One-command deploy: creates cluster, installs DB + monitoring, builds images, deploys app
-deploy: cluster db monitoring build load-images app
+# One-command deploy: creates cluster, installs DB + monitoring, pulls pre-built images, deploys app
+# Uses pre-built images from Docker Hub — no local Rust compilation required.
+# To build from source instead: make deploy-from-source
+deploy: cluster db monitoring pull-images load-images app
 	@echo ""
 	@echo "=== Deployment Complete ==="
 	@echo "Dashboard:  http://localhost:30080"
@@ -47,6 +49,22 @@ monitoring:
 		--namespace $(MON_NAMESPACE) --create-namespace \
 		-f $(PROM_VALUES) \
 		--wait --timeout 180s
+
+# Pull pre-built images from Docker Hub (used by default deploy)
+pull-images:
+	docker pull $(REGISTRY)/refapp-gateway:$(IMAGE_TAG)
+	docker pull $(REGISTRY)/refapp-catalog:$(IMAGE_TAG)
+	docker pull $(REGISTRY)/refapp-worker:$(IMAGE_TAG)
+	docker pull $(REGISTRY)/refapp-dashboard:$(IMAGE_TAG)
+
+# Build from source (requires Rust toolchain — takes 5-10 min on first run)
+deploy-from-source: cluster db monitoring build load-images app
+	@echo ""
+	@echo "=== Deployment Complete (built from source) ==="
+	@echo "Dashboard:  http://localhost:30080"
+	@echo "Grafana:    http://localhost:30090  (admin/admin)"
+	@echo "Prometheus: http://localhost:30091"
+	@echo ""
 
 build:
 	docker build --build-arg GIT_SHA=$(GIT_SHA) \

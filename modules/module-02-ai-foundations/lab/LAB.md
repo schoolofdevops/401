@@ -23,7 +23,13 @@ You will send a CloudWatch alarm JSON to your AI agent **four times**, each time
 
 ### Step 1.1: Prepare Your Alarm Data
 
-Save this CloudWatch alarm JSON to a file called `alarm-sample.json` in your lab directory:
+The alarm data is already in `lab/starter/alarm-data.json`. Copy it to your working directory or reference it directly:
+
+```bash
+cp modules/module-02-ai-foundations/lab/starter/alarm-data.json alarm-data.json
+```
+
+The alarm contents for reference:
 
 ```json
 {
@@ -254,9 +260,8 @@ Create a markdown table in your lab notes and fill it in as you progress through
 | **Mentions 60-65% baseline?** | | | | |
 | **Actionable next steps?** | | | | |
 | **Mentions cache or database?** | | | | |
-| **Suggests specific CLI commands?** | | | | |
+| **Correlation analysis?** | | | | |
 | **Would you trust this at 3am?** | | | | |
-| **How many minutes would remediation take?** | | | | |
 ```
 
 **Fill this in with 2-4 words per cell.** For example:
@@ -537,28 +542,31 @@ If you're using Claude Code as your AI agent:
 
 If you're using Crush as your AI agent:
 
-1. Install Crush: `brew install charmbracelet/tap/crush` (or `choco install crush` on Windows)
-2. Connect to your preferred provider: `crush /connect groq` (for Groq) or `crush /connect gemini` (for Google Gemini)
-3. Create a project: `crush new module-02-lab`
-4. In the terminal, create your layer files and run Crush on each:
+1. Install Crush: `brew install charmbracelet/tap/crush` (or see [github.com/charmbracelet/crush](https://github.com/charmbracelet/crush))
+2. Connect to your preferred provider (run `/connect` inside Crush and choose Groq or Gemini)
+3. Navigate to the lab directory:
    ```bash
-   crush analyze layer-1-bare.md alarm-sample.json
-   crush analyze layer-2-role.md alarm-sample.json
-   # ... repeat for layers 3 and 4
+   cd modules/module-02-ai-foundations/lab/starter
    ```
-5. Use `crush export` to save outputs to your comparison table
+4. Launch Crush:
+   ```bash
+   crush
+   ```
+5. For each layer, paste the prompt from the corresponding `context-layer-N.md` file, then append the alarm JSON from `alarm-data.json`. Type or paste directly into the Crush terminal interface.
+6. Record your observations in `comparison-table.md`
 
-**Tip:** Crush is fast with Groq — if you're on a slow connection, use Groq's free tier (14,400 requests/day) rather than falling back to Gemini.
+**Tip:** Crush is fast with Groq — if you're on a slow connection, use Groq's free tier (14,400 requests/day) rather than Gemini.
 
 ---
 
 ## Appendix: Starter Files
 
 The `starter/` directory contains:
-- `alarm-sample.json` — the CloudWatch alarm used in Part 1
+- `alarm-data.json` — the CloudWatch alarm used in Part 1
 - `cost-anomaly-sample.json` — the Cost Explorer anomaly for Part 3
-- `comparison-table-template.md` — a blank table ready to fill
-- `layer-prompts.md` — copy-paste templates for layers 1–4 (saves typing)
+- `comparison-table.md` — a blank table ready to fill
+- `context-layer-1.md` through `context-layer-4.md` — copy-paste prompts for each layer (saves typing)
+- `vocabulary-comparison.md` — Prompt A and Prompt B for the vocabulary comparison exercise
 
 Use these to speed up the lab if time is tight.
 

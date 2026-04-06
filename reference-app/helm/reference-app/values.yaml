@@ -13,7 +13,7 @@ global:
 apiGateway:
   replicaCount: 1
   image:
-    repository: reference-app/api-gateway
+    repository: schoolofdevops/refapp-gateway
     tag: "1.0.0"
     pullPolicy: IfNotPresent
   service:
@@ -30,7 +30,7 @@ apiGateway:
 catalog:
   replicaCount: 1
   image:
-    repository: reference-app/catalog
+    repository: schoolofdevops/refapp-catalog
     tag: "1.0.0"
     pullPolicy: IfNotPresent
   service:
@@ -44,7 +44,7 @@ catalog:
 worker:
   replicaCount: 1
   image:
-    repository: reference-app/worker
+    repository: schoolofdevops/refapp-worker
     tag: "1.0.0"
     pullPolicy: IfNotPresent
   service:
@@ -58,7 +58,7 @@ worker:
 dashboard:
   replicaCount: 1
   image:
-    repository: reference-app/dashboard
+    repository: schoolofdevops/refapp-dashboard
     tag: "1.0.0"
     pullPolicy: IfNotPresent
   service:

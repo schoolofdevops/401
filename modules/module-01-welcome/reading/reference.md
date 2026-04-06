@@ -141,7 +141,7 @@ crush
   "mcpServers": {
     "kubernetes": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-kubernetes"],
+      "args": ["-y", "mcp-server-kubernetes"],
       "env": { "KUBECONFIG": "${HOME}/.kube/config" }
     },
     "postgres": {
