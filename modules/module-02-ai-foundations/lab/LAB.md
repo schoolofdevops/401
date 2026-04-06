@@ -182,23 +182,21 @@ When you see a CPU spike, follow this decision tree:
 2. **Runaway process check:** SSH into the instance and run:
    ```bash
    aws ssm send-command --instance-ids i-0abc123def456001 --document-name "AWS-RunShellScript" \
-   --parameters 'commands=["top -bn1 | head -20"]'
-   ```
+   --parameters 'commands=["top -bn1 | head -20"]' ```   
+ 
    - Look for a single process consuming >50% CPU (typical runaway)
    - Look for swapping or OOM killer activity in dmesg
 
 3. **Recent deployment check:** Did the 02:30 UTC deployment introduce a leak or inefficiency?
    ```bash
    aws deploy describe-deployments --region us-east-1 --query 'deployments[0:5]' \
-   --filters "key=instanceIds,type=KEY_AND_VALUE,value=i-0abc123def456001"
-   ```
+   --filters "key=instanceIds,type=KEY_AND_VALUE,value=i-0abc123def456001"```
    - If last deployment was <30 min ago AND no obvious runaway process → suspect code regression
 
 4. **Cache health check:** Is ElastiCache degraded?
    ```bash
    aws elasticache describe-cache-clusters --cache-cluster-id catalog-cache-1 \
-   --show-cache-node-info --query 'CacheClusters[0].CacheNodes[0].CacheNodeStatus'
-   ```
+   --show-cache-node-info --query 'CacheClusters[0].CacheNodes[0].CacheNodeStatus'```
    - If cache is degraded or nodes are rebooting → every query goes to database → CPU spike
    - Check Redis hit ratio: should be 94%, if < 85% → cache-miss storm
 
