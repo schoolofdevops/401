@@ -586,26 +586,3 @@ Use these to speed up the lab if time is tight.
 **"Can I use this 4-layer approach for non-alarm scenarios?"**
 - Yes, absolutely. Use it for log analysis, capacity planning, cost anomalies, deployment decisions, post-mortem analysis. Any scenario where you need consistent, context-aware AI reasoning.
 
----
-
-## Appendix: Facilitator Notes (for live workshop instructors)
-
-**Timing:**
-- Part 1 takes 25 min if participants are fast typists; allow 30 min in a live setting.
-- Part 2 comparison should be quick (10 min) — do it together as a group to celebrate the "aha moment."
-- Part 3 is 5 min of instruction; the actual template creation happens offline or as homework.
-
-**Group exercise (live workshop):**
-- Have each participant fill the comparison table in a shared Google Doc or Miro board.
-- After Layer 3, pause and ask: "What changed? What's the biggest difference?" Usually the answer is "Oh, NOW I understand the infrastructure."
-- Use the cost anomaly template as a model for what they'll do with runbooks in Module 07.
-
-**Solo/Udemy:**
-- The lab is fully self-contained. Learners can complete it in 40 min without an instructor.
-- Offer the comparison table as a downloadable template (XLSX or Markdown).
-- Encourage learners to build their Layer 3 context for their own infrastructure and share it in the course forum.
-
-**Assessment:**
-- Quiz question (Module 02 QUIZ.md): "You receive an alarm with no infrastructure context. What are you missing to respond effectively?"
-- Lab deliverable grade: Did they complete all 4 layers? Is their cost template usable?
-
