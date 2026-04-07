@@ -1,0 +1,20 @@
+GitHub PR event received: PR #{pull_request.number} on {repository.full_name}.
+
+Title: {pull_request.title}
+Author: {pull_request.user.login}
+Branch: {pull_request.head.ref} → {pull_request.base.ref}
+Files changed: {pull_request.changed_files}
+Additions: +{pull_request.additions}, Deletions: -{pull_request.deletions}
+
+Full PR body:
+{pull_request.body}
+
+YOUR TASK:
+Briefly review this pull request and post a single review comment back to the PR. Focus on:
+1. Whether the title clearly states the change (conventional commit format preferred).
+2. Whether the body has a Summary section and a Test plan section.
+3. Whether the changed file count and line counts seem proportional to the title.
+
+Keep the comment under 1500 characters. Use markdown formatting. Sign off with "— hermes-lab".
+
+NOTE: Do not attempt to fetch the diff itself; you only have the metadata above. If the PR clearly needs a deeper review than metadata permits, say so politely.

@@ -1,0 +1,42 @@
+{
+  "action": "opened",
+  "number": 42,
+  "pull_request": {
+    "id": 1234567890,
+    "number": 42,
+    "state": "open",
+    "title": "feat(api): add /health readiness endpoint",
+    "body": "## Summary\n\nAdds a `/health` endpoint that returns `{\"status\": \"ok\", \"db\": \"connected\"}` when the service is ready to receive traffic.\n\n## Test plan\n\n- [x] curl http://localhost:8080/health returns 200\n- [x] returns 503 if database connection fails\n- [ ] integration test in CI",
+    "user": {
+      "login": "synthetic-octocat",
+      "id": 9999
+    },
+    "head": {
+      "ref": "feature/health-endpoint",
+      "sha": "abc123def456789"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "0123456789abcdef"
+    },
+    "additions": 47,
+    "deletions": 2,
+    "changed_files": 3,
+    "html_url": "https://github.com/example-org/example-repo/pull/42"
+  },
+  "repository": {
+    "id": 1234,
+    "name": "example-repo",
+    "full_name": "example-org/example-repo",
+    "owner": {
+      "login": "example-org",
+      "id": 100
+    },
+    "private": false,
+    "html_url": "https://github.com/example-org/example-repo"
+  },
+  "sender": {
+    "login": "synthetic-octocat",
+    "id": 9999
+  }
+}
