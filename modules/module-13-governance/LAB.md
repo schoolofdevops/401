@@ -1012,10 +1012,9 @@ grep -l '^wrapper_allowlist:' \
   course/governance/governance-L4-track-c.yaml | wc -l
 # Expected: 5
 
-# 8. Wrapper rejects blocked commands at L2
+# 8. Wrapper rejects blocked commands at L2 (call mock-kubectl directly)
 export HERMES_LAB_MODE=mock HERMES_LAB_GOVERNANCE=L2
 export MOCK_DATA_DIR="$(pwd)/course/infrastructure/mock-data"
-export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"
-kubectl delete pod foo 2>&1 | grep -q 'GOVERNANCE REJECTED' && echo 'Layer 1 working'
+course/infrastructure/wrappers/mock-kubectl delete pod foo 2>&1 | grep -q 'GOVERNANCE REJECTED' && echo 'Layer 1 working'
 # Expected: Layer 1 working
 ```
