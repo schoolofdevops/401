@@ -319,7 +319,27 @@ Place the file at `~/.hermes/profiles/track-b/skills/cost-anomaly-investigation/
 
 Promote Finley from L2 Advisory to L4 Semi-Autonomous governance. Update `~/.hermes/profiles/track-b/config.yaml`:
 - Change `approvals.mode` to `smart`
-- Add read-only AWS command patterns to `command_allowlist`
+- Two allowlists control what your agent can invoke:
+  - `command_allowlist` (Hermes-native) — empty at L2, since Track B's most dangerous commands (`aws ec2 terminate-instances`) are NOT in DANGEROUS_PATTERNS and cannot be bypassed via this key
+  - `wrapper_allowlist.aws` (course-local) — read-only AWS describe/get commands allowed; any other prefix is rejected by the `mock-aws` wrapper
+
+Your L2 baseline looks like:
+
+```yaml
+command_allowlist: []
+
+wrapper_allowlist:
+  aws:
+    - "sts get-caller-identity"
+    - "ec2 describe-"
+    - "rds describe-"
+    - "cloudwatch get-metric-"
+    - "cloudwatch describe-alarms"
+    - "ce get-"
+    - "cost-explorer get-"
+```
+
+Track B safety boundary: `aws ec2 terminate-instances` is not in `wrapper_allowlist.aws` and never will be at any governance level. Combined with SOUL.md NEVER rules, this is the two-layer defense Track B relies on. Module 13 walks through both layers.
 
 Rerun the clean scenario and observe what changes:
 - Which actions no longer require human approval?

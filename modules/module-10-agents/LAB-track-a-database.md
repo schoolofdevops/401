@@ -341,20 +341,43 @@ and skill-guided diagnostics.
 
 **Challenge 3 — Advanced: Promote to L3 Proposal governance**
 
-Change `approvals.mode` from `manual` to `smart` in your config.yaml, and add `EXPLAIN` to the
-`command_allowlist`:
+### Two allowlists, two purposes
+
+Your L2 config has two allowlist keys:
+
+- **`command_allowlist`** (Hermes-native) — A bypass list for Hermes's built-in DANGEROUS_PATTERNS approval gate. An entry is a description-key string (like "SQL DROP") that tells Hermes "skip the approval prompt for this already-detected pattern." For Track A Database at L2, leave this empty — you want the approval gate to fire on every dangerous SQL match.
+
+- **`wrapper_allowlist`** (course-local) — A command-prefix allowlist read by the `mock-psql` wrapper. Lists the SQL keywords the agent may invoke when `HERMES_LAB_GOVERNANCE=L2`. A command whose first keyword does not match any listed prefix is rejected with a loud GOVERNANCE REJECTED banner.
+
+Your config snippet after the changes:
+
+```yaml
+command_allowlist: []
+
+wrapper_allowlist:
+  psql:
+    - "SELECT "
+    - "EXPLAIN "
+    - "SHOW "
+    - "DESCRIBE "
+    - "\\d"
+    - "\\dt"
+    - "\\l"
+```
+
+This is the L2 baseline — read-only SQL plus psql meta-commands. Module 13 shows you how to progress this list through L3 and L4 governance levels.
+
+Change `approvals.mode` from `manual` to `smart` in your config.yaml to promote to L3:
 
 ```yaml
 approvals:
   mode: smart
   timeout: 300
-
-command_allowlist: ["EXPLAIN"]
 ```
 
 Restart the agent and rerun the clean scenario. Observe:
 
-- Does Aria now run `EXPLAIN` without prompting? (It should — `EXPLAIN` is in the allowlist.)
+- Does Aria now run `EXPLAIN` without prompting? (It should — `EXPLAIN` is in `wrapper_allowlist.psql`.)
 - Does the DROP command from Step 7 still trigger the approval gate? (It should — smart mode
   still catches DANGEROUS_PATTERNS; only allowlisted patterns bypass it.)
 
