@@ -44,6 +44,13 @@ You need:
 - **Claude Code** OR **Crush** installed
 - **Node.js 18+** and `npm` (for installing MCP servers)
 
+Setup troubled pods 
+
+```
+git clone https://github.com/kubeagentix/kube-troublesim.git
+kubectl apply -f kube-troublesim/set01
+```
+
 ### Verify Your Setup
 
 Run these commands in your terminal to confirm everything is in place:
