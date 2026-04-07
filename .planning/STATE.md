@@ -181,6 +181,12 @@ None yet.
 - [Phase 8] Chat bot trigger (TRIG-04) requires Telegram or Slack API access — confirm which is feasible on free tier before designing the lab
 - [Phase 9] K8s Agent Sandbox CRDs (PROD-01) are alpha v0.2.1 — may change; treat as exploratory and pin to a specific release
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260407-vyg | Fix Hermes profile install instructions across all agent configs and lab files | 2026-04-07 | 9c24d6c | [260407-vyg-fix-hermes-profile-install-instructions-](./quick/260407-vyg-fix-hermes-profile-install-instructions-/) |
+
 ## Session Continuity
 
 Last session: 2026-04-07T16:06:42.057Z
