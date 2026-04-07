@@ -43,7 +43,11 @@
   2. A participant opening Module 6 finds the AI Workflow Tools content (GSD, CLAUDE.md, claude-mem, plan modes) with updated naming and module numbering
   3. All IaC project material from the old Module 6 (Terraform, Helm, ArgoCD) is present in Module 5 as domain context for Superpowers exercises
   4. Reading materials and quizzes for Module 5 and 6 reference the restructured content — no stale references to old module names or old module 6 IaC-as-primary content
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 05-01-PLAN.md — Directory restructure: rename module-05b to module-06, scaffold new module-05, migrate solution files, delete old dirs, update all cross-references
+- [ ] 05-02-PLAN.md — Lab content authoring: Track A (Helm Superpowers 90 min) and Track B (Terraform Superpowers 90 min)
+- [ ] 05-03-PLAN.md — Supporting content: README, reading (concepts + reference), quiz (7 questions), exploratory projects (ArgoCD, CI/CD, second track)
 
 ### Phase 6: K8s Skills & Agents
 **Goal**: The K8s diagnostic track has real, working skills and a properly configured agent (Kiran) connected to a live KIND cluster — EC2 skill references eliminated
@@ -98,7 +102,7 @@
 | 2. Day 1 Modules | v1.0 | 3/3 | Complete | 2026-04-07 |
 | 3. Day 2 Modules | v1.0 | 5/5 | Complete | 2026-04-07 |
 | 4. Remaining Content | v1.0 | 3/3 | Complete | 2026-04-07 |
-| 5. Module Consolidation | v1.1 | 0/? | Not started | - |
+| 5. Module Consolidation | v1.1 | 0/3 | Planning complete | - |
 | 6. K8s Skills & Agents | v1.1 | 0/? | Not started | - |
 | 7. Guardrails & Governance | v1.1 | 0/? | Not started | - |
 | 8. Agent Triggers | v1.1 | 0/? | Not started | - |
