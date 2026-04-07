@@ -1,0 +1,480 @@
+---
+id: module-05-lab-track-b
+title: "Track B: Superpowers for Terraform"
+sidebar_label: "Lab: Track B — Terraform"
+sidebar_position: 2
+---
+
+# Track B: Superpowers for Terraform
+
+**Duration:** 90 minutes
+**Track:** B — Cloud IaC / Terraform
+
+---
+
+## Introduction
+
+In this lab, you apply the Superpowers workflow to build a complete Terraform module from scratch. No starter files. No TODO comments. You start with a CLAUDE.md that describes what you need, and the Superpowers cycle generates, tests, and hardens the code.
+
+**What you are building:** An EC2 instance with CloudWatch CPU alarm and SNS email notification — a real monitoring pattern that every DevOps team uses. Fully testable offline using `terraform test` with `mock_provider`. No AWS account required for the TDD cycle.
+
+**What you will NOT have:** A pre-filled `main.tf` with TODO placeholders. The Superpowers approach is different — context is your starter, not code skeletons. The CLAUDE.md you write in Phase 0 is the real engineering artifact. The AI generates everything from that context.
+
+:::info Why no starter code?
+The Superpowers workflow trains you to produce working IaC from structured context, not from copying and modifying templates. In practice, you will often work on modules that have no reference implementation — you write the context, the AI generates, you verify. This lab simulates that reality.
+:::
+
+**Prerequisites:**
+
+- Terraform 1.7+ (CRITICAL — `mock_provider` requires it)
+- Claude Code (or Crush) configured and ready
+- No AWS account or credentials needed for the main lab flow
+
+---
+
+:::danger Terraform Version Requirement
+`mock_provider` requires Terraform 1.7.0 or higher. Earlier versions will fail with `Error: Unsupported argument "mock_provider"`.
+
+Check your version:
+```bash
+terraform version
+```
+
+**If your version is below 1.7:**
+- macOS: `brew tap hashicorp/tap && brew install hashicorp/tap/terraform`
+- Linux: Download from [releases.hashicorp.com](https://releases.hashicorp.com/terraform/)
+- Windows: Download from releases page or use `choco install terraform`
+
+**If you cannot upgrade** (e.g., managed workstation): You can follow the lab conceptually and use `terraform validate` for syntax checking. You will skip the `terraform test` step and use validation-only mode. Document this in your notes — it is a real constraint you may encounter on restricted enterprise machines.
+:::
+
+---
+
+## Phase 0: Setup + Context (10 min)
+
+### Step 1 — Verify Terraform version
+
+```bash
+terraform version
+```
+
+Expected result: `Terraform v1.7.x` (or higher). The version line must say 1.7.0 or greater.
+
+### Step 2 — Create the project directory
+
+```bash
+mkdir -p superpowers-terraform
+cd superpowers-terraform
+```
+
+This is your working directory for the entire lab.
+
+### Step 3 — Create the project CLAUDE.md
+
+This is your "starter." Create `CLAUDE.md` in the `superpowers-terraform/` directory:
+
+```markdown
+# Terraform EC2 Monitoring Module
+
+## What We Are Building
+A Terraform module that provisions:
+- 1 EC2 instance (t2.micro — AWS free tier)
+- 1 CloudWatch CPU alarm (threshold-based, basic monitoring)
+- 1 SNS topic with email subscription for alarm notifications
+
+## Constraints
+- AWS free tier only: t2.micro, basic (not detailed) monitoring, SNS email (not SMS)
+- Must work with mock_provider for offline testing (no AWS credentials needed)
+- Must pass terraform validate with zero errors
+- Must pass terraform test with mock_provider "aws" {}
+- Variables: instance_name (string), alarm_threshold (number, default 80),
+  notification_email (string), vpc_id (string, optional/nullable)
+- Outputs: instance_id, instance_public_ip, alarm_arn, sns_topic_arn
+
+## Architecture
+- Data source: aws_ami for latest Amazon Linux 2
+  (owners = ["amazon"], filter on amzn2-ami-hvm-*-x86_64-gp2, most_recent = true)
+- Resources: aws_instance, aws_cloudwatch_metric_alarm, aws_sns_topic,
+  aws_sns_topic_subscription
+- The alarm triggers on CPU > threshold for 2 consecutive 5-minute periods
+  (evaluation_periods = 2, period = 300, metric_name = "CPUUtilization",
+   comparison_operator = "GreaterThanThreshold", namespace = "AWS/EC2")
+- SNS subscription uses protocol = "email" (not SMS — SNS email is free)
+- monitoring = false on the instance (basic monitoring — detailed costs money)
+```
+
+Expected result: CLAUDE.md created. Notice that the Architecture section uses the EXACT AWS attribute names and values. This is the key difference between good context and generic context — you are encoding operational knowledge, not a vague description.
+
+:::info The CLAUDE.md is doing real work
+The specific attribute names in the Architecture section (`GreaterThanThreshold` not `greater-than`, `CPUUtilization` not `cpu_utilization`, `evaluation_periods = 2` not just "2 periods") are the exact values that prevent the most common AI generation errors for Terraform. You are pre-correcting the AI's common mistakes by encoding the correct vocabulary.
+:::
+
+---
+
+## Phase 1: Brainstorm (15 min)
+
+### Goal: What does this module need?
+
+Open Claude Code (or Crush) in the `superpowers-terraform/` directory and ask:
+
+```
+Read the CLAUDE.md. List every Terraform resource, data source, variable, and output
+needed for this module. For each resource, specify the key attributes and any
+constraints mentioned in the CLAUDE.md. Format as a resource inventory.
+```
+
+Expected result: AI produces a resource inventory. Review it against the CLAUDE.md to verify:
+
+- Does it include the `aws_ami` data source? (AI sometimes skips data sources and hardcodes AMI IDs)
+- Are variable defaults sensible? (`alarm_threshold = 80`, `vpc_id = null`)
+- Does it include all 4 outputs: `instance_id`, `instance_public_ip`, `alarm_arn`, `sns_topic_arn`?
+- Does it use `monitoring = false` on the instance? (if not, note it — detailed monitoring costs money)
+
+**Push back if the AI skips the data source:** "The AMI ID must not be hardcoded — it varies by region. Add an `aws_ami` data source for Amazon Linux 2 using the filter pattern from the CLAUDE.md."
+
+### Key teaching point
+
+The brainstorm validates understanding before any code exists. Catching a missing data source at this stage takes 30 seconds to correct. Finding it during `terraform test` when the mock provider does not have the expected resource name takes 10 minutes.
+
+:::tip Solo Learner
+Before asking the AI, spend 2 minutes writing your own resource inventory. Compare it against the AI's output. Where do they differ? This exercise builds your Terraform pattern recognition — the ability to read a requirements description and immediately identify the right resource primitives.
+:::
+
+---
+
+## Phase 2: TDD — RED (20 min)
+
+### Goal: Write the tests before any production code exists
+
+This is the Iron Law of TDD: no production code until a failing test exists. For Terraform, `terraform test` with `mock_provider` gives us offline unit testing that requires no AWS credentials.
+
+### Step 1 — Create the test file FIRST
+
+Create `superpowers-terraform/unit.tftest.hcl` — this must exist BEFORE any `.tf` files:
+
+```hcl
+# Unit tests for ec2-monitored module
+# Uses mock_provider — no AWS credentials required
+# Requires Terraform 1.7+
+
+mock_provider "aws" {}
+
+variables {
+  notification_email = "test@example.com"
+  instance_name      = "test-instance"
+  vpc_id             = "vpc-12345"
+}
+
+run "ec2_instance_exists" {
+  command = plan
+
+  assert {
+    condition     = length(aws_instance.app) > 0
+    error_message = "EC2 instance must be created"
+  }
+}
+
+run "cloudwatch_alarm_configured" {
+  command = plan
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cpu.threshold == 80
+    error_message = "CloudWatch alarm threshold should default to 80"
+  }
+}
+
+run "sns_topic_created" {
+  command = plan
+
+  assert {
+    condition     = length(aws_sns_topic.alerts) > 0
+    error_message = "SNS topic must be created"
+  }
+}
+```
+
+:::info Why write tests before main.tf?
+Writing the test first forces you to commit to the resource names (`aws_instance.app`, `aws_cloudwatch_metric_alarm.cpu`, `aws_sns_topic.alerts`) before writing any production code. These names become the contract. When you generate `main.tf`, the AI must use these exact resource names or the tests fail. This is TDD discipline applied to IaC.
+:::
+
+### Step 2 — Create the provider configuration
+
+Create `superpowers-terraform/versions.tf`:
+
+```hcl
+terraform {
+  required_version = ">= 1.7"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+```
+
+### Step 3 — Initialize Terraform
+
+```bash
+cd superpowers-terraform
+terraform init
+```
+
+Expected result: `Terraform has been successfully initialized!`
+
+### Step 4 — Run the tests (MUST FAIL — this is the RED state)
+
+```bash
+terraform test
+```
+
+Expected result: Test failures because no resources are defined yet. You should see something like:
+
+```
+╷
+│ Error: Reference to undeclared resource
+│
+│   on unit.tftest.hcl line 20, in run "ec2_instance_exists":
+│   20:     condition     = length(aws_instance.app) > 0
+│
+│ A managed resource "aws_instance" "app" has not been declared...
+╵
+```
+
+This IS the TDD red state. The tests exist, the assertions are defined, and they fail because the code does not exist yet.
+
+:::caution mock_provider syntax error?
+If `terraform test` gives `Error: Unsupported argument` on line 1 (`mock_provider "aws" {}`), your Terraform version is below 1.7. Return to Phase 0 and upgrade.
+
+If the error is `no configuration files`, verify you are running from `superpowers-terraform/` directory.
+:::
+
+---
+
+## Phase 3: Implement — GREEN (20 min)
+
+### Goal: Generate the minimum code to make all tests pass
+
+Prompt AI with:
+
+```
+Using the CLAUDE.md context and the test expectations in unit.tftest.hcl,
+generate main.tf, variables.tf, and outputs.tf for this module.
+
+Critical constraints:
+- Resource names must match the test file exactly:
+  aws_instance.app, aws_cloudwatch_metric_alarm.cpu, aws_sns_topic.alerts
+- Use the attribute names from CLAUDE.md verbatim (comparison_operator = "GreaterThanThreshold",
+  metric_name = "CPUUtilization", namespace = "AWS/EC2")
+- Include the aws_ami data source — do not hardcode AMI IDs
+- The aws_sns_topic_subscription resource can have any name
+```
+
+**Before saving the generated files**, review each one:
+
+1. Do resource names match the test file (`aws_instance.app`, not `aws_instance.this`)?
+2. Does the CloudWatch alarm use `metric_name = "CPUUtilization"` (not `cpu_utilization`)?
+3. Does the CloudWatch alarm use `comparison_operator = "GreaterThanThreshold"`?
+4. Does the SNS subscription use `protocol = "email"`?
+5. Is `monitoring = false` set on the EC2 instance?
+
+Save the generated files to `superpowers-terraform/`:
+
+```
+superpowers-terraform/
+  main.tf          (generated)
+  variables.tf     (generated)
+  outputs.tf       (generated)
+  versions.tf      (from Phase 2)
+  unit.tftest.hcl  (from Phase 2)
+  CLAUDE.md        (from Phase 0)
+```
+
+### Run verification
+
+```bash
+terraform validate
+```
+
+Expected result: `Success! The configuration is valid.`
+
+```bash
+terraform test
+```
+
+Expected result: All 3 tests passing:
+
+```
+unit.tftest.hcl... in progress
+  run "ec2_instance_exists"... pass
+  run "cloudwatch_alarm_configured"... pass
+  run "sns_topic_created"... pass
+unit.tftest.hcl... tally: 3 passed, 0 failed
+```
+
+:::info If tests still fail after placing the files
+Do NOT manually fix the code yet. Note exactly which test fails and the error message, then proceed to Phase 4. The Debug phase methodology handles this.
+:::
+
+---
+
+## Phase 4: Debug (10 min)
+
+### Goal: Fix what the AI got wrong using systematic debugging
+
+Common AI generation errors for Terraform fall into predictable categories. Recognizing these patterns speeds up every future debugging session.
+
+### Common AI generation errors for Terraform
+
+| Error Type | What the AI generates | Correct value |
+|-----------|----------------------|---------------|
+| Resource name mismatch | `aws_instance.this` | `aws_instance.app` (must match test) |
+| Wrong metric name | `cpu_utilization` | `CPUUtilization` (AWS metric names are camelCase) |
+| Wrong comparison operator | `GreaterThanOrEqualToThreshold` | `GreaterThanThreshold` |
+| Wrong SNS protocol | `"lambda"` or `"sqs"` | `"email"` |
+| Missing AMI data source | Hardcoded `ami = "ami-12345"` | Must use `data "aws_ami"` with filter |
+| Variable reference missed | `threshold = 80` (hardcoded) | `threshold = var.alarm_threshold` |
+| Wrong owners in AMI filter | `["self"]` or `["aws"]` | `["amazon"]` (Amazon-owned AMIs) |
+
+### Systematic Debugging Workflow
+
+**Step 1 — Read the test output:**
+
+```bash
+terraform test 2>&1
+```
+
+Which run block fails? The error message names the exact assertion that failed.
+
+**Step 2 — Trace to the resource:**
+
+If `run "cloudwatch_alarm_configured"` fails with `threshold was 0` instead of `80`:
+- The test expects `aws_cloudwatch_metric_alarm.cpu.threshold == 80`
+- Look at your `main.tf` — is the resource named `cpu`? Is the threshold set to `var.alarm_threshold`?
+- Is `var.alarm_threshold` defined in `variables.tf` with `default = 80`?
+
+**Step 3 — Form a hypothesis:**
+
+One variable at a time. Start with the resource name (most common mismatch), then the attribute name, then the value.
+
+**Step 4 — Apply the smallest fix and re-run:**
+
+```bash
+# After fixing one thing:
+terraform validate
+terraform test
+```
+
+:::caution 3-Fix Rule
+If you have made 3 fixes and the same test still fails, stop debugging manually. Ask the AI:
+
+"Here is my current main.tf: [paste content]. Here is the failing test: [paste test block]. Here is the exact error: [paste error]. What specifically is wrong?"
+
+Provide all three inputs. The AI can see the mismatch immediately when given the code, the test, and the error together.
+:::
+
+---
+
+## Phase 5: Verify + Code Review (15 min)
+
+### Verification — Prove it works
+
+Run all verification commands in sequence:
+
+```bash
+# 1. Schema validation — syntax and type checking
+terraform validate
+```
+
+Expected result: `Success! The configuration is valid.`
+
+```bash
+# 2. Unit tests with mock provider — offline verification
+terraform test
+```
+
+Expected result: `3 passed, 0 failed`
+
+```bash
+# 3. Plan (will fail without AWS credentials — this is expected)
+terraform plan
+```
+
+Expected result: A failure like `Error: No valid credential sources found`. This is correct and expected. The `terraform test` with `mock_provider` IS your production-equivalent verification for this lab. The plan step demonstrates that when real credentials exist, the plan would execute.
+
+:::info Why does terraform plan fail?
+`mock_provider "aws" {}` bypasses the real AWS provider entirely. When you run `terraform plan` without `mock_provider`, Terraform uses the real AWS provider which requires valid credentials. The test is your verification — the plan failure is expected and does not invalidate the tests.
+:::
+
+### Code Review — Improve what was generated
+
+Prompt AI with:
+
+```
+Review this Terraform module against these 5 dimensions:
+
+1. Code Quality — variable names, DRY (no hardcoded values), consistent naming conventions
+2. Architecture — resource relationships, data flow (does CloudWatch alarm properly
+   reference the EC2 instance? Does the SNS subscription reference the SNS topic?)
+3. Testing — does unit.tftest.hcl cover all critical behaviors?
+   What is NOT tested? (e.g., is the SNS email subscription tested?)
+4. Requirements — compare against CLAUDE.md: are all constraints met?
+   Check: t2.micro, basic monitoring, email protocol, all 4 outputs present
+5. Production Readiness — free tier compliance (monitoring = false on instance?),
+   variable defaults sensible (alarm_threshold = 80?), tags applied?
+```
+
+**Common code review findings to act on:**
+
+- If there are no resource tags, ask the AI to add a consistent tagging pattern (`Name`, `Environment`, `ManagedBy = "terraform"`)
+- If the variable validation block is missing from `alarm_threshold`, ask the AI to add it: `condition = var.alarm_threshold > 0 && var.alarm_threshold <= 100`
+- If `treat_missing_data` is not set on the alarm, ask the AI to set it to `"notBreaching"` — this prevents false alarms when the metric has no data
+
+Apply any agreed improvements, then re-run the test suite to confirm everything still passes.
+
+### Compare against the reference solution
+
+Compare your AI-generated code against the reference solution:
+
+```bash
+diff main.tf ../course-site/docs/module-05-superpowers-iac/lab/solution/terraform/modules/ec2-monitored/main.tf
+```
+
+Expected result: Some differences. Neither version is "wrong" — the comparison teaches that AI generation produces valid but varying implementations.
+
+**Discussion points from the diff:**
+- Does the reference solution use `aws_instance.this` while yours uses `aws_instance.app`? Both are valid — the name choice is a style decision, but if you used `app` to match the tests, that was intentional and correct.
+- Does the reference solution have `treat_missing_data = "notBreaching"` that you added during code review? That is a code review improvement.
+- Where does the reference solution have comments that yours lacks? Comments are part of code quality.
+
+---
+
+## Wrap-Up
+
+**What you accomplished in 90 minutes:**
+1. Wrote structured context (CLAUDE.md) encoding architecture constraints in precise AWS vocabulary
+2. Defined success criteria as executable test assertions before writing any production code
+3. Generated a complete Terraform module (main.tf, variables.tf, outputs.tf) from context
+4. Debugged AI generation errors using systematic methodology
+5. Validated with `terraform validate` + `terraform test` using offline mock_provider
+6. Improved quality through AI-assisted code review and comparison against reference solution
+
+**Reflection questions:**
+- How did including the exact AWS attribute names in CLAUDE.md affect the AI generation quality?
+- What would have happened if you had written the test file AFTER main.tf instead of before?
+- Looking at the diff between your code and the reference solution: which differences are style preferences and which are correctness issues?
+
+**The pattern you practiced today applies to:**
+- Any Terraform module: RDS with backup configuration, ECS service with auto-scaling, VPC with subnet routing
+- Ansible roles: writing test assertions before writing tasks
+- Helm charts: the same TDD cycle applies (Track A of this module)
+
+The skill is structured context + tests-first + systematic debugging — the technology changes, the workflow transfers.
+
+**Next:** Module 6 introduces AI Workflow Tools (GSD cycle, memory systems, plan modes) that automate this cycle across larger multi-module projects.
+
+---
+
+:::tip Solo Learner
+The complete reference solution is at `course-site/docs/module-05-superpowers-iac/lab/solution/terraform/modules/ec2-monitored/`. If you get stuck at any phase, read the solution file for that phase, understand what the correct code looks like, then return to your working directory and regenerate using the AI — do not copy-paste the solution directly. The point is to practice the Superpowers cycle, not to produce a specific output.
+:::
