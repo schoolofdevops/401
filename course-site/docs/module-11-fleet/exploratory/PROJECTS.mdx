@@ -104,3 +104,198 @@ Updated coordination SKILL.md with triage step, test results for three incident 
 | Under 30 minutes available | Project 2 — skill update is focused and measurable |
 
 Both projects prepare you for Module 13 governance work: Project 1 produces a postmortem format that can be incorporated into audit logging; Project 2 produces routing logic that can be extended with approval gates for high-severity incidents.
+
+---
+
+## Project 3: K8s Agent Sandbox — Isolated Agent Deployment (Alpha, Exploratory)
+
+**Estimated time:** 75 minutes
+**Extends:** Module 11 lab (fleet coordinator)
+**Prerequisites:** KIND cluster running, Phase 6 Track C agent profile installed
+
+:::warning Alpha Status — Course v1.1 exploratory only
+
+K8s Agent Sandbox is at **v0.2.1 (alpha)** as of 2026-04-07. The CRDs are under
+`agents.x-k8s.io/v1alpha1` and are subject to breaking changes between releases. Phase 9 ships
+this as an **exploratory project only** — the main Module 11 lab does NOT depend on Sandbox.
+If you run into breakage, fall back to the main lab's Morgan fleet coordinator flow.
+
+This project will be promoted to a required GUIDED lab step in a future course version (v1.2+)
+once the Sandbox CRDs reach beta/stable.
+
+:::
+
+### What You Will Build
+
+A sandboxed deployment of one of your Phase 6 Track C agents (the K8s diagnostic specialist)
+running inside a Kubernetes-managed isolation boundary using the K8s Agent Sandbox CRDs. You
+will observe the isolation: the sandboxed agent cannot access resources outside its namespace,
+cannot escape its resource quota, and can be cleanly destroyed via CRD delete.
+
+This is the Kubernetes-native answer to the multi-tenancy question that arises in production
+fleets: "how do I run N agents for N teams without them stepping on each other?"
+
+### Prerequisites
+
+```bash
+# Confirm KIND is running
+kubectl cluster-info --context kind-kind
+
+# Confirm Track C agent profile is available
+ls agents/track-c-kubernetes/SOUL.md
+```
+
+### Step 1: Install the Sandbox CRDs (pinned v0.2.1)
+
+```bash
+# Primary CRDs: Sandbox, SandboxTemplate
+kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/v0.2.1/manifest.yaml
+
+# Extension CRDs: SandboxClaim, SandboxWarmPool
+kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/v0.2.1/extensions.yaml
+
+# Verify CRDs installed
+kubectl get crd | grep agents.x-k8s.io
+# Expected:
+#   sandboxes.agents.x-k8s.io
+#   sandboxtemplates.agents.x-k8s.io
+#   sandboxclaims.agents.x-k8s.io
+#   sandboxwarmpools.agents.x-k8s.io
+```
+
+:::caution Install URL may change
+
+If the v0.2.1 release URL 404s, check https://github.com/kubernetes-sigs/agent-sandbox/releases
+for the current release. This project pins v0.2.1 for reproducibility at course release time.
+
+:::
+
+### Step 2: Create a SandboxTemplate for Your Track C Agent
+
+Write `sandbox-template-track-c.yaml`:
+
+```yaml
+apiVersion: agents.x-k8s.io/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: track-c-diagnostic-template
+  namespace: default
+spec:
+  image: your-registry/track-c-kubernetes:v0.4.2  # build from agents/track-c-kubernetes/
+  resources:
+    limits:
+      memory: "512Mi"
+      cpu: "250m"
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+  networkPolicy:
+    ingress: []  # no incoming traffic
+    egress:
+      - to: kube-system   # allow DNS
+      - to: k8s-trouble-crashloop  # only the target diagnostic namespace
+  env:
+    - name: HERMES_LAB_GOVERNANCE
+      value: "L2"   # read-only diagnostic (not L4 for exploratory)
+    - name: HERMES_LAB_TRACK
+      value: "track-c"
+```
+
+Apply:
+
+```bash
+kubectl apply -f sandbox-template-track-c.yaml
+```
+
+### Step 3: Instantiate a Sandbox from the Template
+
+Write `track-c-sandbox-001.yaml`:
+
+```yaml
+apiVersion: agents.x-k8s.io/v1alpha1
+kind: Sandbox
+metadata:
+  name: track-c-sandbox-001
+  namespace: default
+spec:
+  template: track-c-diagnostic-template
+  ttl: 30m   # auto-destroy after 30 minutes
+```
+
+Apply and inspect:
+
+```bash
+kubectl apply -f track-c-sandbox-001.yaml
+kubectl get sandbox track-c-sandbox-001 -o yaml
+```
+
+Wait for `status.phase: Running` before proceeding.
+
+### Step 4: Verify Isolation
+
+**Test 1 — Agent can access its target namespace:**
+
+```bash
+kubectl exec -n default track-c-sandbox-001 -- kubectl get pods -n k8s-trouble-crashloop
+# Expected: pod list including the crasher pod
+```
+
+**Test 2 — Agent CANNOT access unrelated namespaces:**
+
+```bash
+kubectl exec -n default track-c-sandbox-001 -- kubectl get pods -n kube-system
+# Expected: Error from server (Forbidden): pods is forbidden
+```
+
+**Test 3 — Agent cannot exceed its resource quota:**
+
+```bash
+# Trigger a memory-intensive agent run — observe eviction
+kubectl exec -n default track-c-sandbox-001 -- hermes -p track-c chat \
+  --prompt "Analyze all logs from all pods in all namespaces in extreme detail"
+# Expected: OOMKilled or eviction event visible in Sandbox status
+kubectl get events -n default | grep track-c-sandbox-001
+```
+
+Document the actual outputs of all three tests against the expected outputs above. Note any
+deviations — Sandbox is alpha and behavior may differ.
+
+### Step 5: Clean Up
+
+```bash
+# Delete the Sandbox (CRD-managed teardown)
+kubectl delete sandbox track-c-sandbox-001
+
+# Delete the SandboxTemplate
+kubectl delete sandboxtemplate track-c-diagnostic-template
+
+# Optionally uninstall the CRDs (removes agent-sandbox from your cluster entirely)
+kubectl delete -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/v0.2.1/extensions.yaml
+kubectl delete -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/v0.2.1/manifest.yaml
+```
+
+### Expected Deliverable
+
+- `sandbox-template-track-c.yaml` and `track-c-sandbox-001.yaml` applied to KIND
+- Isolation Tests 1, 2, 3 documented with expected vs actual outputs
+- Notes on what you would change for a production Sandbox deployment (image registry,
+  network policy hardening, TTL tuning, governance level)
+
+### Why This Matters
+
+The Phase 9 FLEET-01 chain runs all agents in a single gateway process. That works for a solo
+operator or a small team, but at scale you need per-agent isolation: different teams, different
+trust levels, different blast radius boundaries.
+
+K8s Agent Sandbox is the emerging Kubernetes-native answer. It models the pattern that will
+become standard: agents are CRDs, lifecycle is K8s-managed, isolation is network+quota
+enforced, and destruction is declarative (`kubectl delete sandbox`).
+
+For now: explore, document what breaks, and stay aware. When Sandbox reaches beta/stable,
+this project becomes a required lab step.
+
+### Related
+
+- Module 11 reading reference §7.4 Scaling — multi-tenancy isolation discussion
+- https://github.com/kubernetes-sigs/agent-sandbox — upstream project (alpha v0.2.1)
+- Module 13 governance reading — per-agent blast radius concepts that Sandbox enforces at the K8s layer

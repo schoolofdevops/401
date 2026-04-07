@@ -163,3 +163,151 @@ Option C is partially true (specialists often produce better output) but is not 
 
 </details>
 
+---
+
+### Question 6: Dual Apply Path Tradeoff
+
+Your Phase 9 FLEET-01 lab introduced two apply paths: Path A (direct kubectl apply at L4
+governance) and Path B (GitOps PR-based apply via `gh pr create` + `apply.sh` sync). Your team
+is debating which path to use for their production incident response pipeline. Which statement
+best captures the tradeoff?
+
+A) Path A is always faster, so it is always the right choice for production
+B) Path B is always safer, so it is always the right choice for production
+C) Path A is faster and simpler but has no diff review opportunity; Path B is auditable and
+   review-gated but requires GitOps infrastructure (ArgoCD/Flux/CI) that not every team runs
+D) Path A and Path B are functionally equivalent — pick whichever your team prefers
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) Path A is faster and simpler but has no diff review opportunity; Path B is auditable and review-gated but requires GitOps infrastructure that not every team runs**
+
+Phase 9's dual path design teaches that there is no universal "best" answer. Path A (direct apply)
+trades auditability for simplicity — one command, one approval, one apply, via Telegram. Path B
+(GitOps PR) trades speed for auditability — the human sees the diff in GitHub UI, the PR history
+is the audit record, and the same flow works across multiple operators without a Telegram bot.
+
+The decision depends on your operational context:
+
+- Small team, mature Telegram bot, high-trust operators → Path A works fine
+- Larger team, compliance mandate, existing ArgoCD/Flux/CI → Path B is the natural fit
+- Regulated environment with change management requirements → Path B with formal PR review
+
+Phase 9 ships BOTH paths because not every participant has ArgoCD installed — the helm/kubectl
+fallback script (`apply.sh`) is Sub-path B2, the only fully implementable Path B mechanism in v1.1.
+ArgoCD (Sub-path B1) is a v1.2 alternative for teams already running it.
+
+**Why not A or B alone?** Neither path is universally best. Phase 9's design intentionally teaches
+the tradeoff by making participants walk both paths and compare them.
+
+**Why not D?** They are NOT functionally equivalent. Path A commits the change to the cluster
+directly after Telegram approval. Path B commits to a git branch, requires human PR merge, then
+syncs to the cluster via `apply.sh`. The audit trail, review opportunity, and rollback
+characteristics differ meaningfully.
+
+</details>
+
+---
+
+### Question 7: Re-delegation with Governance Escalation
+
+In the Phase 9 FLEET-01 chain, Morgan receives Telegram `/approve incident-001` and then
+re-delegates to the SAME Track C specialist that diagnosed the issue. The re-delegation spawns
+a child agent with `HERMES_LAB_GOVERNANCE=L4` + `HERMES_LAB_TRACK=track-c`. Why does Morgan
+re-delegate to the SAME specialist instead of picking a new one or running the apply herself?
+
+A) Morgan does not technically have the terminal toolset in her config.yaml, so she cannot run kubectl
+B) The diagnosing specialist has full context from the diagnostic run, so re-delegating to it
+   produces better applied fixes than handing off to a fresh specialist
+C) Morgan's SOUL.md NEVER rules prohibit her from calling terminal tools directly AND the
+   diagnosing specialist has diagnostic context that makes it the correct applier
+D) Hermes requires that the same agent that opened a delegation chain must close it
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) Morgan's SOUL.md NEVER rules prohibit her from calling terminal tools directly AND the diagnosing specialist has diagnostic context that makes it the correct applier**
+
+Two reasons combine here:
+
+**Reason 1 — Behavioral prohibition (SOUL.md NEVER rule):** Morgan's Phase 9 SOUL.md includes
+a new rule: "NEVER call terminal tools directly — your role is delegation, not execution." Even
+though her `config.yaml` DOES include `terminal` in her `platform_toolsets.cli` (the Phase 9
+toolset fix required for delegated specialists to inherit it), Morgan is behaviorally prohibited
+from using terminal herself. The terminal entry in her config is "mechanical capability so children
+can inherit it" — the SOUL.md NEVER rule is the behavioral prohibition against direct use. This is
+the belt + suspenders pattern: config (belt) + SOUL.md (suspenders).
+
+**Reason 2 — Context retention:** The diagnosing specialist has the full diagnostic context (pod
+name, namespace, exact root cause finding, proposed fix command). Re-delegating to a fresh
+specialist would lose that context and require a redundant re-diagnosis. SOUL.md's re-delegation
+rule explicitly says "re-delegate to the SAME specialist that diagnosed the issue."
+
+**Why not A alone?** Before Phase 9, Morgan did NOT have terminal in her config. The Phase 9 Plan
+01 toolset fix ADDED it (otherwise Hermes `delegate_tool.py` toolset intersection would block
+children from inheriting terminal). So "Morgan lacks terminal" is no longer mechanically true —
+the prohibition is behavioral (SOUL.md NEVER rule), not mechanical (config.yaml).
+
+**Why not B alone?** Context retention is real and valuable but insufficient as the sole reason.
+Without the NEVER rule, Morgan could theoretically run kubectl herself. The NEVER rule is what
+enforces the delegation-only pattern structurally.
+
+**Why not D?** Hermes has no such constraint. Any agent can delegate to any compatible specialist.
+The "same specialist" pattern comes from Morgan's SOUL.md behavioral rule, not from Hermes
+delegation mechanics.
+
+</details>
+
+---
+
+### Question 8: Productionizing Decision
+
+Your team has built a Phase 9 fleet coordinator and wants to deploy it in production. Your alert
+volume is ~15 alerts/minute at peak, all routed through a single Morgan webhook receiver. Your
+team runs three different services with different on-call rotations and wants to keep alert audit
+logs separate per service for SOC 2 compliance. Which deployment pattern from the Module 11
+productionization reference (§7.4 Scaling) should you choose?
+
+A) Single Morgan Deployment with `replicas: 1`, all services share one agent
+B) Single Morgan Deployment with `replicas: 2-10` behind an HPA, plus per-team profile
+   variants (`fleet-serviceA`, `fleet-serviceB`, `fleet-serviceC`) sharing the same runtime
+C) Three separate Morgan Deployments in three separate namespaces, one per service, with
+   dedicated image builds and dedicated audit log aggregation per team
+D) Queue-based pattern with SQS → worker pool pulling from the queue
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) Three separate Morgan Deployments in three separate namespaces, one per service, with dedicated image builds and dedicated audit log aggregation per team**
+
+The key constraint is "keep alert audit logs separate per service for SOC 2 compliance." That is
+a multi-tenant isolation requirement at the regulatory level, not a convenience preference.
+
+The Module 11 reference §7.4 Scaling discusses two isolation models:
+
+1. **Profile-per-team** (shared runtime): Each team gets its own fleet profile name but shares a
+   single Hermes runtime and audit log stream
+2. **Deployment-per-team** (stronger isolation): Each team gets its own Hermes deployment,
+   namespace, and audit log aggregation
+
+The reference explicitly states: "Small shops use (1). Regulated environments use (2)." SOC 2
+compliance is a regulated environment with audit separation requirements. Each service gets its own
+Morgan Deployment in its own namespace, with its own audit log aggregation pipeline.
+
+**Why not A?** `replicas: 1` cannot handle 15 alerts/minute reliably (single point of failure, no
+horizontal scaling). It also fails the SOC 2 audit separation requirement.
+
+**Why not B?** Option B is the correct pattern for teams WITHOUT regulatory constraints (§7.4 Model
+1). It shares a runtime and produces a shared audit log stream across services. That fails the
+SOC 2 requirement for per-service audit separation.
+
+**Why not D?** Queue-based is recommended "if your alert volume exceeds ~10 alerts/second" per §7.4.
+At 15 alerts/minute (0.25/second), you are nowhere near the queue threshold. Trigger-based is the
+correct pattern for this volume. Adding queue infrastructure is unnecessary complexity here.
+
+The §7.5 Production decision table shows this scenario under "Regulated environment, audit
+mandate": Deployment-per-team with GitOps sync and SIEM integration for audit log aggregation.
+
+</details>
+
