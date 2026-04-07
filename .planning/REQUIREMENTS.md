@@ -12,7 +12,7 @@ Requirements for v1.1: Realistic Agents & Production Workflows. Each maps to roa
 - [x] **CONS-01**: Module 5 rebuilt as "Superpowers for IaC" with brainstorm, TDD, verification, debugging, and code review workflows applied to Terraform/Helm/GitOps tracks
 - [x] **CONS-02**: Module 6 renamed from "5b" to "AI Workflow Tools" — GSD + CLAUDE.md + claude-mem + plan modes (content preserved, numbering updated)
 - [x] **CONS-03**: Old Module 6 (AI-Assisted IaC) content absorbed into new Module 5 as project context — Terraform/Helm/GitOps become the domain for Superpowers exercises
-- [ ] **CONS-04**: Reading materials and quizzes updated to match restructured Module 5 and 6 content
+- [x] **CONS-04**: Reading materials and quizzes updated to match restructured Module 5 and 6 content
 
 ### K8s Skills & Agents
 
@@ -79,7 +79,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONS-01 | Phase 5 | Complete |
 | CONS-02 | Phase 5 | Complete |
 | CONS-03 | Phase 5 | Complete |
-| CONS-04 | Phase 5 | Pending |
+| CONS-04 | Phase 5 | Complete |
 | K8S-01 | Phase 6 | Pending |
 | K8S-02 | Phase 6 | Pending |
 | K8S-03 | Phase 6 | Pending |
