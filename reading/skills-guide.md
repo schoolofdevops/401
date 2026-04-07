@@ -489,17 +489,18 @@ IF all services within 10% of baseline:
 
 Note: The mock data for cost anomaly includes "day 7 partially resolved at $26 (vs baseline $13)" — this intentional ambiguity tests whether the agent correctly identifies a SUSTAINED_ELEVATED_SPEND rather than declaring the incident closed.
 
-### 4.4 Track C: sre-ec2-health-check Skill Anatomy
+### 4.4 Track C: sre-k8s-pod-health Skill Anatomy
 
-The `sre-ec2-health-check` skill exemplifies the read-only escalation model: the agent diagnoses but never remediates. It is used in the Track C Kubernetes lab — which is intentional: the agent's SOUL.md identity (SRE scope) drives the behavior, even when the skill name suggests a different domain.
+The `sre-k8s-pod-health` skill exemplifies the read-only escalation model: the agent diagnoses but never remediates. It is the canonical example for Track C — a Kubernetes diagnostic procedure that gathers pod state in Phase 1 [SCRIPTS ZONE] using `kubectl get pods`, `kubectl describe pod`, `kubectl logs`, and `kubectl top pods`, then applies six decision branches in Phase 2 [AGENTS ZONE] to identify which of the six K8S failure modes is present (ImagePullBackOff, CrashLoopBackOff, OOMKilled, Liveness probe failure, CreateContainerConfigError, Service port mismatch).
 
 **Phase 1 [SCRIPTS ZONE]:**
-- `aws ec2 describe-instances` — instance metadata and current state
-- `aws ec2 describe-instance-status` — system and instance status checks
-- `aws elbv2 describe-target-health` — load balancer health status
-- `aws cloudwatch get-metric-statistics` — CPUUtilization, NetworkPacketsIn/Out
+- `kubectl get pods -n $NAMESPACE -o json` — pod inventory and container status
+- `kubectl describe pod $POD_NAME -n $NAMESPACE` — events and container last-state details
+- `kubectl logs $POD_NAME -n $NAMESPACE --tail=100 --previous` — terminated-instance logs for crash diagnosis
+- `kubectl top pods -n $NAMESPACE` — current resource consumption
+- `kubectl get endpoints -n $NAMESPACE` — service endpoint state for port mismatch detection
 
-No write operations. Every command is a read-only describe or get.
+No write operations. Every command is a read-only get or describe.
 
 **Phase 2 [AGENTS ZONE]:**
 All decision branches end in either a named diagnosis or escalation. No branch ends in a remediation action. This is the read-only model — the skill's scope is diagnosis and escalation, not remediation. When the diagnosis warrants action, the skill escalates to a human who executes the remediation.
@@ -525,7 +526,7 @@ The following files are the canonical examples for each concept covered in this 
 `course/skills/cost-anomaly/SKILL.md` — Demonstrates the two-zone design for cost analysis. Shows how the cost anomaly ambiguity (day 7 partially resolved) is handled by the decision tree without open-ended "investigate further" branches.
 
 **Track C reference implementation:**
-`course/skills/sre-ec2-health-check/SKILL.md` — The read-only escalation model. Notice that Phase 3 does not exist — there is no remediation phase. The skill escalates directly from Phase 2 diagnosis to structured handoff. This is correct for an agent operating under read-only governance.
+`course/skills/sre-k8s-pod-health/SKILL.md` — The read-only escalation model for Kubernetes diagnosis. Notice that Phase 3 does not exist — there is no remediation phase. The skill escalates directly from Phase 2 diagnosis to structured handoff. This is correct for an agent operating under read-only governance.
 
 **Module 7 solution skills:**
 `course/modules/module-07-skills/solution/` — All four track solution skills from the Module 7 lab. These are what a completed participant skill looks like. Compare against SKILL-TEMPLATE.md to see how the placeholders are filled in.

@@ -96,7 +96,7 @@ ls ~/.hermes/profiles/track-c/
 # Expected: SOUL.md  config.yaml  skills/
 
 ls ~/.hermes/profiles/track-c/skills/
-# Expected: sre-ec2-health-check/
+# Expected: sre-k8s-pod-health/
 ```
 
 This installs Kiran — the Kubernetes Health Agent — with its identity, safety config, and attached skill.
@@ -133,25 +133,23 @@ Exit the session when done: type `exit` or press Ctrl+C.
 
 ```bash
 ls ~/.hermes/profiles/track-c/skills/
-# Expected: sre-ec2-health-check/
+# Expected: sre-k8s-pod-health/
 ```
 
-> **Cross-domain skill — teaching moment**
+> **Kiran ships with a Kubernetes skill**
 >
-> You will notice the attached skill is from a different domain (SRE EC2 health check) than
-> this scenario (Kubernetes OOM diagnosis). Like Track B, this is intentional — the skill
-> carries forward from Module 7's Track C path.
+> Kiran's attached skill is `sre-k8s-pod-health` — a Kubernetes diagnostic skill
+> covering six pod failure modes: ImagePullBackOff, CrashLoopBackOff, OOMKilled,
+> Liveness probe failure, missing Secret/ConfigMap, and Service port mismatch.
 >
-> Kiran's Kubernetes domain behavior is driven by the SOUL.md identity and mock data routing,
-> not by the attached skill's domain. The SOUL.md Behavior Rules (start with kubectl get pods,
-> cite OOMKilled exit codes, NEVER execute kubectl delete) define how Kiran operates regardless
-> of which skill is attached.
->
-> In a production deployment, you would also attach a `kubernetes-health` SKILL.md with
-> Kubernetes-specific diagnostic procedures. The free explore phase challenges you to design one.
+> The SOUL.md Behavior Rules (start with `kubectl get pods`, cite failure-reason
+> codes like `OOMKilled` and `CrashLoopBackOff`, never execute `kubectl delete`)
+> work together with this skill's two-phase procedure: Phase 1 [SCRIPTS ZONE]
+> gathers pod state via four kubectl commands, Phase 2 [AGENTS ZONE] applies six
+> named decision branches to identify the specific failure mode.
 >
 > To verify the skill is loaded: start a chat session and ask "List your available skills."
-> Kiran should report `sre-ec2-health-check`.
+> Kiran should report `sre-k8s-pod-health`.
 
 ---
 
@@ -451,7 +449,7 @@ ls ~/.hermes/profiles/track-c/
 
 # 2. Skill in correct location
 ls ~/.hermes/profiles/track-c/skills/
-# Expected: sre-ec2-health-check/
+# Expected: sre-k8s-pod-health/
 
 # 3. No unresolved placeholders (if you created a custom SOUL.md)
 grep -c '\[' ~/.hermes/profiles/track-c/SOUL.md

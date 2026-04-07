@@ -295,9 +295,9 @@ IF all services within 10% of baseline:
   THEN Diagnosis = "NO_ANOMALY_CURRENT_PERIOD"
 ```
 
-### Track C: sre-ec2-health-check Skill Anatomy
+### Track C: sre-k8s-pod-health Skill Anatomy
 
-The Track C read-only escalation model: the agent diagnoses but never remediates. **Phase 3 does not exist** — the skill escalates directly from Phase 2 diagnosis to structured handoff. This is NOT a limitation of the skill. It is a deliberate governance decision: SRE agents operate with principle of least privilege. Read-only agents can be trusted with continuous monitoring because their blast radius is zero.
+The `sre-k8s-pod-health` skill exemplifies the read-only escalation model: the agent diagnoses but never remediates. In Phase 1 [SCRIPTS ZONE], four kubectl commands gather pod state: `kubectl get pods -o json`, `kubectl describe pod`, `kubectl logs --previous`, and `kubectl top pods`. In Phase 2 [AGENTS ZONE], six decision branches cover the K8S-02 failure modes — ImagePullBackOff, CrashLoopBackOff, OOMKilled, Liveness probe failure, CreateContainerConfigError, and Service port mismatch — each ending in a named diagnosis string or escalation. **Phase 3 does not exist** — the skill escalates directly from Phase 2 diagnosis to structured handoff. This is NOT a limitation of the skill. It is a deliberate governance decision: SRE agents operate with principle of least privilege. Read-only agents can be trusted with continuous monitoring because their blast radius is zero.
 
 ---
 

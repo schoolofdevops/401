@@ -136,3 +136,33 @@ An updated SKILL.md with memory sections, plus notes on what you stored vs. what
 | Under 30 minutes available | Project 2 — most focused and highest skill-quality impact |
 
 All three projects extend the skill-writing discipline from the lab. The goal is to experience the edges: where does your SKILL.md fail, and how do you fix it?
+
+---
+
+## Project 4: Compare with kube-troublesim (advanced)
+
+**Difficulty:** Advanced • **Time:** 60-90 min • **Prerequisites:** Completed the main Module 7 lab; KIND cluster running
+
+The [kube-troublesim](https://github.com/kubeagentix/kube-troublesim) repository (kubeagentix organization) is a nascent collection of Kubernetes failure-mode YAML manifests — similar in spirit to the six baked scenarios in `infrastructure/scenarios/k8s/` that this course ships. As of April 2026 the repo has one commit, no releases, and no README — treat it as a "watch this space" tool, not a stable lab dependency.
+
+### What to try
+
+1. Clone the kube-troublesim repo and inspect the `set01/` directory
+2. Apply one of its scenarios to your KIND cluster:
+   ```bash
+   git clone https://github.com/kubeagentix/kube-troublesim.git
+   kubectl apply -f kube-troublesim/set01/01-imagepull-error.yaml
+   ```
+3. Compare the failure mode it produces against the equivalent course scenario at `infrastructure/scenarios/k8s/01-image-pull-backoff.yaml`
+4. Note which manifests overlap with the course's six K8S-02 failure modes and which are different
+5. Run `sre-k8s-pod-health` against a kube-troublesim scenario — does it diagnose correctly?
+
+### What to document
+
+- Which kube-troublesim scenarios mapped 1:1 to course scenarios
+- Which produced different kubectl outputs (and why — e.g., different image, different probe config)
+- Whether the skill's six decision branches were sufficient or if any failure mode escaped them
+
+### Why this is exploratory and not required
+
+kube-troublesim is at an early stage (1 commit, no releases, no README, no documented KIND compatibility). The course's baked scenarios are version-controlled, reproducible, and require zero external dependencies — they are the reliable lab path. This stretch project is for participants who want to explore alternative chaos-engineering tooling and contribute observations back to the course.

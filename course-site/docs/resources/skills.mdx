@@ -32,6 +32,60 @@ The split between Scripts Zone and Agents Zone is the key design pattern: determ
 
 ## Course Skills
 
+### `sre-k8s-pod-health`
+
+**File:** `skills/sre-k8s-pod-health/SKILL.md`
+
+```
+Diagnose Kubernetes pod health issues. Use when a pod enters CrashLoopBackOff,
+ImagePullBackOff, OOMKilled, or CreateContainerConfigError, when a Service has
+no endpoints, or when a deployment is reporting unhealthy replicas. Covers pod
+status, container states, events, logs, and resource consumption across six
+failure modes.
+```
+
+**Tags:** kubernetes, sre, pod-health, kubectl, k8s, diagnosis, incidents
+
+**What it does:**
+- Phase 1 (Scripts Zone): Runs `kubectl get pods -o json`, `kubectl describe pod`, `kubectl logs --previous`, `kubectl top pods`, `kubectl get endpoints`, and `kubectl get events` — six deterministic data-gather steps.
+- Phase 2 (Agents Zone): Six decision branches covering ImagePullBackOff, CrashLoopBackOff, OOMKilled, Liveness probe failure, CreateContainerConfigError, and Service port mismatch — each with explicit field-value conditions and escalation criteria.
+
+**Key constraint:** Read-only. The skill never `kubectl delete`s, `kubectl patch`es, or `kubectl exec`s. Any remediation action requires explicit human approval.
+
+**Used in:** Module 7 lab (Track C primary example), Module 10 lab (Kiran reference agent), Module 11 fleet lab (Kiran delegation target).
+
+---
+
+### `sre-k8s-node-health`
+
+**File:** `skills/sre-k8s-node-health/SKILL.md`
+
+**Tags:** kubernetes, sre, node-health, kubectl, k8s, diagnosis
+
+Starter scaffold for diagnosing Kubernetes node health issues — NotReady, MemoryPressure, DiskPressure, PIDPressure. Phase 2 is a participant extension point for Module 7 lab.
+
+---
+
+### `sre-k8s-resource-quota`
+
+**File:** `skills/sre-k8s-resource-quota/SKILL.md`
+
+**Tags:** kubernetes, sre, resource-quota, kubectl, k8s, capacity
+
+Starter scaffold for diagnosing Kubernetes resource quota saturation — blocked pod creation, missing LimitRange, namespace quota exhaustion. Phase 2 is a participant extension point for Module 7 lab.
+
+---
+
+### `sre-k8s-rollback-investigator`
+
+**File:** `skills/sre-k8s-rollback-investigator/SKILL.md`
+
+**Tags:** kubernetes, sre, rollback, deployment, kubectl, k8s
+
+Starter scaffold for investigating Kubernetes deployment rollback scenarios — ProgressDeadlineExceeded, image regression, replica drift, ReplicaSet sprawl. Phase 2 is a participant extension point for Module 7 lab.
+
+---
+
 ### `sre-ec2-health-check`
 
 **File:** `skills/sre-ec2-health-check/SKILL.md`
