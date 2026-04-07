@@ -18,9 +18,9 @@ Requirements for v1.1: Realistic Agents & Production Workflows. Each maps to roa
 
 - [x] **K8S-01**: K8s diagnostic SKILL.md with real kubectl commands (get pods, describe pod, logs, top) replacing EC2 skill in Track C
 - [x] **K8S-02**: kube-troublesim 6 broken pod scenarios integrated as lab exercises on KIND (ImagePullBackOff, CrashLoopBackOff, resource limits, liveness probe, missing secret, port mismatch)
-- [ ] **K8S-03**: Track C agent (Kiran) rebuilt with proper K8s skill attached, updated SOUL.md, and live KIND integration
+- [x] **K8S-03**: Track C agent (Kiran) rebuilt with proper K8s skill attached, updated SOUL.md, and live KIND integration
 - [x] **K8S-04**: Additional K8s skills: node health check, resource quota analysis, deployment rollback investigation
-- [ ] **K8S-05**: Module 7 Track C starter and solution files replaced with actual K8s diagnostic skill (not EC2)
+- [x] **K8S-05**: Module 7 Track C starter and solution files replaced with actual K8s diagnostic skill (not EC2)
 
 ### Agent Triggers
 
@@ -82,9 +82,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONS-04 | Phase 5 | Complete |
 | K8S-01 | Phase 6 | Complete |
 | K8S-02 | Phase 6 | Complete |
-| K8S-03 | Phase 6 | Pending |
+| K8S-03 | Phase 6 | Complete |
 | K8S-04 | Phase 6 | Complete |
-| K8S-05 | Phase 6 | Pending |
+| K8S-05 | Phase 6 | Complete |
 | TRIG-01 | Phase 8 | Pending |
 | TRIG-02 | Phase 8 | Pending |
 | TRIG-03 | Phase 8 | Pending |

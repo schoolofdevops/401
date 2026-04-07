@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Realistic Agents & Production Workflows
-status: Ready to execute
-stopped_at: Completed 06-02-PLAN.md (broken-pod scenarios, mock-kubectl extension, 13 mock data files)
-last_updated: "2026-04-07T03:57:40.513Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 06-03-PLAN.md (K8s skill cascade — agent profiles, SOUL.md light-edit, 6 cascade files, zero EC2 refs in K8s contexts)
+last_updated: "2026-04-07T04:10:52.363Z"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -66,6 +66,7 @@ Plan: 3 of 3
 | Phase 05-module-consolidation P03 | 7 | 2 tasks | 5 files |
 | Phase 06-k8s-skills-agents P01 | 5min | 2 tasks | 4 files |
 | Phase 06-k8s-skills-agents P02 | 10 | 2 tasks | 28 files |
+| Phase 06-k8s-skills-agents P03 | 15min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,9 @@ Recent decisions affecting current work:
 - [Phase 06-k8s-skills-agents]: OOM scenario uses python:3.12-alpine bytearray(64MB) not busybox dd — arm64/macOS Docker does not reliably trigger cgroup OOM kill with I/O-bound dd
 - [Phase 06-k8s-skills-agents]: CrashLoop mock SCENARIO name is crashloop2 not crashloop — avoids collision with Module 10 existing lab (RESEARCH Pitfall 5)
 - [Phase 06-k8s-skills-agents]: K8S-02 mock files hand-authored (KIND not in agent env) — capture-mock-data.sh is canonical re-capture workflow for course delivery prep
+- [Phase 06-k8s-skills-agents]: SOUL.md light-edit (D-16): 3 changes only — skill reference paragraph, kubectl exec NEVER rule, expanded Escalation Policy with 6 K8S-02 failure modes. Result: 42 lines (was 31, max 80).
+- [Phase 06-k8s-skills-agents]: command_allowlist: [] preserved in both config.yaml files (D-17 — Phase 7 territory).
+- [Phase 06-k8s-skills-agents]: D-20 cascade verified: zero sre-ec2-health-check references in K8s/Kiran/Track C contexts. Canonical root EC2 skill preserved for Track B.
 
 ### Pending Todos
 
@@ -151,6 +155,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T03:57:40.510Z
-Stopped at: Completed 06-02-PLAN.md (broken-pod scenarios, mock-kubectl extension, 13 mock data files)
+Last session: 2026-04-07T04:10:52.360Z
+Stopped at: Completed 06-03-PLAN.md (K8s skill cascade — agent profiles, SOUL.md light-edit, 6 cascade files, zero EC2 refs in K8s contexts)
 Resume file: None
