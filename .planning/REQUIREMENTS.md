@@ -1,130 +1,74 @@
-# Requirements: Agentic DevOps Course
+# Requirements: Agentic DevOps Course v1.1
 
-**Defined:** 2026-04-04
+**Defined:** 2026-04-07
 **Core Value:** DevOps practitioners learn to build AI agents that encode their operational expertise — context engineering is THE skill that makes agents useful.
 
-## v1 Requirements
+## v1.1 Requirements
 
-Requirements for initial release (due 2026-04-05, course starts 2026-04-06).
+Requirements for v1.1: Realistic Agents & Production Workflows. Each maps to roadmap phases.
 
-### Foundation Infrastructure
+### Module Consolidation
 
-- [x] **FOUND-01**: Reference microservices application (2-3 services + PostgreSQL) deployable on KIND — serves as the course backbone for all labs
-- [x] **FOUND-02**: Helm chart packaging for the reference app (used in Module 5 lab and Module 6 Track B)
-- [x] **FOUND-03**: CI/CD pipeline (GitHub Actions) for the reference app — build, test, deploy to KIND
-- [x] **FOUND-04**: ~~ArgoCD GitOps setup on KIND~~ → Descoped per D-06: ArgoCD too heavy for local lab setup. GitOps concepts taught conceptually via Helm + CI/CD pipeline. Makefile provides `make deploy` one-command workflow.
-- [x] **FOUND-05**: Participant setup guide covering Claude Code install, Crush/OpenCode install, KIND + Docker, AWS CLI, multi-provider LLM config (Claude subscription, Gemini 2.5 Flash, OpenRouter, Grok, Groq)
-- [x] **FOUND-06**: Environment verification script (verify.sh) that validates all prerequisites
-- [x] **FOUND-07**: Real AWS connections first (Cost Explorer, CloudWatch, RDS Performance Insights) when participants have AWS accounts. Mock data as clearly-labeled fallback only — realistic format matching current AWS CLI output, with instructions to swap in real credentials
-- [x] **FOUND-08**: Multi-provider LLM access documentation — setup instructions for each provider with rate limits and fallback guidance
+- [ ] **CONS-01**: Module 5 rebuilt as "Superpowers for IaC" with brainstorm, TDD, verification, debugging, and code review workflows applied to Terraform/Helm/GitOps tracks
+- [ ] **CONS-02**: Module 6 renamed from "5b" to "AI Workflow Tools" — GSD + CLAUDE.md + claude-mem + plan modes (content preserved, numbering updated)
+- [ ] **CONS-03**: Old Module 6 (AI-Assisted IaC) content absorbed into new Module 5 as project context — Terraform/Helm/GitOps become the domain for Superpowers exercises
+- [ ] **CONS-04**: Reading materials and quizzes updated to match restructured Module 5 and 6 content
 
-### Module 1 — AI Foundations
+### K8s Skills & Agents
 
-- [x] **MOD1-01**: Lab Part 1 — Progressive context engineering with real CloudWatch-style alarm data (raw dump → system prompt → structured output → few-shot)
-- [x] **MOD1-02**: Lab Part 2 — Context engineering deep-dive: same alarm with progressive context layers (alarm only → infrastructure topology → incident history → runbook context)
-- [x] **MOD1-03**: Lab Part 3 — Token economics: cost estimation, context size vs quality tradeoff, free tier management
-- [x] **MOD1-04**: Reading — Tokenization, context windows, inference pipeline (prefill/decode), temperature, Top-P/K — all with DevOps analogies
-- [x] **MOD1-05**: Reading — AI spectrum (Chat → Copilot → Agent → Squad) with operational maturity analogy
-- [x] **MOD1-06**: Reading — Context engineering philosophy: why context > prompts, domain expertise as context
-- [x] **MOD1-07**: Quiz (5-8 questions) covering LLM fundamentals, context engineering concepts
+- [ ] **K8S-01**: K8s diagnostic SKILL.md with real kubectl commands (get pods, describe pod, logs, top) replacing EC2 skill in Track C
+- [ ] **K8S-02**: kube-troublesim 6 broken pod scenarios integrated as lab exercises on KIND (ImagePullBackOff, CrashLoopBackOff, resource limits, liveness probe, missing secret, port mismatch)
+- [ ] **K8S-03**: Track C agent (Kiran) rebuilt with proper K8s skill attached, updated SOUL.md, and live KIND integration
+- [ ] **K8S-04**: Additional K8s skills: node health check, resource quota analysis, deployment rollback investigation
+- [ ] **K8S-05**: Module 7 Track C starter and solution files replaced with actual K8s diagnostic skill (not EC2)
 
-### Module 2 — Platform AI
+### Agent Triggers
 
-- [x] **MOD2-01**: Lab — Explore AWS AI features on free tier: CloudWatch anomaly detection setup, Cost Explorer analysis, Q Developer for query explanation
-- [x] **MOD2-02**: Reading — AWS AI services landscape and capabilities/limitations matrix
-- [x] **MOD2-03**: Assessment template — "Platform AI capabilities and gaps for your environment"
-- [x] **MOD2-04**: Quiz covering platform AI features, vendor lock-in concepts
+- [ ] **TRIG-01**: AlertManager webhook triggers triage agent that diagnoses pod issues on KIND with Prometheus stack
+- [ ] **TRIG-02**: K8s CronJob scheduled agent runs periodic health checks and reports status
+- [ ] **TRIG-03**: GitHub webhook/command triggers PR review bot agent
+- [ ] **TRIG-04**: Chat bot interaction via Telegram or Slack — slash commands trigger agent workflows, results posted back
 
-### Module 3 — Bridge Content (Platform AI → Custom Agents)
+### Guardrails & Governance
 
-- [x] **MOD3-01**: Demo script — Hermes first-run agent walkthrough (minimal setup, live demo)
-- [x] **MOD3-02**: Reading — What custom agents add that platform AI can't, the gap analysis
-- [x] **MOD3-03**: Quiz covering platform vs custom agent tradeoffs
+- [ ] **GOV-01**: Hermes command allowlist/blocklist configuration — kubectl get/describe/logs allowed, kubectl delete/drain/exec blocked
+- [ ] **GOV-02**: Per-track governance configs with domain-specific allowlists (K8s, Database, FinOps)
+- [ ] **GOV-03**: Progressive governance walkthrough L1 to L4 with allowlist differentiation showing trust escalation
 
-### Module 4 — Impact Assessment
+### Agent Productionization
 
-- [x] **MOD4-01**: Automation Quadrant template (frequency × complexity scoring matrix)
-- [x] **MOD4-02**: Scoring sheet for top 10 operational tasks with evaluation criteria (frequency, time, error risk, tool count)
-- [x] **MOD4-03**: Selection criteria for Day 3 capstone project
-- [x] **MOD4-04**: Solo-completable version (no team dependency for Udemy learners)
-- [x] **MOD4-05**: Quiz covering automation candidate evaluation
+- [ ] **PROD-01**: K8s Agent Sandbox exploratory lab — install CRDs on KIND, deploy agent in Sandbox, demonstrate isolation and lifecycle
+- [ ] **PROD-02**: Conceptual content on productionizing agents: packaging, deployment, monitoring, scaling patterns
 
-### Module 5 — Structured AI Coding + AI Workflows
+### Multi-Agent Workflows
 
-- [x] **MOD5-01**: Lab Track A — Build production Helm chart for reference app via structured AI workflow (Brainstorm → Design → Blueprint → Implement → Validate)
-- [x] **MOD5-02**: Lab Track B — Build CI/CD pipeline (GitHub Actions) for reference app via structured AI workflow
-- [x] **MOD5-03**: GSD Workflow lab — Full /gsd:new-project → discuss → plan → execute → verify cycle applied to a real IaC deliverable, demonstrating structured AI harness for multi-file infrastructure work
-- [x] **MOD5-04**: Context engineering practical — CLAUDE.md files, context window management, selective injection, managing what the LLM sees across sessions
-- [x] **MOD5-05**: Memory systems lab — Cross-session persistence: claude-mem for Claude Code, MCP-based memory for OpenCode/Crush. When to use memory vs context vs plans
-- [x] **MOD5-06**: Plan modes lab — Structured reasoning before execution: Claude Code plan mode, GSD plan-phase. When to plan vs when to just execute, reviewing and approving plans
-- [x] **MOD5-07**: Superpowers workflow (exploratory) — TDD, systematic debugging, code review, brainstorming skills as examples of extending Claude Code with disciplined workflows
-- [x] **MOD5-08**: Reading — Why unstructured prompting fails for production infrastructure
-- [x] **MOD5-09**: Reading — GSD workflow reference, plan modes, memory systems, context engineering techniques
-- [x] **MOD5-10**: Quiz covering structured coding concepts, context engineering, AI workflow patterns
+- [ ] **FLEET-01**: End-to-end workflow: AlertManager alert triggers triage agent, diagnostic agent investigates, proposes fix, human approves, agent applies
+- [ ] **FLEET-02**: Fleet coordinator (Morgan) rebuilt with real cross-domain incident synthesis using working specialist agents
 
-### Module 6 — AI-Assisted IaC
-
-- [x] **MOD6-01**: Lab Track A — Terraform module for real AWS resources (free tier): EC2/RDS with CloudWatch alarms + SNS notifications. Mock fallback documented for non-AWS participants
-- [x] **MOD6-02**: Lab Track B — Kubernetes manifests + Helm charts + ArgoCD GitOps config for reference app on KIND — fully real, local
-- [ ] **MOD6-03**: Lab Track C — CI/CD pipeline with Argo Workflows + GitHub Actions for reference app — fully real
-- [x] **MOD6-04**: Each track: starter files, solution files, expected outputs, validation steps
-- [x] **MOD6-05**: Reading — AI failure modes in infrastructure generation, common AI errors in IaC
-- [x] **MOD6-06**: Quiz covering IaC validation, AI error patterns in infrastructure code
-
-### Module 9 — Agent Design Patterns (partial — this repo)
-
-- [x] **MOD9-01**: Reading — Pattern taxonomy: advisor, investigator, proposal, guardian — each mapped to Hermes capabilities
-- [x] **MOD9-02**: Reading — Autonomy spectrum L1 (Assistive) → L4 (Semi-autonomous) with concrete examples
-- [x] **MOD9-03**: Quiz covering design patterns, autonomy levels
-
-### Module 14 — Capstone (partial — this repo)
-
-- [x] **MOD14-01**: Presentation template — what teams should cover in their demo
-- [x] **MOD14-02**: 30-day deployment roadmap template — post-workshop implementation plan
-- [x] **MOD14-03**: Evaluation rubric — problem statement, agent design quality, live demo, governance spec, plan realism
-
-### All Modules — Reading & Assessment
-
-- [x] **CONTENT-01**: concepts.md for every module (1-14) — core concepts with DevOps analogies
-- [x] **CONTENT-02**: reference.md for every module (1-14) — command reference, configs, cheat sheets
-- [x] **CONTENT-03**: QUIZ.md for every module (1-14) — 5-8 questions, concept-focused not syntax trivia
-- [x] **CONTENT-04**: Exploratory projects (PROJECTS.md) per module — 2-3 stretch ideas for advanced participants
-- [x] **CONTENT-05**: Module README.md for every module — overview, 3-5 learning objectives, prerequisites
-- [x] **CONTENT-06**: Context engineering vocabulary enforced throughout — no "prompt engineering" language after Module 1, DevOps analogies for every AI concept
-
-### Format & Delivery
-
-- [x] **FMT-01**: Instructor facilitator guides for Day 1, Day 2, Day 3 — timing, transitions, debrief prompts
-- [x] **FMT-02**: Udemy section outline mapping modules to Udemy sections
-- [x] **FMT-03**: Solo fallback for all team exercises (Module 4 scoring, Module 11 fleet, Module 14 capstone)
-- [x] **FMT-04**: Every lab step includes "Expected result:" validation so learners know if they succeeded
-- [x] **FMT-05**: Lab deliverable stated at top of every LAB.md
-
-## v2 Requirements
+## v1.2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
 
-### Extended Content
+### Video & Media
 
-- **V2-01**: Mission Control dashboard design and reference implementation
-- **V2-02**: Additional domain agent tracks (security hardening agent, CI/CD health agent)
-- **V2-03**: Certification / completion badge program
-- **V2-04**: Post-course reference guide ("What to build in your first 30 days")
-- **V2-05**: Video production (recorded walkthroughs, Udemy video lessons)
-- **V2-06**: vLLM/MLOps integration labs (if demand warrants)
-- **V2-07**: Advanced multi-model orchestration patterns
+- **VID-01**: Video walkthroughs for structured AI workflow (5-phase cycle recording)
+- **VID-02**: Udemy video production (concept explainers + lab walkthroughs)
+- **VID-03**: Explainer slide notes and Excalidraw diagram sources
+
+### Deferred Content
+
+- **DEF-01**: Module 6 Lab Track C — Argo Workflows + GitHub Actions pipeline (deferred from v1.0)
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Hermes-focused lab content (Modules 7, 8, 10-13) | Built in hermes-agent repo, not this repo |
 | Video recording/editing | Separate production step after content is written |
-| Excalidraw diagram visual creation | Trainer creates from diagram descriptions in explainer/ |
-| LMS/Udemy platform configuration | Separate from content creation |
+| Excalidraw diagram creation | Visual design — trainer creates from diagram descriptions |
+| LMS/Udemy platform setup | Separate from content creation |
 | Paid API integrations | All labs must work on free tiers only |
-| Python-first or framework-specific content | Course is tool-agnostic, YAML-first, pattern-focused |
-| Requiring paid AWS services | Labs work with free tier; participants with existing AWS accounts connect to real services |
+| K8s Agent Sandbox as required lab dependency | Alpha v0.2.1 — too early for required content; exploratory only |
+| Modules 1-4 changes | Already validated in v1.0, no feedback warranting changes |
 
 ## Traceability
 
@@ -132,72 +76,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 | Complete |
-| FOUND-02 | Phase 1 | Complete |
-| FOUND-03 | Phase 1 | Complete |
-| FOUND-04 | Phase 1 | Complete |
-| FOUND-05 | Phase 1 | Complete |
-| FOUND-06 | Phase 1 | Complete |
-| FOUND-07 | Phase 1 | Complete |
-| FOUND-08 | Phase 1 | Complete |
-| MOD1-01 | Phase 2 | Complete |
-| MOD1-02 | Phase 2 | Complete |
-| MOD1-03 | Phase 2 | Complete |
-| MOD1-04 | Phase 2 | Complete |
-| MOD1-05 | Phase 2 | Complete |
-| MOD1-06 | Phase 2 | Complete |
-| MOD1-07 | Phase 2 | Complete |
-| MOD2-01 | Phase 2 | Complete |
-| MOD2-02 | Phase 2 | Complete |
-| MOD2-03 | Phase 2 | Complete |
-| MOD2-04 | Phase 2 | Complete |
-| MOD3-01 | Phase 2 | Complete |
-| MOD3-02 | Phase 2 | Complete |
-| MOD3-03 | Phase 2 | Complete |
-| MOD4-01 | Phase 2 | Complete |
-| MOD4-02 | Phase 2 | Complete |
-| MOD4-03 | Phase 2 | Complete |
-| MOD4-04 | Phase 2 | Complete |
-| MOD4-05 | Phase 2 | Complete |
-| MOD5-01 | Phase 3 | Complete |
-| MOD5-02 | Phase 3 | Complete |
-| MOD5-03 | Phase 3 | Complete |
-| MOD5-04 | Phase 3 | Complete |
-| MOD5-05 | Phase 3 | Complete |
-| MOD5-06 | Phase 3 | Complete |
-| MOD5-07 | Phase 3 | Complete |
-| MOD5-08 | Phase 3 | Complete |
-| MOD5-09 | Phase 3 | Complete |
-| MOD5-10 | Phase 3 | Complete |
-| MOD6-01 | Phase 3 | Complete |
-| MOD6-02 | Phase 3 | Complete |
-| MOD6-03 | Phase 3 | Pending |
-| MOD6-04 | Phase 3 | Complete |
-| MOD6-05 | Phase 3 | Complete |
-| MOD6-06 | Phase 3 | Complete |
-| MOD9-01 | Phase 4 | Complete |
-| MOD9-02 | Phase 4 | Complete |
-| MOD9-03 | Phase 4 | Complete |
-| MOD14-01 | Phase 4 | Complete |
-| MOD14-02 | Phase 4 | Complete |
-| MOD14-03 | Phase 4 | Complete |
-| CONTENT-01 | Phase 4 | Complete |
-| CONTENT-02 | Phase 4 | Complete |
-| CONTENT-03 | Phase 4 | Complete |
-| CONTENT-04 | Phase 4 | Complete |
-| CONTENT-05 | Phase 4 | Complete |
-| CONTENT-06 | Phase 4 | Complete |
-| FMT-01 | Phase 4 | Complete |
-| FMT-02 | Phase 4 | Complete |
-| FMT-03 | Phase 4 | Complete |
-| FMT-04 | Phase 4 | Complete |
-| FMT-05 | Phase 4 | Complete |
+| CONS-01 | — | Pending |
+| CONS-02 | — | Pending |
+| CONS-03 | — | Pending |
+| CONS-04 | — | Pending |
+| K8S-01 | — | Pending |
+| K8S-02 | — | Pending |
+| K8S-03 | — | Pending |
+| K8S-04 | — | Pending |
+| K8S-05 | — | Pending |
+| TRIG-01 | — | Pending |
+| TRIG-02 | — | Pending |
+| TRIG-03 | — | Pending |
+| TRIG-04 | — | Pending |
+| GOV-01 | — | Pending |
+| GOV-02 | — | Pending |
+| GOV-03 | — | Pending |
+| PROD-01 | — | Pending |
+| PROD-02 | — | Pending |
+| FLEET-01 | — | Pending |
+| FLEET-02 | — | Pending |
 
 **Coverage:**
-- v1 requirements: 55 total
-- Mapped to phases: 55
-- Unmapped: 0
+- v1.1 requirements: 20 total
+- Mapped to phases: 0
+- Unmapped: 20
 
 ---
-*Requirements defined: 2026-04-04*
-*Last updated: 2026-04-04 — traceability filled in after roadmap creation*
+*Requirements defined: 2026-04-07*
+*Last updated: 2026-04-07 after initial definition*
