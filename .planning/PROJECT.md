@@ -35,17 +35,26 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 - ✓ Dual-format: All team exercises have solo-completable versions (Module 4, 11, 14)
 - ✓ Multi-provider: Labs support Claude Code, Crush, with setup for Gemini 2.5 Flash, OpenRouter, Groq
 
-### Active (v1.1+)
+### Active (v1.1)
 
-- [ ] Module 5: Video walkthroughs for structured AI workflow (5-phase cycle recording)
+- [ ] Module 5/6 consolidation: 5a→Module 5 (Superpowers for IaC), 5b→Module 6 (AI Workflow Tools), old Module 6 absorbed
+- [ ] K8s diagnostic SKILL.md with real kubectl commands (replace EC2 skill in Track C across Modules 7, 10)
+- [ ] kube-troublesim integration — broken pods on KIND as lab scenarios for agent diagnosis
+- [ ] Hermes command allowlist/blocklist guardrails (kubectl get allowed, kubectl delete blocked) in Modules 10 and 13
+- [ ] Agent trigger patterns: AlertManager webhook → triage agent, K8s CronJob scheduled agent, chat bot interaction, GitHub event PR review bot (Module 12)
+- [ ] K8s Agent Sandbox exploratory lab — productionizing agents on Kubernetes (new K8s SIG)
+- [ ] Deeper Hermes multi-agent workflows — end-to-end: alert → triage → diagnose → propose fix → human approval → apply
+- [ ] Rebuild all Hermes module labs (7, 8, 10, 11, 12, 13) with working, relevant K8s-first content
+
+### Deferred (v1.2+)
+
+- [ ] Video walkthroughs for structured AI workflow (5-phase cycle recording)
 - [ ] Module 6: Lab Track C — Argo Workflows + GitHub Actions pipeline (deferred from v1.0)
-- [ ] Hermes modules (7, 8, 10, 11, 12, 13): Integration into Docusaurus site (awaiting Hermes content finalization)
 - [ ] Explainer slide notes and Excalidraw diagram sources (design author creates visuals from notes)
 - [ ] Udemy video production (concept explainers + lab walkthroughs)
 
 ### Out of Scope
 
-- Hermes-focused lab content (modules 7, 8, 10, 11, 12, 13) — built in hermes-agent repo
 - Video recording/editing — separate production step after content is written
 - Excalidraw diagram creation (visual design) — trainer creates these from diagram descriptions
 - LMS/Udemy platform setup — separate from content creation
@@ -81,6 +90,22 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 | Multi-provider LLM access | No participant left behind due to subscription status | ✓ Validated: llm-access.md documents 4+ free-tier providers; Crush integration enables Gemini 2.5 Flash + Groq |
 | Track selection in Module 5 & 6 | Accommodate different participant interests (IaC tools vary by team) | ✓ Validated: Helm (Track A) and CI/CD (Track B) completed; Terraform (6-A) and K8s+ArgoCD (6-B) completed |
 | Scope v1.0 to core (descope Hermes + Track C) | Ensure ship on deadline; Hermes labs and CI/CD orchestration deferred to v1.1 | ✓ Validated: v1.0 ships 14 modules (1-6, 9, 14 complete; 7-8, 10-13 documented for Hermes integration); MOD6-03 deferred |
+| Consolidate Module 5/6 (v1.1) | 5a too basic, old Module 6 repetitive with 5a — Superpowers adds real value | — Pending |
+| K8s-first agent rebuild (v1.1) | EC2 skill on K8s agent undermines course credibility; kube-troublesim provides real scenarios | — Pending |
+| Command allowlist/blocklist guardrails (v1.1) | Empty allowlists miss key governance teaching opportunity | — Pending |
+
+## Current Milestone: v1.1 Realistic Agents & Production Workflows
+
+**Goal:** Rebuild modules 5-13 with working K8s-first agents, real skills, Superpowers integration, agent triggers, and production deployment patterns.
+
+**Target features:**
+- Module 5/6 consolidation with Superpowers workflow as centerpiece
+- K8s diagnostic skills with real kubectl commands (replacing EC2 skill mismatch)
+- kube-troublesim broken-pod scenarios on KIND for agent diagnosis labs
+- Hermes command allowlist/blocklist guardrails
+- Agent trigger patterns (AlertManager, CronJob, chat bots)
+- K8s Agent Sandbox exploratory content
+- End-to-end multi-agent workflows that actually execute
 
 ## Current State (v1.0 Shipped)
 
@@ -88,16 +113,23 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 
 **Codebase:** ~100K lines across 605 files (Docusaurus site, reference app, instructor guides, labs, reading materials).
 
-**User feedback themes:** (N/A — pre-launch; gather feedback during April 6-8 workshop)
+**User feedback themes (April 6-8 workshop):**
+- Module 5a too basic, repetitive with Module 6 — needs Superpowers integration
+- K8s skills not relevant (EC2 skill on K8s agent), Hermes agents incomplete
+- Need working agent triggers and interaction patterns (AlertManager, chat bots)
+- Want to see agent productionization on K8s (Agent Sandbox)
+- Need concrete guardrails demo (command allowlist/blocklist)
 
 **Known issues:**
-- MOD6-03 (Argo Workflows) descoped to v1.1 (both Terraform and K8s tracks complete; CI/CD orchestration deferred)
-- Explainer diagrams: slide notes exist; Excalidraw creation is design-phase work (not part of content authoring)
-- Hermes module labs: documented with references to `/Users/gshah/work/agentic/devops/hermes-agent/`; waiting for module content finalization before integration into course-site/
+- Track C K8s agent ships with EC2 health check skill (sre-ec2-health-check) — completely wrong domain
+- Module 7 Track C solution is also the EC2 skill — no K8s diagnostic skill exists anywhere
+- Hermes repo has ~100 skills, zero are K8s/DevOps/SRE relevant
+- All L4 governance configs have empty command_allowlist — no guardrails demonstrated
+- Module 14 capstone templates referenced but files incomplete
 
 **Deployment:** Docusaurus site auto-deploys to GitHub Pages at https://schoolofdevops.github.io/401/ on pushes affecting course-site/**
 
-**Tech debt:** None blocking v1.0; v1.1 will add Track C, video production, and full Hermes integration.
+**Tech debt:** EC2→K8s skill replacement, Module 14 template completion, empty governance allowlists.
 
 ## Evolution
 
@@ -119,4 +151,4 @@ This document evolves at phase transitions and milestone boundaries.
 6. Log key decisions with outcomes
 
 ---
-*Last updated: 2026-04-07 after v1.0 milestone completion*
+*Last updated: 2026-04-07 after v1.1 milestone start*
