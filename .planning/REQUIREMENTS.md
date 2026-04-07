@@ -42,8 +42,8 @@ Requirements for v1.1: Realistic Agents & Production Workflows. Each maps to roa
 
 ### Multi-Agent Workflows
 
-- [ ] **FLEET-01**: End-to-end workflow: AlertManager alert triggers triage agent, diagnostic agent investigates, proposes fix, human approves, agent applies
-- [ ] **FLEET-02**: Fleet coordinator (Morgan) rebuilt with real cross-domain incident synthesis using working specialist agents
+- [x] **FLEET-01**: End-to-end workflow: AlertManager alert triggers triage agent, diagnostic agent investigates, proposes fix, human approves, agent applies
+- [x] **FLEET-02**: Fleet coordinator (Morgan) rebuilt with real cross-domain incident synthesis using working specialist agents
 
 ## v1.2 Requirements
 
@@ -94,8 +94,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GOV-03 | Phase 7 | Complete |
 | PROD-01 | Phase 9 | Pending |
 | PROD-02 | Phase 9 | Pending |
-| FLEET-01 | Phase 9 | Pending |
-| FLEET-02 | Phase 9 | Pending |
+| FLEET-01 | Phase 9 | Complete |
+| FLEET-02 | Phase 9 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 20 total

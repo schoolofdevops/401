@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Realistic Agents & Production Workflows
-status: Ready to plan
-stopped_at: Phase 9 context gathered
-last_updated: "2026-04-07T14:41:04.144Z"
+status: Ready to execute
+stopped_at: Completed 09-01-PLAN.md — Morgan profile + GitOps Path B + fleet-webhook-subscribe.sh
+last_updated: "2026-04-07T15:49:33.638Z"
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 14
+  completed_plans: 13
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** DevOps practitioners learn to build AI agents that encode their operational expertise — context engineering is THE skill that makes agents useful.
-**Current focus:** Phase 8 — agent-triggers
+**Current focus:** Phase 9 — multi-agent-workflows-production
 
 ## Current Position
 
-Phase: 9
-Plan: Not started
+Phase: 9 (multi-agent-workflows-production) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Plan: Not started
 | Phase 08 P02 | 5 | 2 tasks | 8 files |
 | Phase 08-agent-triggers P01 | 7min | 2 tasks | 8 files |
 | Phase 08-agent-triggers P03 | 10min | 2 tasks | 4 files |
+| Phase 09-multi-agent-workflows-production P01 | 4 | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -163,6 +164,8 @@ Recent decisions affecting current work:
 - [Phase 08-agent-triggers]: K8s CronJob image built from python:3.12-slim + hermes-agent[messaging,cron] from GitHub source (not official 2-3GB image)
 - [Phase 08-agent-triggers]: Hermes prompt template uses {alerts} full array not array index — _render_prompt does not support {alerts[0]} notation
 - [Phase 08-agent-triggers]: Steps 9-16 inserted before FREE EXPLORE per D-21; all 4 trigger types (AlertManager, K8s CronJob, GitHub webhook, Telegram bot) now have participant-facing guided walkthroughs
+- [Phase 09-multi-agent-workflows-production]: D-13 toolset fix: terminal added to Morgan config.yaml for Hermes delegation inheritance (belt) + NEVER rule added to SOUL.md prohibiting direct terminal use (suspenders)
+- [Phase 09-multi-agent-workflows-production]: D-07 Path B: Sub-path B2 (apply.sh) is the ONLY implementable Path B mechanism — ArgoCD install infrastructure does not exist in course repo
 
 ### Pending Todos
 
@@ -176,6 +179,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T14:41:04.140Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-multi-agent-workflows-production/09-CONTEXT.md
+Last session: 2026-04-07T15:49:33.631Z
+Stopped at: Completed 09-01-PLAN.md — Morgan profile + GitOps Path B + fleet-webhook-subscribe.sh
+Resume file: None
