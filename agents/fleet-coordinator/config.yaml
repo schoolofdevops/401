@@ -10,7 +10,14 @@ model:
   provider: "auto"
 
 platform_toolsets:
-  cli: [web, skills]   # No terminal: coordinator delegates, never executes domain commands
+  # Morgan needs `terminal` in her toolset because Hermes delegation intersects child toolsets
+  # with the parent's enabled_toolsets (see hermes-agent/tools/delegate_tool.py lines 178-184).
+  # Specialists Morgan delegates to (Track A/B/C) can only use tools Morgan has in her toolset.
+  # Behavioral prohibition against Morgan calling terminal directly is enforced by the NEW
+  # "NEVER call terminal tools directly" rule in SOUL.md + the existing 3 domain NEVER rules.
+  # Belt (config) + suspenders (SOUL.md) = Morgan can delegate kubectl apply to Track C at L4
+  # governance without herself executing any domain commands.
+  cli: [terminal, web, skills]
 
 delegation:
   max_iterations: 30
