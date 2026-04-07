@@ -107,7 +107,7 @@ Plans:
 | 3. Day 2 Modules | v1.0 | 5/5 | Complete | 2026-04-07 |
 | 4. Remaining Content | v1.0 | 3/3 | Complete | 2026-04-07 |
 | 5. Module Consolidation | v1.1 | 3/3 | Complete   | 2026-04-07 |
-| 6. K8s Skills & Agents | v1.1 | 3/3 | Complete   | 2026-04-07 |
+| 6. K8s Skills & Agents | v1.1 | 3/3 | Complete    | 2026-04-07 |
 | 7. Guardrails & Governance | v1.1 | 0/? | Not started | - |
 | 8. Agent Triggers | v1.1 | 0/? | Not started | - |
 | 9. Multi-Agent Workflows & Production | v1.1 | 0/? | Not started | - |
