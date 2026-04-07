@@ -37,7 +37,7 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 
 ### Active (v1.1)
 
-- [ ] Module 5/6 consolidation: 5a→Module 5 (Superpowers for IaC), 5b→Module 6 (AI Workflow Tools), old Module 6 absorbed
+- ✓ Module 5/6 consolidation: 5a→Module 5 (Superpowers for IaC), 5b→Module 6 (AI Workflow Tools), old Module 6 absorbed (Phase 5 complete)
 - [ ] K8s diagnostic SKILL.md with real kubectl commands (replace EC2 skill in Track C across Modules 7, 10)
 - [ ] kube-troublesim integration — broken pods on KIND as lab scenarios for agent diagnosis
 - [ ] Hermes command allowlist/blocklist guardrails (kubectl get allowed, kubectl delete blocked) in Modules 10 and 13
@@ -90,7 +90,7 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 | Multi-provider LLM access | No participant left behind due to subscription status | ✓ Validated: llm-access.md documents 4+ free-tier providers; Crush integration enables Gemini 2.5 Flash + Groq |
 | Track selection in Module 5 & 6 | Accommodate different participant interests (IaC tools vary by team) | ✓ Validated: Helm (Track A) and CI/CD (Track B) completed; Terraform (6-A) and K8s+ArgoCD (6-B) completed |
 | Scope v1.0 to core (descope Hermes + Track C) | Ensure ship on deadline; Hermes labs and CI/CD orchestration deferred to v1.1 | ✓ Validated: v1.0 ships 14 modules (1-6, 9, 14 complete; 7-8, 10-13 documented for Hermes integration); MOD6-03 deferred |
-| Consolidate Module 5/6 (v1.1) | 5a too basic, old Module 6 repetitive with 5a — Superpowers adds real value | — Pending |
+| Consolidate Module 5/6 (v1.1) | 5a too basic, old Module 6 repetitive with 5a — Superpowers adds real value | ✓ Validated (Phase 5): 13/13 must-haves verified, 4/4 requirements met, no broken module-5/6 links |
 | K8s-first agent rebuild (v1.1) | EC2 skill on K8s agent undermines course credibility; kube-troublesim provides real scenarios | — Pending |
 | Command allowlist/blocklist guardrails (v1.1) | Empty allowlists miss key governance teaching opportunity | — Pending |
 
@@ -151,4 +151,4 @@ This document evolves at phase transitions and milestone boundaries.
 6. Log key decisions with outcomes
 
 ---
-*Last updated: 2026-04-07 after v1.1 milestone start*
+*Last updated: 2026-04-07 after Phase 5 (Module Consolidation) complete*
