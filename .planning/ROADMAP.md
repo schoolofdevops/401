@@ -28,7 +28,7 @@
 
 - [x] **Phase 5: Module Consolidation** - Restructure Modules 5 and 6 with Superpowers as centerpiece for IaC work (completed 2026-04-07)
 - [x] **Phase 6: K8s Skills & Agents** - Build real K8s diagnostic skills and rebuild Track C agents for KIND (completed 2026-04-07)
-- [ ] **Phase 7: Guardrails & Governance** - Add command allowlists, per-track configs, and L1-L4 progression demo
+- [x] **Phase 7: Guardrails & Governance** - Add command allowlists, per-track configs, and L1-L4 progression demo (completed 2026-04-07)
 - [ ] **Phase 8: Agent Triggers** - Implement AlertManager, CronJob, GitHub, and chat bot trigger patterns
 - [ ] **Phase 9: Multi-Agent Workflows & Production** - End-to-end fleet workflows and K8s Agent Sandbox
 
@@ -74,11 +74,11 @@ Plans:
   1. Participant running a Hermes agent with Module 10 or 13 config finds kubectl get, describe, and logs in the allowlist and kubectl delete, drain, and exec blocked — attempting a blocked command produces a governance rejection, not silent execution
   2. Each domain track (K8s, Database, FinOps) has a separate governance config file with domain-appropriate allowlists — a FinOps agent cannot issue kubectl commands, a K8s agent cannot run database mutations
   3. A participant following the L1 through L4 walkthrough can observe the allowlist growing at each trust level — L1 has read-only kubectl, L4 adds write operations with human-approval gate — the progression is shown in config diffs
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 07-01-PLAN.md — Wrapper extension + governance YAML population (3 wrappers + 6 governance files with wrapper_allowlist)
 - [x] 07-02-PLAN.md — Agent profile config update + Module 10 cascade (3 profile configs + Module 10 lab text updates)
-- [ ] 07-03-PLAN.md — Module 13 lab extension + reading update (4 new L4 steps + reference.mdx + quiz)
+- [x] 07-03-PLAN.md — Module 13 lab extension + reading update (4 new L4 steps + reference.mdx + quiz)
 
 ### Phase 8: Agent Triggers
 **Goal**: Participants can wire an agent to four external trigger sources and observe automated agent invocation — not just manual CLI execution
@@ -112,7 +112,7 @@ Plans:
 | 4. Remaining Content | v1.0 | 3/3 | Complete | 2026-04-07 |
 | 5. Module Consolidation | v1.1 | 3/3 | Complete   | 2026-04-07 |
 | 6. K8s Skills & Agents | v1.1 | 3/3 | Complete    | 2026-04-07 |
-| 7. Guardrails & Governance | v1.1 | 2/3 | In Progress|  |
+| 7. Guardrails & Governance | v1.1 | 3/3 | Complete   | 2026-04-07 |
 | 8. Agent Triggers | v1.1 | 0/? | Not started | - |
 | 9. Multi-Agent Workflows & Production | v1.1 | 0/? | Not started | - |
 

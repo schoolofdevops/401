@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Realistic Agents & Production Workflows
-status: Ready to execute
-stopped_at: Completed 07-guardrails-governance/07-01-PLAN.md
-last_updated: "2026-04-07T10:58:44.144Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 07-guardrails-governance/07-03-PLAN.md
+last_updated: "2026-04-07T11:23:22.775Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -69,6 +69,7 @@ Plan: 3 of 3
 | Phase 06-k8s-skills-agents P03 | 15min | 2 tasks | 13 files |
 | Phase 07-guardrails-governance P02 | 10min | 2 tasks | 13 files |
 | Phase 07-guardrails-governance P01 | 60 | 2 tasks | 9 files |
+| Phase 07-guardrails-governance P03 | 13 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -150,6 +151,8 @@ Recent decisions affecting current work:
 - [Phase 07-01]: PATH B wrapper extension confirmed (D-01): Hermes DANGEROUS_PATTERNS is hardcoded Python, no extension hook exists — wrapper pre-flight is the only course-local mechanism
 - [Phase 07-01]: wrapper_allowlist is a NEW yaml key (not command_allowlist): Hermes-native command_allowlist: [] preserved untouched; wrapper reads only wrapper_allowlist
 - [Phase 07-01]: awk-based YAML parser chosen for wrapper allowlist extraction: avoids yq v3/v4 version mismatch; wrapper code stays readable as teaching material
+- [Phase 07-03]: Verification checklist check 8 uses mock-kubectl directly (wrapper named mock-kubectl not kubectl, no symlink in wrappers/)
+- [Phase 07-03]: SOUL.md is load-bearing narrative preserved and extended for Track B/C: Phase 7 Layer 1 adds mechanical defense but SOUL.md remains the sole protection for novel commands
 
 ### Pending Todos
 
@@ -163,6 +166,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T10:58:44.140Z
-Stopped at: Completed 07-guardrails-governance/07-01-PLAN.md
+Last session: 2026-04-07T11:23:22.762Z
+Stopped at: Completed 07-guardrails-governance/07-03-PLAN.md
 Resume file: None
