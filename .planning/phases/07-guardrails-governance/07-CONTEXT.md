@@ -59,7 +59,7 @@ Phase 7 does NOT touch:
   | `HERMES_LAB_MODE` | `mock` \| `live` | Phase 1 | Route kubectl/aws/psql to mock JSON fixtures or real infra |
   | `HERMES_LAB_SCENARIO` | `clean` \| `messy` \| `crashloop` \| `image-pull` \| `crashloop2` \| `oom` \| `liveness` \| `missing-secret` \| `port-mismatch` | Phase 1 + Phase 6 | Select scenario fixture for mock mode |
   | `HERMES_LAB_GOVERNANCE` | `L1` \| `L2` \| `L3` \| `L4` | **Phase 7 NEW** | Select active governance level for wrapper enforcement |
-  | `HERMES_LAB_TRACK` | `a` \| `b` \| `c` | **Phase 7 NEW** (researcher recommendation) | Required at L4 to disambiguate which track-specific L4 yaml file to load (3 files: L4-track-a, L4-track-b, L4-track-c). Optional at L1-L3 (shared yamls) |
+  | `HERMES_LAB_TRACK` | `track-a` \| `track-b` \| `track-c` | **Phase 7 NEW** (researcher recommendation) | Required at L4 to disambiguate which track-specific L4 yaml file to load (3 files: L4-track-a, L4-track-b, L4-track-c). Optional at L1-L3 (shared yamls). Long form (`track-a`) is canonical — matches the wrapper's resolved file path and Module 13 lab examples |
   | `MOCK_DATA_DIR` | path | Phase 1 | Point to mock fixtures directory |
   | `PATH` additions | `infrastructure/wrappers:$PATH` | Phase 1 | Make wrappers override system kubectl/aws/psql |
 
