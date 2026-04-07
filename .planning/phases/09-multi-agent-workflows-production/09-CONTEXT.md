@@ -46,17 +46,17 @@ Phase 9 does NOT touch:
 
 - **D-06:** **Path A — Direct kubectl apply at L4 governance (PRIMARY).** Specialist agent runs `kubectl apply` (or `kubectl patch`) directly after Telegram approval. Phase 7 wrapper enforces L4 allowlist + audit. Works on any KIND cluster + Hermes — no Module 6 Track B prerequisites. Lab walks this path end-to-end as the GUIDED PHASE main flow. Solo Learner callouts use mock-kubectl wrapper for participants without live KIND.
 
-- **D-07:** **Path B — GitOps PR-based apply ("production upgrade" section).** After Path A completes, a new GUIDED PHASE section walks Path B for participants who want to see the production-grade pattern:
+- **D-07:** **Path B — GitOps PR-based apply ("production upgrade" section).** Research-corrected: ArgoCD installation infrastructure does NOT exist in the course repo (Phase 1/3 reference was documentation-only). Sub-path B1 (ArgoCD sync) cannot be a guided step in v1.1. Path B uses the helm upgrade fallback (Sub-path B2) as the ONLY sync mechanism.
+
+  After Path A completes, a new GUIDED PHASE section walks Path B for participants who want to see the production-grade pattern:
   1. Specialist agent generates the YAML patch as a file (not directly applies)
   2. Agent commits to a feature branch in a course-provided GitOps repo (or local repo for Solo Learners)
-  3. Agent opens a PR via Phase 8 GitHub integration (`--deliver github_comment` style or direct API call)
+  3. **Agent opens PR via specialist's terminal toolset calling `gh pr create` directly** (research-corrected: Hermes has `_deliver_github_comment` for posting to existing PRs but NO `_deliver_github_pr` for opening new ones. The specialist must call `gh pr create` from its terminal toolset.)
   4. Human reviews the diff in GitHub UI (richer than Telegram message)
   5. Human merges the PR
-  6. **Sync mechanism (two sub-options):**
-     - **Sub-path B1:** ArgoCD on KIND syncs automatically (requires Module 6 Track B completion)
-     - **Sub-path B2:** `infrastructure/scenarios/k8s/gitops/apply.sh` script wraps `helm upgrade --install reference-app reference-app/helm/ --values <merged-patch>` (no ArgoCD prerequisite)
+  6. **Sync mechanism:** `infrastructure/scenarios/k8s/gitops/apply.sh` script wraps `helm upgrade --install reference-app reference-app/helm/ --values <merged-patch>`. Self-contained, no ArgoCD prerequisite.
   7. Confirmation posted back to Telegram via webhook
-  Lab text shows BOTH sub-paths with explicit "if you completed Module 6 Track B, use Sub-path B1; otherwise use Sub-path B2" callout.
+  Lab text mentions ArgoCD as a v1.2 alternative with explicit "ArgoCD-based sync would replace this script in production deployments" callout, but the GUIDED step uses the helm upgrade script.
 
 - **D-08:** **Why two paths instead of GitOps-only:** Not every workshop participant or Udemy learner will have completed Module 6 Track B (ArgoCD on KIND). Requiring ArgoCD for FLEET-01 creates a hard prerequisite that excludes learners. Path A (direct apply) works for everyone; Path B (GitOps) is for those who want the production teaching. User decision per discussion log.
 
@@ -70,11 +70,19 @@ Phase 9 does NOT touch:
 
 - **D-12:** **Solo Learner callouts inside live lab.** Each major step gets a `:::info Solo Learner` callout showing the mock-mode equivalent (set `HERMES_LAB_MODE=mock` + appropriate scenario, the wrapper produces expected outputs without real KIND/Telegram). Mirrors Phase 6 pattern. Udemy participants stay supported.
 
-- **D-13:** **Light edit to Morgan SOUL.md.** Three small additions:
+- **D-13:** **Light edit to Morgan SOUL.md + REQUIRED config.yaml toolset update (research-corrected).** Hermes delegation INTERSECTS child toolsets with the parent's `enabled_toolsets` per `delegate_tool.py` lines 178-184. Morgan must have `terminal` in her toolset for delegated specialists to inherit it and run kubectl. The original D-13 stance ("Morgan stays at `cli: [web, skills]`") was mechanically incompatible with delegated apply.
+
+  **config.yaml change (REQUIRED):**
+  - `cli: [web, skills]` → `cli: [terminal, web, skills]`
+  - Comment block above the line explains: "Morgan needs `terminal` in her toolset because Hermes delegation intersects child toolsets with parent. Specialists Morgan delegates to can only use tools Morgan has. Behavioral prohibition against Morgan calling terminal directly is enforced by the new NEVER rule below + existing 4 NEVER rules."
+
+  **SOUL.md additions (4 total — was 3):**
   1. Behavior Rules: add "After human approval, re-delegate to the diagnosing specialist with L4 governance escalation"
   2. Behavior Rules: add "Generate fix proposals as kubectl patch commands OR YAML diff overlays (for GitOps path)"
-  3. Escalation Policy: add "Await human approval via Telegram before re-delegating apply"
-  Identity stays intact, anti-loop and sequential rules unchanged. Approximately 5-10 line addition. config.yaml stays at `cli: [web, skills]` since Morgan still doesn't execute directly. Mirror the edit to `modules/module-11-fleet/agents/fleet-coordinator/SOUL.md` if such a mirror exists (researcher confirms).
+  3. Behavior Rules: add **NEW NEVER rule**: "NEVER call terminal tools directly — your role is delegation, not execution. If you need a kubectl/aws/psql command run, delegate it to the appropriate specialist. The terminal toolset exists in your config so children can inherit it, NOT for your direct use."
+  4. Escalation Policy: add "Await human approval via Telegram before re-delegating apply"
+
+  Belt + suspenders: mechanical capability for delegation (config), behavioral prohibition against direct execution (SOUL.md). Approximately 12-15 line addition total. Identity intact, anti-loop and sequential rules unchanged.
 
 - **D-14:** **cross-domain.md scenario fixture stays usable.** The existing scenario fixture is reused for the live lab. Researcher verifies whether it needs updates to reflect Phase 6 K8s skills + Phase 7 governance vocabulary, or whether the existing version is still accurate.
 
