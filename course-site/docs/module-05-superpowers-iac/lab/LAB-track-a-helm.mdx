@@ -1,0 +1,498 @@
+---
+id: module-05-lab-track-a
+title: "Track A: Superpowers for Helm Charts"
+sidebar_label: "Lab: Track A — Helm"
+sidebar_position: 1
+---
+
+# Track A: Superpowers for Helm Charts
+
+**Duration:** 90 minutes
+**Track:** A — Kubernetes / Helm
+
+---
+
+## Introduction
+
+In this lab, you apply the Superpowers workflow — brainstorm, TDD, implement, debug, verify, and code review — to a real IaC project. You will NOT copy-paste templates. You will generate production Helm chart improvements from scratch, using structured context as your only starting point.
+
+**What you are doing:** Adding five production-hardening resources to the existing reference app Helm chart:
+- `HorizontalPodAutoscaler` — autoscaling under load
+- `PodDisruptionBudget` — availability guarantee during node drain
+- `ServiceMonitor` — Prometheus metrics discovery
+- Resource limits — prevent unbounded pod resource consumption
+- `NOTES.txt` — post-install usage instructions
+
+**What you will NOT have:** Starter files. Per the Superpowers approach, you start with context — a project CLAUDE.md — and let the AI generate everything. The structured context you write is your real work product.
+
+:::info Why context-first?
+A bare prompt like "add HPA to my Helm chart" produces something generic that probably won't lint. A CLAUDE.md with system state, existing values, constraints, and gaps produces something that works the first time — or close to it. This lab demonstrates that gap in action.
+:::
+
+**Prerequisites:**
+
+- Helm v3.x installed (`helm version --short`)
+- kubectl installed and KIND cluster running (from setup guide)
+- Reference app deployed to KIND cluster
+- Claude Code (or Crush) configured and ready
+
+---
+
+## Phase 0: Setup + Context (10 min)
+
+### Step 1 — Verify tools
+
+```bash
+helm version --short
+```
+
+Expected result: `v3.x.x+...` (version 3.x.x with some build metadata)
+
+```bash
+kubectl cluster-info
+```
+
+Expected result: `Kubernetes control plane is running at https://127.0.0.1:...` (your KIND cluster)
+
+:::caution Wrong cluster?
+If `kubectl cluster-info` shows a cloud cluster instead of a local one, switch your context: `kubectl config use-context kind-kind` (or your KIND cluster context name).
+:::
+
+### Step 2 — Navigate to the chart directory
+
+```bash
+cd reference-app/helm/reference-app
+ls templates/
+```
+
+Expected result: You should see deployment, service, and configmap files for `api-gateway`, `catalog`, `worker`, and `dashboard` — 13+ template files total.
+
+### Step 3 — Create the project CLAUDE.md
+
+This is your "starter." In the Superpowers workflow, you do not start with a pre-written template — you start with structured context that tells the AI exactly what the project is, what is already there, and what is missing.
+
+Create a file called `CLAUDE.md` in the chart directory (`reference-app/helm/reference-app/CLAUDE.md`):
+
+```markdown
+# Helm Chart Hardening — Reference App
+
+## System State
+- Existing chart: reference-app/helm/reference-app/
+- Chart version: 1.0.0 (apiVersion: v2)
+- Services: api-gateway (8080), catalog (8081), worker (8082), dashboard (3000, NodePort 30080)
+- Current state: resource requests set (cpu: 50m, memory: 64Mi), liveness/readiness probes configured
+- Deployment target: KIND cluster (local development)
+
+## What Is Missing (Production Gaps)
+- No resource limits (only requests) — pods can consume unlimited resources
+- No HorizontalPodAutoscaler — no autoscaling under load
+- No PodDisruptionBudget — no availability guarantee during node drain
+- No ServiceMonitor — Prometheus cannot discover service metrics
+- No NOTES.txt — helm install shows no usage instructions
+
+## Constraints
+- Must pass helm lint with zero errors and zero warnings
+- Must pass kubectl apply --dry-run=client on rendered output
+- All new resources must be toggleable via values.yaml (enabled: true/false pattern)
+- Resource limits should be 2x the existing requests (cpu: 100m, memory: 128Mi)
+- K8s API versions: use autoscaling/v2 for HPA (not v2beta2, removed in K8s 1.26+)
+- HPA apiVersion autoscaling/v2 requires K8s 1.23+; KIND v0.31 ships with K8s 1.32
+```
+
+Expected result: CLAUDE.md created. The AI can now understand exactly what the project is, what already works, and what you need it to build.
+
+:::info The CLAUDE.md is your engineering work
+Writing the CLAUDE.md is the most important step. It encodes: system vocabulary, existing state, gap analysis, and hard constraints. This is context engineering — not prompt writing. A good CLAUDE.md makes the AI generate correct code. A weak one wastes 20 minutes of debug time.
+:::
+
+---
+
+## Phase 1: Brainstorm (15 min)
+
+### Goal: What needs to change?
+
+Open Claude Code (or Crush) in the chart directory and ask:
+
+```
+Read the CLAUDE.md and the existing chart at reference-app/helm/reference-app/.
+List every production gap, categorize by severity (critical/important/nice-to-have),
+and propose a prioritized implementation order with reasons.
+```
+
+Expected result: The AI produces a ranked analysis. Your job is to review it and adjust priorities based on your actual constraints.
+
+**What to verify in the AI's output:**
+- Gap list includes at minimum: resource limits, HPA, PDB, ServiceMonitor, NOTES.txt
+- It understands the existing templates reference `apiGateway`, `catalog`, `worker`, `dashboard` sections in values.yaml
+- It recognizes the enablement pattern requirement (toggling via values.yaml)
+
+**Do NOT accept generic output.** If the AI says "add resource limits" without referencing the specific cpu/memory values from values.yaml, ask it to be more specific. Push back with: "Reference the exact current values from values.yaml and propose specific new limit values."
+
+:::tip Solo Learner
+If you're completing this lab self-paced without an instructor, spend 3-5 minutes writing down your own gap analysis BEFORE asking the AI. Then compare. This builds your pattern recognition for IaC production readiness — a skill that transfers to every future chart you work with.
+:::
+
+### Key teaching point
+
+The brainstorm produces a **plan**, not code. The AI's analysis quality depends entirely on the CLAUDE.md context you provided. Notice: if you had just asked "what should I add to my Helm chart?" with no CLAUDE.md, the AI would give you a generic list. With the CLAUDE.md, it gives you context-specific, constraint-aware recommendations.
+
+---
+
+## Phase 2: TDD — RED (20 min)
+
+### Goal: Define what success looks like before writing code
+
+The TDD "test" for Helm charts uses `helm lint` and `helm template | kubectl apply --dry-run=client` as the verification toolchain. No extra test frameworks needed — these tools already exist in your workflow.
+
+### Step 1 — Establish baseline
+
+Run the current chart through lint to confirm it passes before you change anything:
+
+```bash
+helm lint reference-app/helm/reference-app/
+```
+
+Expected result: `1 chart(s) linted, 0 chart(s) failed` with no warnings.
+
+If this fails, stop and fix lint errors first. Never add code to a broken baseline.
+
+### Step 2 — Define success criteria
+
+Before generating any templates, write a checklist of what the enhanced chart MUST produce. This is your TDD test definition:
+
+- `helm template` output MUST contain a `HorizontalPodAutoscaler` resource
+- `helm template` output MUST contain a `PodDisruptionBudget` resource
+- `helm template` output MUST contain a `ServiceMonitor` resource
+- `helm install --dry-run` output MUST show NOTES.txt content
+- All deployments MUST have resource limits set
+
+### Step 3 — Create the verification script
+
+Create `verify-chart.sh` in the chart root:
+
+```bash
+#!/bin/bash
+set -e
+
+CHART_DIR="reference-app/helm/reference-app"
+ERRORS=0
+
+echo "=== Helm Chart Verification ==="
+
+# Lint check
+echo "Running helm lint..."
+helm lint "$CHART_DIR" || { echo "FAIL: helm lint failed"; ERRORS=$((ERRORS+1)); }
+
+# Render the chart
+RENDERED=$(helm template test-release "$CHART_DIR" -f "$CHART_DIR/values.yaml" 2>/dev/null)
+
+# Check for required resources
+echo "Checking for HorizontalPodAutoscaler..."
+echo "$RENDERED" | grep -q "kind: HorizontalPodAutoscaler" || { echo "FAIL: no HPA found"; ERRORS=$((ERRORS+1)); }
+
+echo "Checking for PodDisruptionBudget..."
+echo "$RENDERED" | grep -q "kind: PodDisruptionBudget" || { echo "FAIL: no PDB found"; ERRORS=$((ERRORS+1)); }
+
+echo "Checking for ServiceMonitor..."
+echo "$RENDERED" | grep -q "kind: ServiceMonitor" || { echo "FAIL: no ServiceMonitor found"; ERRORS=$((ERRORS+1)); }
+
+# Dry-run against cluster
+echo "Running kubectl dry-run..."
+echo "$RENDERED" | kubectl apply --dry-run=client -f - 2>&1 | tail -5 || { echo "FAIL: kubectl dry-run failed"; ERRORS=$((ERRORS+1)); }
+
+# Check NOTES.txt
+echo "Checking NOTES.txt..."
+helm install test-release "$CHART_DIR" --dry-run 2>/dev/null | grep -q "NOTES:" || { echo "FAIL: no NOTES.txt in install output"; ERRORS=$((ERRORS+1)); }
+
+echo ""
+if [ $ERRORS -eq 0 ]; then
+  echo "ALL CHECKS PASS"
+else
+  echo "$ERRORS check(s) failed — fix before proceeding"
+  exit 1
+fi
+```
+
+Make it executable:
+
+```bash
+chmod +x verify-chart.sh
+```
+
+### Step 4 — Run the verification script (MUST FAIL — this is the RED state)
+
+```bash
+./verify-chart.sh
+```
+
+Expected result: Multiple FAIL lines. The current chart has none of these resources, so every check fails:
+
+```
+FAIL: no HPA found
+FAIL: no PDB found
+FAIL: no ServiceMonitor found
+FAIL: no NOTES.txt in install output
+4 check(s) failed — fix before proceeding
+```
+
+:::info This is good! This is the RED state.
+A failing test is the starting point. If all checks passed already, you would not need to build anything. The failing script proves your success criteria are real and currently unmet. This is how TDD works — you define done before you write code.
+:::
+
+:::caution ServiceMonitor CRD availability
+If the `kubectl apply --dry-run=client` step fails on `ServiceMonitor` with "no kind is registered", it means the Prometheus CRD is not installed in your KIND cluster. This is expected in a base KIND setup. For this lab, you can skip the dry-run check for ServiceMonitor specifically — the `helm lint` and `helm template` checks are sufficient to validate the template structure. The dry-run validates everything else.
+:::
+
+---
+
+## Phase 3: Implement — GREEN (20 min)
+
+### Goal: Generate the minimum code to pass the verification script
+
+Prompt AI with:
+
+```
+Using the CLAUDE.md context and the verification requirements in verify-chart.sh,
+generate Helm templates for:
+1. templates/hpa.yaml — HorizontalPodAutoscaler for api-gateway, catalog, and worker
+2. templates/pdb.yaml — PodDisruptionBudget for api-gateway, catalog, and worker
+3. templates/servicemonitor.yaml — ServiceMonitor for all 4 services
+4. templates/NOTES.txt — post-install usage instructions using template functions
+5. Update templates/deployment-api-gateway.yaml, deployment-catalog.yaml,
+   deployment-worker.yaml, deployment-dashboard.yaml to add resource limits
+
+Each new resource must be:
+- Toggleable via values.yaml using an `enabled: true/false` pattern
+- Using correct apiVersion for K8s 1.32 (autoscaling/v2 for HPA, policy/v1 for PDB)
+- Using matchLabels that match the existing deployment selectors
+```
+
+**Before placing the generated files**, review each one:
+
+1. Does `hpa.yaml` use `autoscaling/v2` (not `v2beta2`)?
+2. Does `pdb.yaml` use `policy/v1` (not `v1beta1`)?
+3. Do the `matchLabels` in HPA/PDB reference the same selectors as the existing Deployments?
+4. Does `servicemonitor.yaml` reference port names that match your Service definitions?
+
+### Step 1 — Place the generated files
+
+```bash
+# Copy AI-generated templates into the chart
+# Replace this with the actual file paths the AI provides
+cp hpa.yaml reference-app/helm/reference-app/templates/
+cp pdb.yaml reference-app/helm/reference-app/templates/
+cp servicemonitor.yaml reference-app/helm/reference-app/templates/
+cp NOTES.txt reference-app/helm/reference-app/templates/
+```
+
+### Step 2 — Update values.yaml
+
+The AI should also generate new values.yaml additions. Add them to the existing `values.yaml`:
+
+```yaml
+# Add under each service section (example for apiGateway):
+apiGateway:
+  # ... existing values ...
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    path: /metrics
+```
+
+Apply the same pattern for `catalog`, `worker`, and `dashboard` sections.
+
+### Step 3 — Run verification (MUST PASS — this is the GREEN state)
+
+```bash
+./verify-chart.sh
+```
+
+Expected result:
+
+```
+=== Helm Chart Verification ===
+Running helm lint...
+1 chart(s) linted, 0 chart(s) failed
+Checking for HorizontalPodAutoscaler... [found]
+Checking for PodDisruptionBudget... [found]
+Checking for ServiceMonitor... [found]
+Running kubectl dry-run... [success]
+Checking NOTES.txt... [found]
+
+ALL CHECKS PASS
+```
+
+:::info If some checks still fail
+Do NOT manually fix the templates yet. Failing checks feed directly into the Debug phase. Note which checks fail and proceed to Phase 4. The debug methodology handles this — the same approach you use for real AI-generated code in production.
+:::
+
+---
+
+## Phase 4: Debug (10 min)
+
+### Goal: Fix what the AI got wrong using systematic debugging
+
+This phase uses REAL errors from AI generation. You are not chasing planted bugs — you are practicing the skill of recognizing and fixing the specific categories of errors that AI tools produce when generating Helm templates.
+
+### Common AI generation errors for Helm charts
+
+| Error Type | What the AI produces | What it should be |
+|-----------|---------------------|-------------------|
+| Wrong HPA apiVersion | `autoscaling/v2beta2` | `autoscaling/v2` (v2beta2 removed in K8s 1.26) |
+| Wrong PDB apiVersion | `policy/v1beta1` | `policy/v1` (v1beta1 removed in K8s 1.25) |
+| Wrong matchLabels | `app: reference-app` | Must match the selector in the Deployment (e.g., `app.kubernetes.io/name: api-gateway`) |
+| Wrong ServiceMonitor port | `port: 8080` | Must be the port **name** from the Service resource, not the number |
+| NOTES.txt wrong syntax | `{{ Release.Name }}` | `{{ .Release.Name }}` (missing the dot prefix) |
+| HPA targetRef name | Hardcoded `name: api-gateway` | Should use `{{ include "reference-app.fullname" . }}` or equivalent helper |
+
+### Systematic Debugging Workflow
+
+**Step 1 — Read the error output:**
+```bash
+./verify-chart.sh 2>&1 | head -30
+```
+
+Identify which check(s) fail. The error message tells you which resource is missing or invalid.
+
+**Step 2 — Trace the error to a specific template:**
+
+If lint fails: `helm lint reference-app/helm/reference-app/ --debug` shows the exact template file and line number.
+
+If dry-run fails: `helm template test-release reference-app/helm/reference-app/ 2>&1 | head -20` shows the render error.
+
+**Step 3 — Form a hypothesis:**
+
+Common patterns:
+- "no HPA found" → check if the HPA template has an `{{ if .Values.apiGateway.autoscaling.enabled }}` condition and your values.yaml has `enabled: false`
+- Lint error on `v2beta2` → replace with `v2` in the template
+- Label mismatch → run `helm template ... | grep -A5 "kind: Deployment" | grep -A3 "matchLabels"` to find the actual selector values, then update the HPA/PDB to match
+
+**Step 4 — Apply the smallest fix and re-run:**
+
+```bash
+# Fix one thing, verify immediately
+./verify-chart.sh
+```
+
+:::caution 3-Fix Rule
+If you have made 3 fixes and the verification still fails on the same check, stop trying individual fixes. Ask the AI: "Here is my current templates/hpa.yaml and the exact error from `helm lint --debug`. What is wrong?" Provide both the file content AND the exact error. AI generation errors are faster to fix by asking the AI with full context than by scanning YAML manually.
+:::
+
+---
+
+## Phase 5: Verify + Code Review (15 min)
+
+### Verification — Prove it works
+
+Run all three verification commands in sequence:
+
+```bash
+# 1. Lint — schema and syntax validation
+helm lint reference-app/helm/reference-app/
+```
+
+Expected result: `1 chart(s) linted, 0 chart(s) failed`
+
+```bash
+# 2. Template + dry-run — validate rendered output against the cluster API
+helm template course-app reference-app/helm/reference-app/ \
+  -f reference-app/helm/reference-app/values.yaml \
+  | kubectl apply --dry-run=client -f -
+```
+
+Expected result: Multiple `... configured (dry run)` lines, zero errors.
+
+```bash
+# 3. Install dry-run — validates the full release installation including NOTES.txt
+helm install course-app reference-app/helm/reference-app/ --dry-run
+```
+
+Expected result: Output ends with `NOTES:` section showing the content from your `NOTES.txt`.
+
+All three must succeed with zero errors before proceeding.
+
+### Code Review — Improve what was generated
+
+Prompt AI with:
+
+```
+Review the generated Helm templates in reference-app/helm/reference-app/templates/
+against these 5 dimensions:
+
+1. Code Quality — naming conventions, DRY, no hardcoded values
+2. Architecture — are resource relationships correct? Does HPA target the right Deployment?
+3. Testing — does the verify-chart.sh cover all critical cases?
+4. Requirements — are all items from CLAUDE.md implemented?
+5. Production Readiness — are resource limits reasonable? Is the HPA min/max sensible?
+   Does the PDB allow rolling updates (minAvailable: 1 with replicaCount: 1 means
+   no pods can be evicted — is that intentional)?
+```
+
+**Common code review findings to act on:**
+
+- If the PDB has `minAvailable: 1` and the deployment has `replicaCount: 1`, node drain will block because the PDB protects the only pod. For development, this is often intentional. For production, you would increase replicas. Document the trade-off in a comment.
+- If the HPA has `minReplicas: 1` and `maxReplicas: 3` but no memory-based metric, ask: "Is CPU-only scaling sufficient for our workload?" The CLAUDE.md described API and worker services — those likely have both CPU and memory pressure.
+- Check that NOTES.txt uses `{{ .Release.Namespace }}` and `{{ .Release.Name }}` to give meaningful post-install output.
+
+Apply any agreed improvements from the code review, then run the full verification suite one final time.
+
+### Compare against baseline
+
+See exactly what was added during this lab:
+
+```bash
+# List all new files
+git status reference-app/helm/reference-app/templates/
+
+# Diff the values.yaml changes
+git diff reference-app/helm/reference-app/values.yaml
+```
+
+Expected result: New template files listed (hpa.yaml, pdb.yaml, servicemonitor.yaml, NOTES.txt), and the values.yaml diff shows the added resource limits and autoscaling configuration.
+
+---
+
+## Wrap-Up
+
+**What you accomplished in 90 minutes:**
+1. Wrote structured context (CLAUDE.md) encoding system state, gaps, and constraints
+2. Defined success criteria as executable verification before writing any code
+3. Generated 5 production-hardening Helm chart additions using AI
+4. Debugged AI generation errors using a systematic methodology
+5. Validated the result with three independent verification methods
+6. Improved quality through AI-assisted code review
+
+**Reflection questions:**
+- How did the CLAUDE.md context affect the quality of AI generation compared to a bare prompt?
+- Which debug step was fastest: reading the error, tracing to the file, or asking the AI with full context?
+- Looking at the verify-chart.sh, what cases are NOT covered that a production chart should also test?
+
+**The pattern you practiced today applies to:**
+- Any Helm chart: adding network policies, Ingress resources, RBAC
+- Terraform modules: adding monitoring, security groups, IAM policies
+- Kubernetes manifests: adding sidecar containers, init containers, PodSecurityPolicy
+
+The skill is structured context + TDD cycle + systematic debugging — the domain changes, the workflow stays the same.
+
+**Next:** Module 6 introduces AI Workflow Tools (GSD cycle, memory systems, plan modes) that automate this cycle across larger projects.
+
+---
+
+:::tip Solo Learner
+If you were not able to get the cluster running locally, you can still complete Phases 0-2 (context creation, brainstorm, verification script authoring) and Phase 3 (template generation) without a live cluster. Skip the `kubectl apply --dry-run=client` step in verify-chart.sh and focus on `helm lint` validation only. The TDD and AI generation workflow is identical — you just cannot do the dry-run step without a cluster.
+:::
