@@ -167,9 +167,9 @@ Phase 9 does NOT touch:
 - `course-site/docs/module-11-fleet/quiz/QUIZ.mdx` — **Phase 9 ADDS 2-3 new questions per D-20.**
 - `course-site/docs/module-11-fleet/exploratory/PROJECTS.mdx` — **Phase 9 ADDS K8s Agent Sandbox project entry per D-15.**
 
-### Fleet Coordinator (Morgan) — Light Edit
-- `agents/fleet-coordinator/SOUL.md` — Existing identity (delegate, never execute, anti-loop, sequential). **Phase 9 light-edits per D-13** (3 small additions).
-- `agents/fleet-coordinator/config.yaml` — `cli: [web, skills]` (no terminal), `delegation:` block. **Phase 9 leaves UNCHANGED** — Morgan still doesn't execute.
+### Fleet Coordinator (Morgan) — Light Edit (research-corrected)
+- `agents/fleet-coordinator/SOUL.md` — Existing identity (delegate, never execute, anti-loop, sequential). **Phase 9 light-edits per D-13** (4 additions including new NEVER rule).
+- `agents/fleet-coordinator/config.yaml` — Currently `cli: [web, skills]` (no terminal). **Phase 9 UPDATES to `cli: [terminal, web, skills]`** per research-corrected D-13 — required for Hermes delegation toolset intersection so children can inherit terminal. Behavioral safety enforced by new NEVER rule in SOUL.md, not by absence of terminal in config.
 
 ### Phase 6 Reuse (read-only references)
 - `infrastructure/scenarios/k8s/02-crashloop-backoff.yaml` — Phase 6 baked CrashLoopBackOff manifest. Phase 9 FLEET-01 demo scenario reuses this AS-IS.
