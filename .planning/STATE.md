@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Realistic Agents & Production Workflows
 status: Ready to execute
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-04-07T02:08:18.587Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-04-07T02:15:33.781Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-07)
 ## Current Position
 
 Phase: 05 (module-consolidation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Plan: 2 of 3
 | Phase 04-remaining-content P02 | 60min | 2 tasks | 72 files |
 | Phase 04-remaining-content P03 | 10 | 2 tasks | 6 files |
 | Phase 05-module-consolidation P01 | 5 | 2 tasks | 60 files |
+| Phase 05-module-consolidation P02 | 4 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,9 @@ Recent decisions affecting current work:
 - [v1.1 Roadmap]: PROD-01 (K8s Agent Sandbox) marked exploratory in requirements — stays in Phase 9 as exploratory content, not required lab
 - [Phase 05]: module-05-superpowers-iac scaffold only in Plan 01 — content authored in Plan 02; Terraform solution files from old module-06-ai-iac are Track B reference, migrated verbatim
 - [Phase 05]: Docusaurus doc ID naming: module-06-ai-workflow-tools/module-06-readme (directory prefix + slug, no a/b suffixes)
+- [Phase 05-module-consolidation]: Context-first starter pattern: CLAUDE.md with system state, gaps, constraints is the starter for Superpowers IaC labs — no pre-written code skeletons needed
+- [Phase 05-module-consolidation]: CLAUDE.md vocabulary encoding: including exact AWS attribute names in Architecture section pre-corrects most common AI Terraform generation errors before code generation begins
+- [Phase 05-module-consolidation]: Helm TDD uses existing toolchain (helm lint + kubectl dry-run) — no additional test frameworks, reduces setup friction for participants
 
 ### Pending Todos
 
@@ -136,6 +140,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T02:08:18.584Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-04-07T02:15:33.778Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None

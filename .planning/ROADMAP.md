@@ -46,7 +46,7 @@
 **Plans:** 1/3 plans executed
 Plans:
 - [x] 05-01-PLAN.md — Directory restructure: rename module-05b to module-06, scaffold new module-05, migrate solution files, delete old dirs, update all cross-references
-- [ ] 05-02-PLAN.md — Lab content authoring: Track A (Helm Superpowers 90 min) and Track B (Terraform Superpowers 90 min)
+- [x] 05-02-PLAN.md — Lab content authoring: Track A (Helm Superpowers 90 min) and Track B (Terraform Superpowers 90 min)
 - [ ] 05-03-PLAN.md — Supporting content: README, reading (concepts + reference), quiz (7 questions), exploratory projects (ArgoCD, CI/CD, second track)
 
 ### Phase 6: K8s Skills & Agents
