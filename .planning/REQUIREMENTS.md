@@ -32,7 +32,7 @@ Requirements for v1.1: Realistic Agents & Production Workflows. Each maps to roa
 ### Guardrails & Governance
 
 - [ ] **GOV-01**: Hermes command allowlist/blocklist configuration — kubectl get/describe/logs allowed, kubectl delete/drain/exec blocked
-- [ ] **GOV-02**: Per-track governance configs with domain-specific allowlists (K8s, Database, FinOps)
+- [x] **GOV-02**: Per-track governance configs with domain-specific allowlists (K8s, Database, FinOps)
 - [ ] **GOV-03**: Progressive governance walkthrough L1 to L4 with allowlist differentiation showing trust escalation
 
 ### Agent Productionization
@@ -90,7 +90,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRIG-03 | Phase 8 | Pending |
 | TRIG-04 | Phase 8 | Pending |
 | GOV-01 | Phase 7 | Pending |
-| GOV-02 | Phase 7 | Pending |
+| GOV-02 | Phase 7 | Complete |
 | GOV-03 | Phase 7 | Pending |
 | PROD-01 | Phase 9 | Pending |
 | PROD-02 | Phase 9 | Pending |
