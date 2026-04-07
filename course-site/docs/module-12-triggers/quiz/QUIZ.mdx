@@ -199,3 +199,111 @@ Mission Control is a future Hermes feature — the concepts apply immediately to
 
 </details>
 
+---
+
+### Question 7: Hermes Cron vs K8s CronJob Tradeoffs
+
+A team is building a daily slow-query health check for their RDS instances. The team uses GitOps for all K8s manifests, has a working Hermes gateway with `sre-dba-rds-slow-query` skill loaded, and wants the schedule reviewed via PR before any change ships. Which trigger pattern is the right primary choice, and what is the key tradeoff?
+
+A) Hermes cron — best because the agent benefits from gateway-shared state and the iteration speed of `hermes cron create`
+B) K8s CronJob — best because the schedule lives in a YAML manifest reviewed via PR (GitOps), and the diagnostic is stateless
+C) AlertManager webhook — best because RDS slow queries should be event-driven, not polled
+D) Hermes webhook test — best for development; switch to K8s CronJob for production
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) K8s CronJob — best because the schedule lives in a YAML manifest reviewed via PR (GitOps), and the diagnostic is stateless**
+
+The team's stated requirement is "schedule reviewed via PR before any change ships." That's the GitOps signal — schedules need to be in git, reviewed, deployed via a pipeline. Hermes cron is CLI-managed, which means schedule changes happen via `hermes cron create` outside the PR workflow.
+
+The diagnostic itself is stateless (read slow_log, identify outliers, report) — there's no conversation history or accumulated learning that would benefit from gateway-shared state. So you don't lose anything important by running it as a one-shot K8s pod.
+
+**Why not A (Hermes cron)?** Hermes cron is the right answer when state matters (most agent work) — for example, an investigation agent that builds context from yesterday's findings to inform today's work. The slow-query check doesn't need that. And critically, the team explicitly wants GitOps review, which Hermes cron doesn't provide.
+
+**Why not C (AlertManager)?** AlertManager is for event-driven incident response — alert fires when something is wrong. A daily health check is the opposite pattern: scheduled scan, no triggering event. You could wire AlertManager to fire on slow queries, but that requires a metrics pipeline and is a different design entirely.
+
+**Why not D?** `hermes webhook test` is for simulating events during development — it's not a production trigger.
+
+**Real-world honest stance:** most agent work uses Hermes cron because state matters. But when the requirement explicitly calls for GitOps + stateless one-shot, K8s CronJob is the right answer. See Module 12 Step 11 for the full "Use Hermes cron when... / Use K8s CronJob when..." comparison.
+
+</details>
+
+---
+
+### Question 8: AlertManager to Hermes Webhook Flow
+
+A participant applies a broken pod manifest (`02-crashloop-backoff.yaml`), enables AlertManager via the helm release, applies a PrometheusRule, and starts the Hermes gateway with an `alertmanager` webhook subscription. Two minutes pass and the agent NEVER runs. Which is the most likely cause, given the symptoms below?
+
+Symptoms:
+- `kubectl get pods -n k8s-trouble-crashloop` shows the pod in CrashLoopBackOff with restartCount=12
+- `kubectl get prometheusrule -n monitoring` shows the rule resource exists
+- The Prometheus UI Rules page does NOT show the `PodCrashLooping` rule
+- AlertManager pods are running and healthy
+
+A) The PrometheusRule manifest is missing the `release: kube-prometheus` label, so kube-prometheus-stack's ruleSelector silently ignores it
+B) The Hermes gateway is not running on port 8644
+C) The agent's `sre-k8s-pod-health` skill is not loaded
+D) The webhook prompt template uses `{alerts[0].labels.pod}` which doesn't render
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: A) The PrometheusRule manifest is missing the `release: kube-prometheus` label, so kube-prometheus-stack's ruleSelector silently ignores it**
+
+The decisive symptom is: "The Prometheus UI Rules page does NOT show the `PodCrashLooping` rule." Even though the PrometheusRule resource exists in the cluster (`kubectl get prometheusrule` shows it), Prometheus has not loaded it.
+
+The kube-prometheus-stack Helm chart configures its Prometheus CRD with a `ruleSelector` that matches PrometheusRule resources by label. The default selector is `release: kube-prometheus` (matching the helm release name). Without that label, the rule is silently ignored — present in the cluster, invisible to Prometheus, never evaluated, never fires.
+
+The fix: add `labels.release: kube-prometheus` to the PrometheusRule metadata. The Phase 8 PrometheusRule manifest at `infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml` includes this label specifically to prevent this class of failure.
+
+**Why not B (gateway not running)?** If the gateway were down, `curl http://localhost:8644/health` would fail. The symptoms don't mention this — and more importantly, the alert never even reached AlertManager to try the delivery. The failure is upstream in Prometheus never loading the rule.
+
+**Why not C (skill not loaded)?** A missing skill would cause the agent to run and immediately error out with a "skill not found" message. The symptoms say the agent NEVER runs — the alert never even arrived.
+
+**Why not D (broken prompt template)?** A broken template would render as literal text and the agent would still run (just with a garbage prompt). The symptoms say the agent never runs at all.
+
+**Reference:** The `release: kube-prometheus` label requirement is documented in Module 12 Step 9 (AlertManager setup). Verify with: `kubectl get prometheusrule -n monitoring hermes-lab-rules -o yaml | yq '.metadata.labels'`.
+
+</details>
+
+---
+
+### Question 9: Chat Bot Governance Inheritance
+
+A team has the Hermes Telegram bot running with `HERMES_LAB_GOVERNANCE=L2` (read-only diagnostics) set when the gateway started. A team member wants to escalate a single command to L4 (with kubectl write actions) without affecting the bot's overall governance. They send `/diagnose --governance L4 crashloop-pod` from Telegram. What happens, and why?
+
+A) The agent runs at L4 because the `--governance L4` flag in the slash command overrides the gateway env var
+B) The agent runs at L2 because Telegram bot governance is per-PROCESS — set when the gateway started, inherited by every command run during that gateway's lifetime, no per-message override
+C) The agent runs at L2, but logs a warning about the unsupported flag
+D) The bot rejects the command entirely because slash commands cannot include `--` flags
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) The agent runs at L2 because Telegram bot governance is per-PROCESS — set when the gateway started, inherited by every command run during that gateway's lifetime, no per-message override**
+
+Per Module 12 Step 16 and CONTEXT.md D-19, Telegram bot governance is **per-process, not per-message**. The `HERMES_LAB_GOVERNANCE` env var is read by the gateway when it starts and inherited by every agent run spawned by the gateway during its lifetime. To change the governance level, the operator must restart the gateway:
+
+```bash
+hermes gateway stop
+sleep 30   # Telegram polling lock release
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-c
+hermes gateway run
+```
+
+The `--governance L4` text in the slash command is not a flag the bot parses — it's just part of the prompt the agent sees. The agent receives the literal text `/diagnose --governance L4 crashloop-pod` as its prompt. It might interpret that as a request to use L4, but the wrapper enforcement (Phase 7 wrapper_allowlist) reads its allowlist from `governance/governance-L2.yaml` because that's what `HERMES_LAB_GOVERNANCE=L2` resolves to at gateway start. Any attempt by the agent to run a kubectl write command is REJECTED with the GOVERNANCE REJECTED banner from the wrapper.
+
+**Why is it designed this way?** Per-message governance escalation would let any user with bot access silently elevate privileges. The per-process model forces an explicit, observable, auditable change — the operator restarts the gateway with a different env var, and the new level applies to every subsequent command. The combination of `TELEGRAM_ALLOWED_USERS` (who can talk to the bot) plus `HERMES_LAB_GOVERNANCE` (what they can do) is the per-context governance model.
+
+**Why not A?** The Hermes Telegram adapter (`gateway/platforms/telegram.py`) does not implement per-message governance flags. Even if you pass `--governance L4` in the message, it's just text the agent reads, not a directive to the wrapper.
+
+**Why not C?** The bot doesn't parse flags from messages — it doesn't know to log a warning about an unsupported one. The text becomes part of the prompt.
+
+**Why not D?** The bot accepts any slash command text, including `--` flags as part of the message. The text is passed through to the agent without parsing.
+
+**Reference:** Module 12 Step 16 demonstrates this exact scenario: restart gateway with `HERMES_LAB_GOVERNANCE=L4` to escalate all commands for that gateway session.
+
+</details>
+

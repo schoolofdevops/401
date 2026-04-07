@@ -222,3 +222,70 @@ This format renders correctly in Slack markdown and provides all information nee
 | Needs human context in task | No | No | Yes |
 | Best for trending data | Yes | No | No |
 | Best for incident response | No | Yes | Yes (fallback) |
+
+---
+
+## 6. Phase 8: Real Trigger Types — Comparison
+
+Module 12's existing content (Sections 1-4 above) covers Hermes-native cron and webhook patterns with simulated payloads. Phase 8 adds four REAL trigger sources you wire to live infrastructure:
+
+| Trigger Type | Source | When To Use | State Required | Governance Inheritance |
+|---|---|---|---|---|
+| **Hermes cron** (Module 12 Steps 2-4) | Internal scheduler | Most agent work — gateway-shared state, fast iteration, audit trail context | Gateway running | `HERMES_LAB_GOVERNANCE` from gateway env |
+| **Hermes webhook test** (Module 12 Step 7) | `hermes webhook test` CLI | Lab/development — simulating events without external services | Gateway running | `HERMES_LAB_GOVERNANCE` from gateway env |
+| **AlertManager webhook** (Phase 8 / TRIG-01) | Real Prometheus + AlertManager on KIND | Event-driven incident response — alerts arrive without polling | KIND cluster + helm release + PrometheusRule applied | `HERMES_LAB_GOVERNANCE` from gateway env (universal inheritance) |
+| **K8s CronJob** (Phase 8 / TRIG-02) | Kubernetes native CronJob resource | GitOps schedule-in-git, stateless one-shot diagnostics, multi-tenant K8s | KIND cluster + Docker image + Secret | `HERMES_LAB_GOVERNANCE` set on container env spec |
+| **GitHub webhook** (Phase 8 / TRIG-03) | Real GitHub webhook via smee.io public proxy | PR review automation, push-to-investigate workflows | GitHub repo + PAT + smee.io channel + smee-client running | `HERMES_LAB_GOVERNANCE` from gateway env |
+| **Telegram bot** (Phase 8 / TRIG-04) | Real Telegram bot via @BotFather | Mobile-first chat ops, on-demand agent invocation from anywhere | Telegram account + bot token + user ID allowlist | `HERMES_LAB_GOVERNANCE` from gateway process env, per-process not per-message |
+
+### Decision tree
+
+- **You want a scheduled health check** → Hermes cron (default) OR K8s CronJob (if GitOps + K8s primitives matter more than gateway state)
+- **You want event-driven incident response** → AlertManager webhook (real metrics-based alerting)
+- **You want code-review automation** → GitHub webhook (`--deliver github_comment` posts back automatically)
+- **You want on-demand chat ops** → Telegram bot (or Slack as production reference — see Section 3)
+- **You're prototyping** → `hermes webhook test` with hand-crafted payloads (no external services)
+
+### Hermes cron vs K8s CronJob — the honest comparison
+
+| Concern | Hermes cron | K8s CronJob |
+|---|---|---|
+| Gateway-shared state (skills, history, audit) | Yes — native | No — stateless container |
+| GitOps schedule in git | No — CLI-managed | Yes — YAML resource |
+| K8s-native observability (job_metrics, pod logs) | No — Hermes session logs only | Yes — Prometheus + Loki/Vector |
+| Multi-tenant resource quotas | No — shared gateway | Yes — namespace + ResourceQuota |
+| Iteration speed | Fast — tweak prompt, re-register | Slow — rebuild image, kubectl apply |
+| Where the agent runs | Gateway process | K8s pod |
+| Image size | n/a (uses host hermes install) | ~700-900MB minimal Dockerfile |
+
+**Real-world stance:** most agent work uses Hermes cron because state matters. K8s CronJob shines for fire-and-forget diagnostic jobs deployed alongside other K8s primitives via the same GitOps pipeline.
+
+---
+
+## 7. Phase 8 New Environment Variables
+
+Phase 8 adds four new environment variables to the lab export block. The full set as of Phase 8 is:
+
+| Env Var | Values | Source | Used For |
+|---|---|---|---|
+| `HERMES_LAB_MODE` | `mock` \| `live` | Phase 1 | Existing |
+| `HERMES_LAB_SCENARIO` | `clean` \| `crashloop2` \| ... | Phase 1 + 6 | Existing |
+| `HERMES_LAB_GOVERNANCE` | `L1` \| `L2` \| `L3` \| `L4` | Phase 7 | Existing — inherited by triggered agents |
+| `HERMES_LAB_TRACK` | `track-a` \| `track-b` \| `track-c` | Phase 7 | Existing |
+| `MOCK_DATA_DIR` | path | Phase 1 | Existing |
+| `PATH` (additions) | `infrastructure/wrappers:$PATH` | Phase 1 | Existing |
+| **`GITHUB_TOKEN`** | classic PAT with `repo` scope OR fine-grained PAT with "Pull requests: Read and Write" | **Phase 8 (TRIG-03)** | GitHub webhook + agent comment posting via `gh pr comment` |
+| **`TELEGRAM_BOT_TOKEN`** | bot token from @BotFather | **Phase 8 (TRIG-04)** | Telegram bot connection — activates the Hermes Telegram adapter |
+| **`TELEGRAM_ALLOWED_USERS`** | comma-separated Telegram user IDs (from @userinfobot) | **Phase 8 (TRIG-04)** | Restricts which Telegram users the bot will respond to |
+| **`SMEE_URL`** | `https://smee.io/<channel-id>` | **Phase 8 (TRIG-03)** | Public webhook proxy URL for forwarding GitHub events to local gateway |
+
+### How to acquire each
+
+- `GITHUB_TOKEN`: https://github.com/settings/tokens → Generate new token (classic) → check `repo` scope → copy `ghp_...` value. Time: ~3 min.
+- `TELEGRAM_BOT_TOKEN`: Open Telegram → search @BotFather → `/newbot` → choose name + username → copy token. Time: ~2 min.
+- `TELEGRAM_ALLOWED_USERS`: Open Telegram → search @userinfobot → `/start` → copy your numeric user ID. Time: ~30 sec.
+- `SMEE_URL`: Visit https://smee.io/ → click "Start a new channel" → copy URL. Time: ~30 sec.
+
+**Storage:** put these in `~/.hermes/.env` (gitignored) or export inline before each lab session. NEVER commit real tokens — Telegram and GitHub both have secret-scanning that will flag leaked credentials within minutes.
+
+**Governance inheritance:** all four trigger types read `HERMES_LAB_GOVERNANCE` from their execution environment. The K8s CronJob sets it on the container env spec; the AlertManager, GitHub, and Telegram triggers all inherit it from the gateway process env. This means a scheduled or triggered agent running unattended is governed by the same allowlist as an interactive one — there is no special "scheduled agent" governance bypass.
