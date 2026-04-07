@@ -5,6 +5,8 @@
 # HERMES_LAB_MODE=mock  -> serve pre-baked CSV output (offline, free)
 # HERMES_LAB_MODE=live  -> pass through to real psql (requires DB connection)
 # HERMES_LAB_SCENARIO=clean|messy -> select scenario variant (default: clean)
+# HERMES_LAB_GOVERNANCE=L1|L2|L3|L4 -> enforce wrapper_allowlist from governance/*.yaml
+# HERMES_LAB_TRACK=track-a|track-b|track-c -> required when HERMES_LAB_GOVERNANCE=L4 (3 track-specific files)
 #
 # Note: psql output format varies by command. Mock returns CSV-compatible output.
 #
@@ -18,16 +20,7 @@ if [[ "$LAB_MODE" != "mock" ]]; then
   exec "$(command -v psql)" "$@"
 fi
 
-# ── MOCK MODE BANNER ────────────────────────────────────────────────────
-printf '\n'
-printf '╔══════════════════════════════════════════╗\n'
-printf '║            [ MOCK MODE ]                 ║\n'
-printf '║   Data source: pre-baked JSON files      ║\n'
-printf '║   Set HERMES_LAB_MODE=live for real DB   ║\n'
-printf '╚══════════════════════════════════════════╝\n'
-printf '\n'
-# ────────────────────────────────────────────────────────────────────────
-
+# ── QUERY EXTRACTION (moved before governance check) ────────────────────
 # Detect query type from -c argument
 # psql is invoked as: psql -h HOST -p PORT -U USER -d DB -c "QUERY" --csv
 # We detect the query intent by keyword scanning args
@@ -41,6 +34,103 @@ for arg in "$@"; do
     CAPTURE_NEXT=1
   fi
 done
+# ────────────────────────────────────────────────────────────────────────
+
+# ── GOVERNANCE PRE-FLIGHT ───────────────────────────────────────────────
+# Phase 7: Enforce wrapper_allowlist from the active governance YAML file.
+# Silent pass-through if HERMES_LAB_GOVERNANCE is not set (backward compat).
+GOVERNANCE="${HERMES_LAB_GOVERNANCE:-}"
+TOOL_KEY="psql"
+if [[ -n "$GOVERNANCE" ]]; then
+  TRACK="${HERMES_LAB_TRACK:-}"
+  COURSE_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+
+  # Resolve governance file path
+  if [[ "$GOVERNANCE" == "L4" ]]; then
+    if [[ -z "$TRACK" ]]; then
+      printf 'WARNING: HERMES_LAB_GOVERNANCE=L4 requires HERMES_LAB_TRACK=track-{a,b,c}. Defaulting to track-a.\n' >&2
+      TRACK="track-a"
+    fi
+    GOVERNANCE_FILE="${COURSE_DIR}/governance/governance-L4-${TRACK}.yaml"
+  else
+    GOVERNANCE_FILE="${COURSE_DIR}/governance/governance-${GOVERNANCE}.yaml"
+  fi
+
+  if [[ ! -f "$GOVERNANCE_FILE" ]]; then
+    printf 'GOVERNANCE ERROR: Cannot find %s\n' "$GOVERNANCE_FILE" >&2
+    exit 1
+  fi
+
+  # Extract wrapper_allowlist for psql from the yaml file using awk.
+  # Parses the psql: subsection under wrapper_allowlist: top-level key.
+  # gsub also converts YAML string escapes: \\X -> \X (e.g., "\\dt" -> \dt for psql meta-commands)
+  ALLOWED_PREFIXES=$(awk -v tool="  ${TOOL_KEY}:" '
+    /^wrapper_allowlist:/ { in_wa=1; next }
+    in_wa && $0 == tool { in_tool=1; next }
+    in_tool && /^    - / {
+      line=$0; gsub(/^    - "|"$/, "", line); gsub(/\\\\/, "\\", line); print line; next
+    }
+    in_tool && /^  [a-z]/ { in_tool=0 }
+    in_wa && /^[a-z]/ { in_wa=0; in_tool=0 }
+  ' "$GOVERNANCE_FILE")
+
+  # Build CMD_CHECK from the query's first token (uppercased).
+  # For SQL: "SELECT * FROM ..." -> CMD_CHECK="SELECT "
+  # For psql meta-commands: "\dt" -> CMD_CHECK="\dt" (first char is backslash)
+  if [[ "${QUERY:0:1}" == "\\" ]]; then
+    # psql meta-command: preserve as-is (e.g., \dt, \l, \d)
+    CMD_CHECK="$QUERY"
+  else
+    # SQL: extract first word uppercase + trailing space for prefix matching
+    CMD_CHECK="$(printf '%s' "$QUERY" | awk '{print toupper($1) " "}')"
+    # Special case: "EXPLAIN ANALYZE" is a 2-word prefix in the allowlist
+    FIRST_TWO="$(printf '%s' "$QUERY" | awk '{print toupper($1) " " toupper($2) " "}')"
+  fi
+
+  ALLOWED=0
+  while IFS= read -r prefix; do
+    [[ -z "$prefix" ]] && continue
+    # Check single-word prefix (e.g., "SELECT ")
+    if [[ "$CMD_CHECK" == "$prefix"* ]]; then
+      ALLOWED=1
+      break
+    fi
+    # Check two-word prefix (e.g., "EXPLAIN ANALYZE ")
+    if [[ -n "${FIRST_TWO:-}" ]] && [[ "$FIRST_TWO" == "$prefix"* ]]; then
+      ALLOWED=1
+      break
+    fi
+  done <<< "$ALLOWED_PREFIXES"
+
+  if [[ "$ALLOWED" == "0" ]]; then
+    printf '\n' >&2
+    printf '╔══════════════════════════════════════════════════╗\n' >&2
+    printf '║           [ GOVERNANCE REJECTED ]                ║\n' >&2
+    printf '╠══════════════════════════════════════════════════╣\n' >&2
+    printf '║ Command:      psql -c "%s"\n' "$QUERY" >&2
+    printf '║ Governance:   %s' "$GOVERNANCE" >&2
+    [[ -n "$TRACK" ]] && printf ' (%s)' "$TRACK" >&2
+    printf '\n' >&2
+    printf '║ Block reason: Not in %s wrapper_allowlist.%s\n' "$GOVERNANCE" "$TOOL_KEY" >&2
+    printf '║ File:         %s\n' "$GOVERNANCE_FILE" >&2
+    printf '║ To unblock:   Upgrade HERMES_LAB_GOVERNANCE or add to wrapper_allowlist\n' >&2
+    printf '║ SOUL.md:      Behavioral NEVER rules may also apply at Layer 3\n' >&2
+    printf '╚══════════════════════════════════════════════════╝\n' >&2
+    printf '\n' >&2
+    exit 1
+  fi
+fi
+# ────────────────────────────────────────────────────────────────────────
+
+# ── MOCK MODE BANNER ────────────────────────────────────────────────────
+printf '\n'
+printf '╔══════════════════════════════════════════╗\n'
+printf '║            [ MOCK MODE ]                 ║\n'
+printf '║   Data source: pre-baked JSON files      ║\n'
+printf '║   Set HERMES_LAB_MODE=live for real DB   ║\n'
+printf '╚══════════════════════════════════════════╝\n'
+printf '\n'
+# ────────────────────────────────────────────────────────────────────────
 
 # Normalize query to lowercase for routing (avoid subshell with $() for bash 3.2 compat)
 QUERY_LOWER=$(printf '%s' "$QUERY" | tr '[:upper:]' '[:lower:]')

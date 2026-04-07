@@ -5,6 +5,8 @@
 # HERMES_LAB_MODE=mock  -> serve pre-baked JSON files (offline, free)
 # HERMES_LAB_MODE=live  -> pass through to real aws CLI (requires AWS credentials)
 # HERMES_LAB_SCENARIO=clean|messy -> select scenario variant (default: clean)
+# HERMES_LAB_GOVERNANCE=L1|L2|L3|L4 -> enforce wrapper_allowlist from governance/*.yaml
+# HERMES_LAB_TRACK=track-a|track-b|track-c -> required when HERMES_LAB_GOVERNANCE=L4 (3 track-specific files)
 #
 set -euo pipefail
 
@@ -15,6 +17,76 @@ SCENARIO="${HERMES_LAB_SCENARIO:-clean}"
 if [[ "$LAB_MODE" != "mock" ]]; then
   exec "$(command -v aws)" "$@"
 fi
+
+# ── GOVERNANCE PRE-FLIGHT ───────────────────────────────────────────────
+# Phase 7: Enforce wrapper_allowlist from the active governance YAML file.
+# Silent pass-through if HERMES_LAB_GOVERNANCE is not set (backward compat).
+GOVERNANCE="${HERMES_LAB_GOVERNANCE:-}"
+TOOL_KEY="aws"
+if [[ -n "$GOVERNANCE" ]]; then
+  TRACK="${HERMES_LAB_TRACK:-}"
+  COURSE_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+
+  # Resolve governance file path
+  if [[ "$GOVERNANCE" == "L4" ]]; then
+    if [[ -z "$TRACK" ]]; then
+      printf 'WARNING: HERMES_LAB_GOVERNANCE=L4 requires HERMES_LAB_TRACK=track-{a,b,c}. Defaulting to track-a.\n' >&2
+      TRACK="track-a"
+    fi
+    GOVERNANCE_FILE="${COURSE_DIR}/governance/governance-L4-${TRACK}.yaml"
+  else
+    GOVERNANCE_FILE="${COURSE_DIR}/governance/governance-${GOVERNANCE}.yaml"
+  fi
+
+  if [[ ! -f "$GOVERNANCE_FILE" ]]; then
+    printf 'GOVERNANCE ERROR: Cannot find %s\n' "$GOVERNANCE_FILE" >&2
+    exit 1
+  fi
+
+  # Extract wrapper_allowlist for aws from the yaml file using awk.
+  # Parses the aws: subsection under wrapper_allowlist: top-level key.
+  # gsub also converts YAML string escapes: \\X -> \X
+  ALLOWED_PREFIXES=$(awk -v tool="  ${TOOL_KEY}:" '
+    /^wrapper_allowlist:/ { in_wa=1; next }
+    in_wa && $0 == tool { in_tool=1; next }
+    in_tool && /^    - / {
+      line=$0; gsub(/^    - "|"$/, "", line); gsub(/\\\\/, "\\", line); print line; next
+    }
+    in_tool && /^  [a-z]/ { in_tool=0 }
+    in_wa && /^[a-z]/ { in_wa=0; in_tool=0 }
+  ' "$GOVERNANCE_FILE")
+
+  # Check if the current command prefix matches any allowed prefix
+  # aws commands use "$1 $2" as check key (e.g., "ec2 describe-instances", "rds describe-")
+  CMD_CHECK="${1:-} ${2:-}"
+  ALLOWED=0
+  while IFS= read -r prefix; do
+    [[ -z "$prefix" ]] && continue
+    if [[ "$CMD_CHECK" == "$prefix"* ]]; then
+      ALLOWED=1
+      break
+    fi
+  done <<< "$ALLOWED_PREFIXES"
+
+  if [[ "$ALLOWED" == "0" ]]; then
+    printf '\n' >&2
+    printf '╔══════════════════════════════════════════════════╗\n' >&2
+    printf '║           [ GOVERNANCE REJECTED ]                ║\n' >&2
+    printf '╠══════════════════════════════════════════════════╣\n' >&2
+    printf '║ Command:      aws %s\n' "$*" >&2
+    printf '║ Governance:   %s' "$GOVERNANCE" >&2
+    [[ -n "$TRACK" ]] && printf ' (%s)' "$TRACK" >&2
+    printf '\n' >&2
+    printf '║ Block reason: Not in %s wrapper_allowlist.%s\n' "$GOVERNANCE" "$TOOL_KEY" >&2
+    printf '║ File:         %s\n' "$GOVERNANCE_FILE" >&2
+    printf '║ To unblock:   Upgrade HERMES_LAB_GOVERNANCE or add to wrapper_allowlist\n' >&2
+    printf '║ SOUL.md:      Behavioral NEVER rules may also apply at Layer 3\n' >&2
+    printf '╚══════════════════════════════════════════════════╝\n' >&2
+    printf '\n' >&2
+    exit 1
+  fi
+fi
+# ────────────────────────────────────────────────────────────────────────
 
 # ── MOCK MODE BANNER ────────────────────────────────────────────────────
 printf '\n' >&2
