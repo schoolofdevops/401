@@ -54,7 +54,7 @@ This separation means:
 1. **No Python required for participants:** DevOps practitioners can build production-grade agents without writing application code. The course constraint "no Python coding for participants" is satisfied by design.
 2. **Profiles are readable by non-engineers:** A SOUL.md is plain English. An operations manager can read it and understand what the agent will and won't do. A config.yaml is YAML. A sysadmin can audit it.
 3. **Profiles are version-controllable artifacts:** SOUL.md and config.yaml go in git. Drift detection is `git diff`. Rollback is `git checkout`.
-4. **Profile-based agents transfer across environments:** Install a profile with `cp -r course/agents/track-a-database/ ~/.hermes/profiles/track-a/` and run immediately. No build step, no environment-specific compilation.
+4. **Profile-based agents transfer across environments:** Run `hermes profile create track-a`, copy `config.yaml`, `SOUL.md`, and the skills directory into `~/.hermes/profiles/track-a/`, then run immediately. No build step, no environment-specific compilation.
 
 The profile IS the agent definition. This is not a simplification for the course — it is the design principle that makes Hermes profiles different from most agent frameworks.
 
@@ -286,8 +286,11 @@ The profile directory name becomes the profile identifier. `~/.hermes/profiles/t
 ### The Install Pattern
 
 ```bash
-# Copy a course profile to your Hermes installation
-cp -r course/agents/track-a-database/ ~/.hermes/profiles/track-a/
+# Register the profile, then copy the agent files in
+hermes profile create track-a
+cp agents/track-a-database/config.yaml ~/.hermes/profiles/track-a/
+cp agents/track-a-database/SOUL.md ~/.hermes/profiles/track-a/
+cp -r agents/track-a-database/skills/dba-rds-slow-query ~/.hermes/profiles/track-a/skills/
 
 # Launch the agent
 hermes -p track-a chat
@@ -296,7 +299,7 @@ hermes -p track-a chat
 hermes -p track-a --model anthropic/claude-3-5-sonnet-20241022 chat
 ```
 
-No build step. No restart required. Hermes discovers profiles by scanning `~/.hermes/profiles/` for directories containing `config.yaml`. The profile is immediately available after the `cp`.
+No build step. No restart required. `hermes profile create` registers the profile in Hermes's index and creates the directory; the `cp` commands populate it with the agent files. The profile is immediately available after the copies finish.
 
 ---
 
@@ -418,7 +421,10 @@ Hermes also warns at startup if SOUL.md contains unfilled placeholders — parti
 
 **Install and launch:**
 ```bash
-cp -r course/agents/track-a-database/ ~/.hermes/profiles/track-a/
+hermes profile create track-a
+cp agents/track-a-database/config.yaml ~/.hermes/profiles/track-a/
+cp agents/track-a-database/SOUL.md ~/.hermes/profiles/track-a/
+cp -r agents/track-a-database/skills/dba-rds-slow-query ~/.hermes/profiles/track-a/skills/
 hermes -p track-a chat
 ```
 
