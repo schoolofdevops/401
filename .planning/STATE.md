@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Realistic Agents & Production Workflows
 status: Ready to execute
-stopped_at: Completed 06-01-PLAN.md — 4 K8s SKILL.md files created
-last_updated: "2026-04-07T03:51:08.363Z"
+stopped_at: Completed 06-02-PLAN.md (broken-pod scenarios, mock-kubectl extension, 13 mock data files)
+last_updated: "2026-04-07T03:57:40.513Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-07)
 ## Current Position
 
 Phase: 6 (k8s-skills-agents) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Plan: 2 of 3
 | Phase 05-module-consolidation P02 | 4 | 2 tasks | 2 files |
 | Phase 05-module-consolidation P03 | 7 | 2 tasks | 5 files |
 | Phase 06-k8s-skills-agents P01 | 5min | 2 tasks | 4 files |
+| Phase 06-k8s-skills-agents P02 | 10 | 2 tasks | 28 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,9 @@ Recent decisions affecting current work:
 - [Phase 05]: Quiz explanation rationale in <details> block is the teaching moment for Udemy self-paced learners — WHY correct and WHY alternatives are wrong
 - [Phase 06-k8s-skills-agents]: sre-k8s-pod-health is 287 lines mirroring EC2 skill structure — 7 decision branches (6 K8S-02 failure modes + no-issue branch)
 - [Phase 06-k8s-skills-agents]: Scaffold Phase 2 uses HTML comment blocks for PARTICIPANT EXTENSION POINT markers — grep-discoverable, not rendered in previews, consistent pattern for Module 7 lab
+- [Phase 06-k8s-skills-agents]: OOM scenario uses python:3.12-alpine bytearray(64MB) not busybox dd — arm64/macOS Docker does not reliably trigger cgroup OOM kill with I/O-bound dd
+- [Phase 06-k8s-skills-agents]: CrashLoop mock SCENARIO name is crashloop2 not crashloop — avoids collision with Module 10 existing lab (RESEARCH Pitfall 5)
+- [Phase 06-k8s-skills-agents]: K8S-02 mock files hand-authored (KIND not in agent env) — capture-mock-data.sh is canonical re-capture workflow for course delivery prep
 
 ### Pending Todos
 
@@ -147,6 +151,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T03:51:08.360Z
-Stopped at: Completed 06-01-PLAN.md — 4 K8s SKILL.md files created
+Last session: 2026-04-07T03:57:40.510Z
+Stopped at: Completed 06-02-PLAN.md (broken-pod scenarios, mock-kubectl extension, 13 mock data files)
 Resume file: None
