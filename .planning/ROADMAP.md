@@ -30,7 +30,7 @@
 - [x] **Phase 6: K8s Skills & Agents** - Build real K8s diagnostic skills and rebuild Track C agents for KIND (completed 2026-04-07)
 - [x] **Phase 7: Guardrails & Governance** - Add command allowlists, per-track configs, and L1-L4 progression demo (completed 2026-04-07)
 - [x] **Phase 8: Agent Triggers** - Implement AlertManager, CronJob, GitHub, and chat bot trigger patterns (completed 2026-04-07)
-- [ ] **Phase 9: Multi-Agent Workflows & Production** - End-to-end fleet workflows and K8s Agent Sandbox
+- [x] **Phase 9: Multi-Agent Workflows & Production** - End-to-end fleet workflows and K8s Agent Sandbox (completed 2026-04-07)
 
 ## Phase Details
 
@@ -104,10 +104,10 @@ Plans:
   2. The fleet coordinator agent (Morgan) synthesizes inputs from two or more working specialist agents and produces a cross-domain incident summary — not a placeholder stub
   3. Participant following the K8s Agent Sandbox lab installs the Sandbox CRDs on KIND, deploys an agent in sandbox mode, and observes isolation — the agent cannot access resources outside its namespace boundary
   4. Conceptual reading on agent productionization covers packaging, deployment, monitoring, and scaling patterns with real Hermes config examples — not generic cloud theory
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 09-01-PLAN.md — FLEET-01 infrastructure: Morgan profile (config.yaml toolset fix + SOUL.md additions per D-13), GitOps Path B Sub-path B2 (apply.sh + memory-patch.yaml + README + repo template), fleet-webhook-subscribe.sh wiring AlertManager to Morgan
-- [ ] 09-02-PLAN.md — Module 11 lab REPLACE (both mirrors, 11-step live-primary FLEET-01 walkthrough), PROD-02 productionization reference section (~500-800 lines), K8s Agent Sandbox exploratory project (v0.2.1 pinned), 3 new quiz questions
+- [x] 09-02-PLAN.md — Module 11 lab REPLACE (both mirrors, 11-step live-primary FLEET-01 walkthrough), PROD-02 productionization reference section (~500-800 lines), K8s Agent Sandbox exploratory project (v0.2.1 pinned), 3 new quiz questions
 
 ## Progress
 
@@ -121,7 +121,7 @@ Plans:
 | 6. K8s Skills & Agents | v1.1 | 3/3 | Complete    | 2026-04-07 |
 | 7. Guardrails & Governance | v1.1 | 3/3 | Complete    | 2026-04-07 |
 | 8. Agent Triggers | v1.1 | 3/3 | Complete    | 2026-04-07 |
-| 9. Multi-Agent Workflows & Production | v1.1 | 1/2 | In Progress|  |
+| 9. Multi-Agent Workflows & Production | v1.1 | 2/2 | Complete   | 2026-04-07 |
 
 ---
 

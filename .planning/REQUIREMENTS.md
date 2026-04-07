@@ -37,8 +37,8 @@ Requirements for v1.1: Realistic Agents & Production Workflows. Each maps to roa
 
 ### Agent Productionization
 
-- [ ] **PROD-01**: K8s Agent Sandbox exploratory lab — install CRDs on KIND, deploy agent in Sandbox, demonstrate isolation and lifecycle
-- [ ] **PROD-02**: Conceptual content on productionizing agents: packaging, deployment, monitoring, scaling patterns
+- [x] **PROD-01**: K8s Agent Sandbox exploratory lab — install CRDs on KIND, deploy agent in Sandbox, demonstrate isolation and lifecycle
+- [x] **PROD-02**: Conceptual content on productionizing agents: packaging, deployment, monitoring, scaling patterns
 
 ### Multi-Agent Workflows
 
@@ -92,8 +92,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GOV-01 | Phase 7 | Complete |
 | GOV-02 | Phase 7 | Complete |
 | GOV-03 | Phase 7 | Complete |
-| PROD-01 | Phase 9 | Pending |
-| PROD-02 | Phase 9 | Pending |
+| PROD-01 | Phase 9 | Complete |
+| PROD-02 | Phase 9 | Complete |
 | FLEET-01 | Phase 9 | Complete |
 | FLEET-02 | Phase 9 | Complete |
 
