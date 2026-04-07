@@ -1,0 +1,27 @@
+# K8s Pod Health Investigator — Hermes Profile
+# Governance Level: L2 Advisory (read-only commands run freely,
+#   destructive commands require human approval)
+#
+# Install: cp -r hermes-version/ ~/.hermes/profiles/k8s-investigator/
+# Launch:  hermes -p k8s-investigator chat
+# Then:    "Investigate unhealthy pods in the payments namespace"
+
+model:
+  default: "anthropic/claude-sonnet-4-20250514"
+  provider: "auto"
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: manual       # L2: kubectl delete/drain/cordon → human approval
+  timeout: 300       # 5 min approval window
+
+# kubectl delete, drain, cordon are NOT in Hermes DANGEROUS_PATTERNS.
+# Safety comes from SOUL.md NEVER rules (behavioral layer).
+# DANGEROUS_PATTERNS still catches: rm -rf, DROP TABLE, kill -9, etc.
+command_allowlist: []
+
+agent:
+  max_turns: 30
+  verbose: false
