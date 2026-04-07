@@ -1,8 +1,8 @@
 # Module 12 Lab: Triggers and Scheduling
 
-**Duration:** 75 minutes (50 min guided + 25 min free explore)
+**Duration:** 145 minutes (120 min guided + 25 min free explore)
 **Prerequisites:** Module 10 agent working for your track, hermes gateway available
-**Outcome:** A working cron job that fires a daily health check + a webhook subscription that reacts to CloudWatch alerts in real time
+**Outcome:** Working examples of all 5 trigger patterns: Hermes cron, simulated CloudWatch webhook, real AlertManager webhook on KIND, K8s CronJob, GitHub webhook via smee.io, and a Telegram bot — each agent invocation observed end-to-end
 
 > This lab moves your Hermes agent from reactive (you type a prompt) to proactive (the agent
 > runs on a schedule or reacts to events). You will build two trigger mechanisms: a cron schedule
@@ -13,7 +13,7 @@
 
 ---
 
-## GUIDED PHASE — 50 minutes
+## GUIDED PHASE — 120 minutes
 
 ---
 
@@ -456,6 +456,559 @@ Note: The agent cannot see this message, and therefore cannot respond to it.
 
 ---
 
+## Step 9: AlertManager — Real Prometheus Stack Setup (10 min)
+
+You have used `hermes webhook test` to fire simulated webhooks (Step 7). Now you wire a REAL alert source: the Prometheus + AlertManager stack on your KIND cluster, firing on a real broken pod from Phase 6.
+
+This is the moment Hermes stops being a chat agent and starts being an incident-response agent — alerts arrive without you typing anything.
+
+> **Solo Learner:** This step requires a running KIND cluster with `kube-prometheus-stack` already installed (from Phase 1 setup). If you skipped Phase 1's KIND setup, jump to the "Skipping AlertManager" callout at the bottom of this step — you can still complete TRIG-02, TRIG-03, and TRIG-04 without TRIG-01.
+
+### Set environment variables
+
+```bash
+export HERMES_LAB_MODE=live
+export HERMES_LAB_SCENARIO=crashloop2
+export HERMES_LAB_GOVERNANCE=L2
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data/kubernetes"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+```
+
+### Enable AlertManager in the helm release
+
+The Phase 1 helm values disabled AlertManager to save resources. Phase 8 flips it back on.
+
+```bash
+# Verify the helm values now have alertmanager.enabled: true
+yq '.alertmanager.enabled' infrastructure/helm/prometheus-lab-values.yaml
+# Expected output: true
+
+# Apply the updated values
+helm upgrade --install kube-prometheus prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --create-namespace \
+  -f infrastructure/helm/prometheus-lab-values.yaml
+
+# Wait for AlertManager pods to reach Ready
+kubectl wait --for=condition=Ready pod \
+  -l app.kubernetes.io/name=alertmanager \
+  -n monitoring --timeout=120s
+```
+
+Expected output:
+```
+pod/alertmanager-kube-prometheus-alertmanager-0 condition met
+```
+
+### Apply the PrometheusRule
+
+```bash
+kubectl apply -f infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml
+```
+
+Expected output:
+```
+prometheusrule.monitoring.coreos.com/hermes-lab-rules created
+```
+
+### Verify the rule loaded
+
+```bash
+kubectl get prometheusrule -n monitoring hermes-lab-rules -o yaml | yq '.spec.groups[0].rules[0].alert'
+```
+
+Expected output:
+```
+PodCrashLooping
+```
+
+Open the Prometheus UI at http://localhost:30091 → Status → Rules. You should see `hermes-lab.k8s-crashloop` group with the `PodCrashLooping` rule listed and state "inactive" (no broken pods YET).
+
+> **Tip:** The PrometheusRule manifest in `infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml` includes a `labels: release: kube-prometheus` field. The kube-prometheus-stack Helm chart configures Prometheus to ONLY load rules with this label. Without it, your rule would be silently ignored — `kubectl get prometheusrule` would show it, but the Prometheus UI Rules page would not.
+
+### Skipping AlertManager (no KIND)
+
+> **Solo Learner:** If you don't have a KIND cluster running, skip to Step 12 (GitHub webhook). TRIG-02 (K8s CronJob) also requires KIND, so you'll skip Step 11 as well. All four trigger types are independent: missing one doesn't block the others.
+
+---
+
+## Step 10: AlertManager — Fire and Observe (10 min)
+
+Now wire the full end-to-end flow: gateway running, alertmanager subscription active, crashloop2 pod applied — then watch the alert fire and the agent diagnose automatically.
+
+### Set environment variables
+
+```bash
+export HERMES_LAB_MODE=live
+export HERMES_LAB_SCENARIO=crashloop2
+export HERMES_LAB_GOVERNANCE=L2
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data/kubernetes"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+```
+
+### Start the gateway and subscribe
+
+Run the following in separate terminals:
+
+```bash
+# Terminal 1: Start the gateway in the foreground so you see live POSTs arrive
+hermes gateway run
+
+# Terminal 2: Subscribe the alertmanager webhook
+hermes webhook subscribe alertmanager \
+  --events "alertmanager-alert" \
+  --prompt "AlertManager PodCrashLooping alert fired. Details: {alerts}. Load the sre-k8s-pod-health skill and diagnose the affected pod in the namespace shown in the alert labels." \
+  --skill "sre-k8s-pod-health" \
+  --deliver local
+
+# Verify the subscription is active
+hermes webhook list
+```
+
+> **WARNING:** Notice the `{alerts}` placeholder in the subscribe command above — NOT `{alerts[0].labels.pod}`. The Hermes prompt template only supports dot-notation access to dict keys, NOT array index access. The agent receives the full `alerts[]` JSON array as a string and parses it to find the pod and namespace. If you accidentally use `{alerts[0].labels.pod}`, it will render as a literal string — the agent will see that text instead of the pod name.
+
+### Apply the Phase 6 crashloop2 scenario
+
+```bash
+# Terminal 3: Apply the broken pod (reuses Phase 6 manifest — do NOT modify it)
+kubectl apply -f infrastructure/scenarios/k8s/02-crashloop-backoff.yaml
+
+# Watch the pod restart count climb
+watch kubectl get pods -n k8s-trouble-crashloop
+```
+
+### Expected timeline
+
+- **t=0s**: pod applied, status `ContainerCreating`
+- **t=10s**: pod status `CrashLoopBackOff`, restartCount=1
+- **t=60s**: restartCount=4-6
+- **t=90s**: PromQL `increase()` exceeds 2 over the 2-min window
+- **t=120s**: AlertManager dispatches; Terminal 1 shows `Received alertmanager-alert event`
+- **t=125s**: Hermes spawns agent run; `sre-k8s-pod-health` loads; diagnosis appears
+
+Open AlertManager UI at http://localhost:30093 to see the active alert and its receiver routing.
+
+### Cleanup after observing
+
+```bash
+kubectl delete -f infrastructure/scenarios/k8s/02-crashloop-backoff.yaml
+hermes webhook unsubscribe alertmanager
+```
+
+---
+
+## Step 11: K8s CronJob — Same Agent, Different Trigger Mechanism (10 min)
+
+The Hermes cron jobs you built in Steps 2-4 are the production pattern for most agent work. This step demonstrates the SAME agent wrapped in a native K8s CronJob — and makes explicit WHEN each pattern is the right answer.
+
+### Set environment variables
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=crashloop2
+export HERMES_LAB_GOVERNANCE=L2
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data/kubernetes"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+```
+
+### Build the minimal hermes-agent image
+
+```bash
+# Build the minimal hermes-agent container image
+# (This takes 5-10 min — the image is ~700-900MB of Python deps)
+docker build -t hermes-lab:cronjob infrastructure/scenarios/k8s/cronjob/
+
+# Verify the image exists
+docker images | grep hermes-lab
+```
+
+> **Note (Image size):** The `infrastructure/scenarios/k8s/cronjob/Dockerfile` uses `python:3.12-slim` as a base, not the official `nousresearch/hermes-agent:latest` (which is 2-3GB with Playwright/ffmpeg). This minimal image is a teaching artifact about packaging agents for K8s.
+
+### Load the image into KIND and create the API key secret
+
+```bash
+# Load into KIND (required — the CronJob uses imagePullPolicy: IfNotPresent, not a registry)
+kind load docker-image hermes-lab:cronjob --name lab
+
+# Create the API key secret (NEVER commit this token — it lives only in your local KIND cluster)
+kubectl create secret generic hermes-secrets \
+  --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY"
+
+# Verify
+kubectl get secret hermes-secrets
+```
+
+### Apply the CronJob for your track
+
+```bash
+# Track A: kubectl apply -f infrastructure/scenarios/k8s/cronjob/agent-health-check.yaml -l track=track-a
+# Track B: kubectl apply -f infrastructure/scenarios/k8s/cronjob/agent-health-check.yaml -l track=track-b
+# Track C:
+kubectl apply -f infrastructure/scenarios/k8s/cronjob/agent-health-check.yaml -l track=track-c
+
+# Watch jobs spawn (schedule is */5 * * * * — wait up to 5 min for the first run)
+watch kubectl get jobs,pods
+```
+
+### View logs from the first completed job
+
+```bash
+kubectl logs -l job-name=$(kubectl get jobs -o jsonpath='{.items[-1].metadata.name}')
+```
+
+> **Tip — Use Hermes cron when... / Use K8s CronJob when...**
+>
+> **Use Hermes cron when:**
+> - The agent benefits from gateway-shared state (loaded skills, audit trail, conversation history)
+> - You want one-stop CLI management (`hermes cron create/list/trigger/pause/resume`)
+> - You're iterating fast — tweak a prompt, re-register the cron, done. No image rebuild cycle.
+> - You need audit trail context linking cron runs to skill and prompt versions
+> - You're not (yet) in Kubernetes
+>
+> **Use K8s CronJob when:**
+> - Stateless one-shot diagnostics — no state needed from previous runs
+> - GitOps schedule-in-git — you want the schedule reviewed via PR and deployed via ArgoCD/Flux
+> - K8s-native observability — Prometheus `kube_job_status_*` metrics, kubectl get jobs, Loki logs
+> - Multi-tenant resource quotas — namespace isolation, NetworkPolicies, resource quotas, Secrets
+>
+> **Real-world honest stance:** Most agent work uses Hermes cron because state matters. K8s CronJob shines for fire-and-forget diagnostic jobs deployed alongside other K8s primitives via the same GitOps pipeline.
+
+### Cleanup
+
+```bash
+kubectl delete -f infrastructure/scenarios/k8s/cronjob/agent-health-check.yaml -l track=track-c
+kubectl delete secret hermes-secrets
+```
+
+---
+
+## Step 12: GitHub Webhook — smee.io Setup (10 min)
+
+GitHub webhooks need a public HTTPS endpoint to POST to. smee.io is a free public webhook proxy: you get a unique channel URL, GitHub POSTs to it, and a smee-client on your laptop forwards events to your local Hermes gateway.
+
+> **Solo Learner:** This step requires a personal GitHub repo and a GitHub PAT. If you don't have these, skip to Step 13's Solo Learner fallback section — you can simulate the full GitHub webhook flow without any external service using the bundled sample PR payload.
+
+### Set environment variables (including new Phase 8 TRIG-03 vars)
+
+```bash
+export HERMES_LAB_MODE=live
+export HERMES_LAB_SCENARIO=crashloop2
+export HERMES_LAB_GOVERNANCE=L2
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data/kubernetes"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+# Phase 8 NEW (TRIG-03):
+export GITHUB_TOKEN="ghp_..."                          # Your PAT — see Get a GitHub PAT below
+export SMEE_URL="https://smee.io/your-channel-id"     # Your smee.io channel — see step 1 below
+```
+
+### Step 1: Get a smee.io channel URL
+
+Visit https://smee.io/ in your browser and click "Start a new channel". Copy the URL — it looks like `https://smee.io/abc123XYZ`. Set it in the env var above.
+
+### Step 2: Get a GitHub PAT with repo scope
+
+1. Open https://github.com/settings/tokens → "Generate new token" → "Generate new token (classic)"
+2. Note: `hermes-lab-trig03`, Expiration: 30 days
+3. Scopes: check **`repo`** (includes read+write to PRs and comments)
+4. Click "Generate token" → copy the `ghp_...` value
+
+```bash
+# Authenticate gh CLI with your PAT
+gh auth login --with-token <<< "$GITHUB_TOKEN"
+gh auth status   # Should show "Logged in to github.com as <you>"
+```
+
+> **Tip:** Use classic PAT with `repo` scope — simplest path. Fine-grained PATs work too but require selecting "Pull requests: Read and Write" as a specific permission, which is a common source of 403 errors (see Phase 8 Research Pitfall 7).
+
+### Step 3: Start the gateway and smee-client
+
+```bash
+# Terminal 1: Start the Hermes gateway
+hermes gateway run
+
+# Terminal 2: Run the smee setup script (foreground — leave it running)
+./infrastructure/scenarios/k8s/github-webhook/smee-setup.sh
+```
+
+Expected smee output:
+```
+================================================================
+ smee.io → Hermes webhook gateway forwarder
+================================================================
+  Source:  https://smee.io/abc123XYZ
+  Target:  http://localhost:8644/webhooks/github
+  Client:  smee-client@5.0.0
+================================================================
+Forwarding https://smee.io/abc123XYZ to http://localhost:8644/webhooks/github
+```
+
+### Step 4: Add the webhook to your GitHub repo
+
+In your test GitHub repo: **Settings → Webhooks → Add webhook**
+- Payload URL: `$SMEE_URL` (the smee.io channel URL)
+- Content type: `application/json`
+- Secret: *(leave blank for the lab)*
+- Events: "Let me select individual events" → check **Pull requests**
+- Active: checked
+
+Click **Add webhook**. GitHub will send a test ping — you should see `Forwarding event to localhost:8644/webhooks/github` in the smee terminal.
+
+> **WARNING — Route name must match subscription name:** The `smee-setup.sh` script targets `http://localhost:8644/webhooks/github`. When you subscribe in Step 13, use `hermes webhook subscribe github` (NOT `github-webhook`). The route name after `/webhooks/` MUST match the subscription name exactly, or events arrive at the gateway but no subscription receives them.
+
+---
+
+## Step 13: GitHub Agent Comment Back — Full Round-Trip (10 min)
+
+Subscribe the GitHub webhook with `--deliver github_comment`, open a PR on your test repo, and watch the agent post a review comment automatically.
+
+### Set environment variables
+
+```bash
+export HERMES_LAB_MODE=live
+export HERMES_LAB_SCENARIO=crashloop2
+export HERMES_LAB_GOVERNANCE=L2
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data/kubernetes"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+# Phase 8 NEW (TRIG-03):
+export GITHUB_TOKEN="ghp_..."
+export SMEE_URL="https://smee.io/your-channel-id"
+```
+
+### Subscribe the GitHub webhook
+
+```bash
+# Terminal 3: Subscribe with the agent prompt template and github_comment delivery
+hermes webhook subscribe github \
+  --events "pull_request" \
+  --prompt "$(cat infrastructure/scenarios/k8s/github-webhook/agent-prompt-template.txt)" \
+  --deliver github_comment \
+  --deliver-chat-id "{repository.full_name}:{pull_request.number}"
+
+# Verify the subscription is active
+hermes webhook list
+```
+
+> **Tip — Built-in github_comment delivery:** The `--deliver github_comment` type is built into Hermes (`gateway/platforms/webhook.py` lines 525-558). Internally it calls `gh pr comment {pr_number} --repo {repo} --body "{content}"`. You wrote zero HTTP code — the only requirement is `gh` CLI installed and authenticated with your `GITHUB_TOKEN`.
+
+### Trigger the event
+
+Open a PR on your test repo (or push a commit to a branch that already has an open PR).
+
+Watch the flow:
+1. **smee terminal** → `Forwarding event to localhost:8644/webhooks/github`
+2. **gateway terminal** → `Received github webhook event`
+3. **~10 seconds** → agent runs, generates review summary, posts comment back to the PR
+4. **GitHub PR** → refresh the PR comments — you should see the Hermes review comment
+
+```bash
+# Verify the comment landed
+gh pr view <PR_NUMBER> --repo <OWNER>/<REPO> --json comments
+```
+
+### Solo Learner fallback — no GitHub repo or smee.io needed
+
+> **Solo Learner:** Skip Steps 12-13 smee setup and use the bundled sample payload instead:
+>
+> ```bash
+> # Subscribe with --deliver local instead of --deliver github_comment
+> hermes webhook subscribe github \
+>   --events "pull_request" \
+>   --prompt "$(cat infrastructure/scenarios/k8s/github-webhook/agent-prompt-template.txt)" \
+>   --deliver local
+>
+> # Inject the bundled sample payload (PR #42: feat(api): add /health readiness endpoint)
+> hermes webhook test github \
+>   --payload @infrastructure/scenarios/k8s/github-webhook/sample-pr-payload.json
+> ```
+>
+> The agent runs identically — the review goes to your terminal instead of back to GitHub. The sample payload is a valid GitHub PR webhook structure with all the fields the prompt template references (`pull_request.number`, `pull_request.title`, `repository.full_name`, etc.).
+
+### Cleanup
+
+```bash
+hermes webhook unsubscribe github
+```
+
+---
+
+## Step 14: Telegram Bot Setup — @BotFather to Gateway (10 min)
+
+Telegram is the right primary chat platform for this lab: free, no admin approval, works for every Udemy learner globally. You create a real bot via @BotFather, configure Hermes to activate the Telegram adapter, and start receiving slash commands from your phone.
+
+> **WARNING — Telegram long-polling conflict:** Telegram bots use long polling. Only ONE bot instance can poll at a time. If you previously ran `hermes gateway run` in another terminal, stop it first with `hermes gateway stop` and wait 30 seconds before starting a new instance, or you'll get 409 Conflict errors (`telegram_polling_conflict` fatal error after 3 retries). This is a Telegram API restriction, not a Hermes bug.
+
+### Step 1: Create your bot via @BotFather (~2 min)
+
+> **Solo Learner:** The @BotFather setup takes about 2 minutes total. You only do it once — your bot stays registered with Telegram permanently. No payment, no admin approval, no workspace required.
+
+1. Open Telegram (mobile app or https://web.telegram.org)
+2. Search for **@BotFather** (verified blue checkmark — the official bot creation bot)
+3. Send `/newbot`
+4. Choose a display name (e.g., `Hermes Lab Bot`)
+5. Choose a username — must end in `bot` (e.g., `hermes_lab_yourname_bot`)
+6. Copy the bot token from BotFather's response — looks like `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`
+7. **Treat this token like a password** — anyone with it can impersonate your bot
+
+### Step 2: Get your Telegram user ID via @userinfobot (~30 sec)
+
+The Telegram adapter restricts the bot to user IDs listed in `TELEGRAM_ALLOWED_USERS`. To find your own ID:
+
+1. In Telegram, search for **@userinfobot** (a public utility bot)
+2. Send `/start`
+3. Copy your numeric user ID (e.g., `987654321`)
+
+### Step 3: Configure env vars and start the gateway
+
+```bash
+# Stop any existing gateway (Telegram polling lock)
+hermes gateway stop
+sleep 30
+
+# Set the base env vars
+export HERMES_LAB_MODE=live
+export HERMES_LAB_SCENARIO=crashloop2
+export HERMES_LAB_GOVERNANCE=L2
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data/kubernetes"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+# Phase 8 NEW (TRIG-04):
+export TELEGRAM_BOT_TOKEN="123456:ABC..."      # From @BotFather
+export TELEGRAM_ALLOWED_USERS="987654321"      # From @userinfobot
+
+# Verify the python-telegram-bot package is installed (from [messaging] extra)
+python3 -c "from telegram import Bot; print('telegram OK')"
+
+# Start the gateway — look for "Telegram adapter started, polling..." in the output
+hermes gateway run
+```
+
+Expected output includes:
+```
+Telegram adapter started, polling...
+```
+
+See `infrastructure/scenarios/k8s/telegram-bot/README.md` for additional troubleshooting guidance and the `bot-config.example.yaml` reference.
+
+---
+
+## Step 15: Telegram /diagnose Command — Slash Commands From Your Phone (5 min)
+
+You've been typing into a terminal for 14 steps. Now pick up your phone, send a slash command, and watch the agent respond in Telegram.
+
+### Set environment variables
+
+```bash
+export HERMES_LAB_MODE=live
+export HERMES_LAB_SCENARIO=crashloop2
+export HERMES_LAB_GOVERNANCE=L2
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data/kubernetes"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+# Phase 8 NEW (TRIG-04):
+export TELEGRAM_BOT_TOKEN="123456:ABC..."
+export TELEGRAM_ALLOWED_USERS="987654321"
+```
+
+### Send slash commands from Telegram
+
+1. Open Telegram on your phone or in the web browser
+2. Search for your bot's username (the one you chose in Step 14 with @BotFather)
+3. Open the chat and send:
+
+```
+/help
+```
+
+Expected: bot replies with the list of available commands.
+
+4. Send the command for your track:
+
+| Track | Command | Skill Used |
+|-------|---------|------------|
+| **Track A** | `/diagnose users` | `sre-dba-rds-slow-query` |
+| **Track B** | `/diagnose web-tier` | `sre-ec2-health-check` |
+| **Track C** | `/diagnose k8s-trouble-crashloop` | `sre-k8s-pod-health` |
+
+Watch the gateway terminal — you should see the message arrive and the agent run. Within ~10 seconds, the bot replies in the same Telegram chat thread with the agent's findings.
+
+> **Tip — All slash commands are automatic:** The Hermes Telegram adapter (`gateway/platforms/telegram.py` line 1549 — `_handle_command`) passes the entire slash command message through to the agent as the prompt. There's no per-command Python registration needed. The adapter handles ALL slash commands automatically. Experiment: send `/status` to see gateway health, or send `/whatever` and the agent will see exactly that text.
+
+5. Send `/status` to see current gateway state:
+
+```
+/status
+```
+
+Expected: bot replies with scheduler status, active webhook subscriptions, and current governance level.
+
+See `infrastructure/scenarios/k8s/telegram-bot/slash-command-spec.md` for the full three-command spec (`/diagnose`, `/status`, `/help`) with per-track examples.
+
+---
+
+## Step 16: Telegram Governance Escalation — Per-Process Override (5 min)
+
+This step demonstrates that bot governance is per-PROCESS — set when the gateway starts and inherited by every command during that gateway's lifetime. To escalate, restart the gateway with a different governance level.
+
+### Set environment variables (escalated to L4)
+
+```bash
+# Stop the current gateway (releases Telegram polling lock)
+hermes gateway stop
+sleep 30
+
+# Restart with L4 governance — full export block with L4
+export HERMES_LAB_MODE=live
+export HERMES_LAB_SCENARIO=crashloop2
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data/kubernetes"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+# Phase 8 NEW (TRIG-04):
+export TELEGRAM_BOT_TOKEN="123456:ABC..."
+export TELEGRAM_ALLOWED_USERS="987654321"
+
+hermes gateway run
+```
+
+### Test escalated governance from Telegram
+
+From Telegram, send a write-action command (Track C example):
+
+```
+/diagnose --apply k8s-trouble-crashloop
+```
+
+At L4, the agent CAN attempt `kubectl apply` (the Phase 7 wrapper allows write actions at L4). At L2 from Step 15, the same command would have triggered the GOVERNANCE REJECTED banner from the wrapper.
+
+### Verify the governance level in session logs
+
+```bash
+hermes sessions list
+hermes sessions show <session-id> | grep -i governance
+```
+
+### What happens when a non-admin tries L4 from the message text?
+
+If a user sends `/diagnose --governance L4 <arg>` from Telegram while the gateway is running at L2, the agent runs at L2 — the `--governance L4` text is just part of the prompt, not a directive to the wrapper. The wrapper reads `HERMES_LAB_GOVERNANCE=L2` from the process env and enforces L2 allowlists.
+
+> **Note — No per-message governance escalation:** Telegram bot governance is **per-process, not per-message**. To change levels, restart the gateway with a different `HERMES_LAB_GOVERNANCE` env var. The combination of `TELEGRAM_ALLOWED_USERS` (who can talk to the bot at all) and `HERMES_LAB_GOVERNANCE` (what they can do) is the per-context governance model — consistent with how AlertManager and K8s CronJob agents work.
+>
+> See `infrastructure/scenarios/k8s/telegram-bot/admin-allowlist.example.yaml` for the team-wide admin roster pattern.
+
+### Cleanup
+
+```bash
+hermes gateway stop
+# Restart at L2 for ongoing lab work:
+# export HERMES_LAB_GOVERNANCE=L2 && hermes gateway run
+```
+
+---
+
 ## FREE EXPLORE PHASE — 25 minutes
 
 Choose challenges based on your available time and experience level.
@@ -594,6 +1147,10 @@ hermes webhook unsubscribe rds-alerts
 - A webhook subscription that reacts to CloudWatch alarm payloads and runs an agent investigation on demand
 - Hands-on experience with the full cron lifecycle: create, trigger, pause, resume, delete
 - Understanding of when to use scheduled triggers (proactive) vs event-driven webhooks (reactive)
+- A real Prometheus + AlertManager pipeline on KIND firing on a Phase 6 broken pod, with the agent receiving the alert and diagnosing without manual invocation
+- A K8s CronJob running a containerized Hermes agent on a schedule, with explicit "use this when…" framing for Hermes cron vs K8s CronJob
+- A GitHub webhook via smee.io routing real PR events to Hermes, with the agent posting review comments back via the built-in `github_comment` delivery type
+- A Telegram bot you can poke from your phone, with three slash commands and per-process governance inheritance from Phase 7
 
 **Key commands reference:**
 
@@ -614,6 +1171,14 @@ hermes webhook subscribe <name> --events ... --prompt ... --deliver local
 hermes webhook list
 hermes webhook test <name> --payload '{"key": "value"}'
 hermes webhook unsubscribe <name>
+
+# Phase 8 trigger commands
+hermes webhook subscribe alertmanager --events "alertmanager-alert" --prompt "..." --skill "..." --deliver local
+hermes webhook subscribe github --events "pull_request" --prompt "..." --deliver github_comment --deliver-chat-id "{repository.full_name}:{pull_request.number}"
+kubectl apply -f infrastructure/scenarios/k8s/cronjob/agent-health-check.yaml -l track=track-c
+./infrastructure/scenarios/k8s/github-webhook/smee-setup.sh
+hermes gateway run    # With TELEGRAM_BOT_TOKEN set, activates Telegram adapter
+hermes gateway stop   # Stop gateway before restarting with new governance level
 ```
 
 **Starter file:** `course/modules/module-12-triggers/starter/cron-job-starter.yaml` provides
@@ -654,4 +1219,31 @@ hermes webhook list
 hermes webhook test cloudwatch-alerts \
   --payload '{"alarm": {"name": "rds-cpu-high", "state": "ALARM"}}'
 # Expected: agent runs investigation and prints findings to terminal
+
+# Phase 8 checks
+# 7. AlertManager is enabled and reachable
+kubectl get pods -n monitoring -l app.kubernetes.io/name=alertmanager
+# Expected: alertmanager-kube-prometheus-alertmanager-0  Running
+
+# 8. PrometheusRule loaded
+kubectl get prometheusrule -n monitoring hermes-lab-rules
+# Expected: row exists
+
+# 9. K8s CronJob image built and loaded
+docker images hermes-lab:cronjob
+# Expected: REPOSITORY: hermes-lab, TAG: cronjob
+
+# 10. K8s CronJob registered (after Step 11)
+kubectl get cronjob | grep hermes-track
+# Expected: hermes-track-{a,b,c}-health  */5 * * * *
+
+# 11. smee-setup.sh is executable
+test -x infrastructure/scenarios/k8s/github-webhook/smee-setup.sh && echo OK
+
+# 12. Sample GitHub PR payload is valid JSON
+jq . infrastructure/scenarios/k8s/github-webhook/sample-pr-payload.json > /dev/null && echo OK
+
+# 13. Telegram adapter prerequisites
+python3 -c "from telegram import Bot; print('telegram OK')"
+# Expected: telegram OK
 ```
