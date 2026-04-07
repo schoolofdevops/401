@@ -1,0 +1,249 @@
+---
+id: module-05-reference
+title: "Superpowers for IaC — Quick Reference"
+sidebar_label: "Reference"
+sidebar_position: 2
+---
+
+# Superpowers for IaC — Quick Reference
+
+---
+
+## The Superpowers Cycle
+
+| Phase | Goal | Time Guidance |
+|-------|------|--------------|
+| **Phase 0: Context** | Write CLAUDE.md — system state, gaps, constraints, exact vocabulary | 10 min |
+| **Phase 1: Brainstorm** | AI reviews context, produces prioritized gap analysis (plan, not code) | 15 min |
+| **Phase 2: TDD — RED** | Write tests FIRST. Run them. They MUST fail. | 20 min |
+| **Phase 3: Implement — GREEN** | Prompt AI to generate code that passes the tests | 20 min |
+| **Phase 4: Debug** | Fix AI generation errors using 4-phase methodology | 10 min |
+| **Phase 5: Verify + Review** | Evidence-based verification + 5-dimension code review | 15 min |
+
+**Iron Law:** No production code before a failing test exists.
+
+---
+
+## TDD Commands by Tool
+
+| Tool | RED (Test First) | GREEN (Make Pass) | REFACTOR |
+|------|-----------------|-------------------|----------|
+| **Helm** | Run `verify-chart.sh` — expect FAIL for missing resources | `helm lint` exits 0 + `helm template \| kubectl apply --dry-run=client -f -` succeeds | `helm lint` stays clean, dry-run stays green |
+| **Terraform** | `terraform test` — expect "Reference to undeclared resource" (no `.tf` files yet) | `terraform validate` + `terraform test` — all assertions pass | `terraform test` stays green |
+
+---
+
+## Common AI Generation Errors — Helm
+
+| Error | What AI Generates | Correct Value | Why |
+|-------|------------------|---------------|-----|
+| Wrong HPA apiVersion | `autoscaling/v2beta2` | `autoscaling/v2` | v2beta2 removed in K8s 1.26+ |
+| Wrong PDB apiVersion | `policy/v1beta1` | `policy/v1` | v1beta1 removed in K8s 1.25+ |
+| matchLabels mismatch | `app: reference-app` | Must match Deployment `spec.selector.matchLabels` | HPA/PDB must target existing selectors |
+| ServiceMonitor wrong port | `port: 8080` | Use the `name` field from Service spec | ServiceMonitor requires port name, not number |
+| NOTES.txt no dot prefix | `{{ Release.Name }}` | `{{ .Release.Name }}` | Helm template functions require dot prefix |
+| HPA targetRef hardcoded | `name: api-gateway` | `{{ include "reference-app.fullname" . }}` | Should use chart helper for naming consistency |
+
+---
+
+## Common AI Generation Errors — Terraform
+
+| Error | What AI Generates | Correct Value | Why |
+|-------|------------------|---------------|-----|
+| Wrong metric name | `cpu_utilization` | `CPUUtilization` | AWS metric names are camelCase — exact match required |
+| Wrong comparison operator | `GreaterThanOrEqualToThreshold` | `GreaterThanThreshold` | Use "greater than" not "greater than or equal" for standard CPU threshold |
+| Wrong SNS protocol | `"lambda"` or `"sqs"` | `"email"` | Free tier requires email protocol (SMS costs money) |
+| Wrong AMI owners | `["self"]` or `["aws"]` | `["amazon"]` | Amazon-owned AMIs require the `"amazon"` owner value |
+| Missing data source | `ami = "ami-12345abc"` | `data "aws_ami"` with filter | AMI IDs are region-specific — always use data source |
+| Resource name mismatch | `aws_instance.this` | Must match test file (e.g., `aws_instance.app`) | Terraform test references resource by name — mismatch = test failure |
+| Variable not used | `threshold = 80` (hardcoded) | `threshold = var.alarm_threshold` | Hardcoded values cannot be overridden by callers |
+
+---
+
+## Systematic Debugging Phases
+
+**Phase 1 — Investigate:** Read the error output completely. Do not guess. Identify the exact resource, attribute, and value mentioned in the error. For Helm: `helm lint --debug`. For Terraform: `terraform test 2>&1`.
+
+**Phase 2 — Pattern match:** Find a working example. Check the error table above. Compare the failing template or resource against a known-good reference.
+
+**Phase 3 — Hypothesize:** Form one specific hypothesis. "The `matchLabels` uses `app` but the Deployment uses `app.kubernetes.io/name`." Apply the smallest change that tests this hypothesis.
+
+**Phase 4 — Fix and verify:** Apply the minimal fix. Run the verification command immediately. Confirm the error is gone. Move to the next error.
+
+**3-Fix Rule:** After 3 failed fix attempts on the same error, stop. Ask the AI with the file content + test/check + exact error. The error is likely a context problem, not a code problem.
+
+---
+
+## Code Review Dimensions for IaC
+
+| Dimension | What to Check | Common Finding |
+|-----------|--------------|----------------|
+| **Code Quality** | Naming conventions, DRY (no hardcoded values), consistent patterns | Literal values that should be variables; inconsistent resource naming |
+| **Architecture** | Resource relationships, data flow, dependency ordering | HPA targeting wrong Deployment; alarm not referencing EC2 instance; SNS subscription hardcoding topic ARN |
+| **Testing** | Assertions cover all resources; edge cases (zero replicas, empty values, default thresholds) | `terraform test` checks resource existence but not attribute values; verify-chart.sh missing resource limit check |
+| **Requirements** | All CLAUDE.md constraints present; nothing omitted | Missing `monitoring = false`; wrong apiVersion; resource limits absent |
+| **Production Readiness** | Free tier compliance; variable defaults; documentation; tags | Missing tags; no `treat_missing_data`; NOTES.txt empty; PDB blocks single-replica drain |
+
+---
+
+## Verification Commands
+
+```bash
+# ── Helm ──────────────────────────────────────────────
+# Lint: syntax and schema validation
+helm lint <chart-dir>
+
+# Template + dry-run: validate rendered output against cluster API
+helm template <release> <chart-dir> -f <values-file> | kubectl apply --dry-run=client -f -
+
+# Install dry-run: full release simulation including NOTES.txt
+helm install <release> <chart-dir> --dry-run
+
+# Debug lint failures: get exact file and line number
+helm lint <chart-dir> --debug
+
+# ── Terraform ─────────────────────────────────────────
+# Schema validation: syntax and type checking
+terraform validate
+
+# Unit tests with mock provider (no AWS credentials needed)
+terraform test
+
+# Format check: consistent code style
+terraform fmt -check
+
+# Plan (requires real AWS credentials): shows actual resource changes
+terraform plan
+```
+
+---
+
+## CLAUDE.md Template for IaC Projects
+
+Use this template as your starting point. The more specific each section, the better the AI generation quality.
+
+```markdown
+# [Project Name]
+
+## System State
+- [What tool/chart/module exists today]
+- [Current versions and configurations]
+- [What is already working correctly]
+
+## What Is Missing (Production Gaps)
+- [Specific gap 1 — be concrete, not "improve the chart"]
+- [Specific gap 2]
+
+## Constraints
+- [Hard requirement 1 — API versions, naming conventions, free tier limits]
+- [Hard requirement 2 — test toolchain, verification method]
+- [Performance or cost constraints]
+
+## Architecture
+- [Key design decisions already made]
+- [Exact resource types and attribute names needed]
+- [Resource relationships and data flow]
+```
+
+**Architecture section tip:** Include the exact attribute names and values your provider requires. For Terraform:
+
+```markdown
+## Architecture
+- Resource: aws_cloudwatch_metric_alarm
+  - metric_name = "CPUUtilization"        (not cpu_utilization)
+  - comparison_operator = "GreaterThanThreshold"
+  - namespace = "AWS/EC2"
+  - evaluation_periods = 2, period = 300
+```
+
+Encoding the exact vocabulary in CLAUDE.md pre-corrects the most common AI generation errors before code generation begins.
+
+---
+
+## Quick Reference: mock_provider for Terraform Testing
+
+```hcl
+# versions.tf — requires Terraform 1.7+
+terraform {
+  required_version = ">= 1.7"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+```
+
+```hcl
+# unit.tftest.hcl — write this BEFORE main.tf
+mock_provider "aws" {}
+
+variables {
+  notification_email = "test@example.com"
+  instance_name      = "test-instance"
+}
+
+run "resource_exists" {
+  command = plan
+  assert {
+    condition     = length(aws_instance.app) > 0
+    error_message = "EC2 instance must be created"
+  }
+}
+
+run "alarm_threshold_correct" {
+  command = plan
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cpu.threshold == 80
+    error_message = "Alarm threshold should default to 80"
+  }
+}
+```
+
+Run tests:
+
+```bash
+terraform init
+terraform test          # must fail before main.tf exists (RED)
+# ... generate main.tf, variables.tf, outputs.tf from CLAUDE.md context
+terraform test          # must pass after implementation (GREEN)
+```
+
+---
+
+## Quick Reference: Helm Verification Script Pattern
+
+```bash
+#!/bin/bash
+set -e
+
+CHART_DIR="<your-chart-dir>"
+ERRORS=0
+
+echo "=== Chart Verification ==="
+
+helm lint "$CHART_DIR" || { echo "FAIL: helm lint"; ERRORS=$((ERRORS+1)); }
+
+RENDERED=$(helm template test-release "$CHART_DIR" 2>/dev/null)
+
+echo "$RENDERED" | grep -q "kind: HorizontalPodAutoscaler" \
+  || { echo "FAIL: no HPA"; ERRORS=$((ERRORS+1)); }
+
+echo "$RENDERED" | grep -q "kind: PodDisruptionBudget" \
+  || { echo "FAIL: no PDB"; ERRORS=$((ERRORS+1)); }
+
+echo "$RENDERED" | kubectl apply --dry-run=client -f - 2>&1 | tail -3 \
+  || { echo "FAIL: kubectl dry-run"; ERRORS=$((ERRORS+1)); }
+
+[ $ERRORS -eq 0 ] && echo "ALL CHECKS PASS" || { echo "$ERRORS check(s) failed"; exit 1; }
+```
+
+Run script:
+
+```bash
+chmod +x verify-chart.sh
+./verify-chart.sh          # must fail before templates exist (RED)
+# ... generate templates from CLAUDE.md context
+./verify-chart.sh          # must pass after implementation (GREEN)
+```

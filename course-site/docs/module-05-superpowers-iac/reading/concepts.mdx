@@ -1,0 +1,258 @@
+---
+id: module-05-concepts
+title: "Superpowers for Infrastructure as Code"
+sidebar_label: "Concepts"
+sidebar_position: 1
+---
+
+# Superpowers for Infrastructure as Code
+
+The Superpowers are not generic coding practices. They are specific engineering workflows that become dramatically more powerful when combined with an AI coding agent applied to infrastructure code. Each Superpower addresses a distinct failure mode in AI-assisted IaC generation. Together, they replace the "generate and pray" anti-pattern with a disciplined cycle.
+
+---
+
+## Why IaC Needs Superpowers
+
+Infrastructure as Code is uniquely well-suited for AI-assisted workflows — and uniquely dangerous without discipline.
+
+**Why it is well-suited:** IaC is declarative. A Helm chart or Terraform module describes desired state, not execution logic. Declarative code is testable without running it — `helm lint`, `helm template`, `terraform validate`, and `terraform test` with `mock_provider` all verify correctness before anything touches a real cluster or cloud account. This testability is the foundation that makes TDD practical for infrastructure.
+
+**Why discipline matters:** IaC is high-consequence. A wrong `autoscaling/v2beta2` instead of `autoscaling/v2` in a Helm chart deploys without error on older clusters and fails silently on K8s 1.26+. A CloudWatch alarm with `metric_name = "cpu_utilization"` (lowercase, incorrect) will be accepted by Terraform validation but never fire in production — the metric name must be `CPUUtilization`. These are the errors that AI tools produce most often, and they pass basic syntax checks.
+
+The Superpowers add discipline that catches these errors before they reach production:
+- TDD: constraints what the AI generates
+- Systematic debugging: identifies root cause rather than thrashing through guesses
+- Verification: requires evidence before completion claims
+- Code review: catches semantic errors that tests miss
+
+---
+
+## The Superpowers Cycle
+
+Each lab follows the same 6-phase cycle:
+
+```
+Context (CLAUDE.md) → Brainstorm → TDD (RED) → Implement (GREEN) → Debug → Verify + Review
+```
+
+| Phase | Goal | Time |
+|-------|------|------|
+| Phase 0: Context | Write CLAUDE.md — system state, gaps, constraints | 10 min |
+| Phase 1: Brainstorm | AI analyzes context and produces a plan (not code) | 15 min |
+| Phase 2: TDD — RED | Write tests BEFORE any code. Tests MUST fail. | 20 min |
+| Phase 3: Implement — GREEN | AI generates code that passes the tests | 20 min |
+| Phase 4: Debug | Fix AI generation errors systematically | 10 min |
+| Phase 5: Verify + Review | Evidence-based verification + AI-assisted code review | 15 min |
+
+This structure is invariant. The tools change (Helm vs Terraform, `helm lint` vs `terraform test`), but the phases and the discipline stay the same.
+
+---
+
+## Superpower 1: TDD for Infrastructure
+
+### The Iron Law Applied to IaC
+
+The Iron Law of TDD states: **no production code without a failing test first.** Applied to infrastructure code, this means no `.tf` files without a failing `terraform test` run, and no Helm templates without a failing verification script.
+
+This feels backwards. The intuitive approach is to generate the code first, then check if it works. The problem with the intuitive approach is that it creates no commitment to what "correct" means before the code exists. Once the code is generated, your definition of "correct" unconsciously adjusts to match what was generated. TDD reverses this: you define done first, then build toward it.
+
+### TDD for Helm: lint as test harness
+
+For Helm, the "test" toolchain uses tools already in your workflow:
+
+```bash
+# RED: Chart is valid but missing required resources
+helm lint <chart-dir>          # validates schema and template syntax
+
+# GREEN: Chart renders with all required resources, validates against cluster API
+helm lint <chart-dir>
+helm template <release> <chart-dir> | kubectl apply --dry-run=client -f -
+```
+
+The RED state for Helm is a verification script that checks for the presence of specific resource kinds (`HorizontalPodAutoscaler`, `PodDisruptionBudget`, `ServiceMonitor`) in the rendered template output. Writing this script BEFORE generating the templates locks in what "done" means. The AI cannot generate a vague HPA — the script checks for the exact resource kind.
+
+**Key insight:** Writing the test first CONSTRAINS what the AI generates. Instead of "write me an HPA for my Helm chart" (unbounded — what values? which services? which apiVersion?), you say "write templates that make this verification script exit 0" (bounded — specific resources, specific apiVersions, specific structure). Constraints improve output quality.
+
+### TDD for Terraform: mock_provider
+
+For Terraform, `terraform test` with `mock_provider "aws" {}` provides offline unit testing that requires no AWS credentials:
+
+```hcl
+mock_provider "aws" {}
+
+run "cloudwatch_alarm_configured" {
+  command = plan
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cpu.threshold == 80
+    error_message = "CloudWatch alarm threshold should default to 80"
+  }
+}
+```
+
+Writing the test file FIRST (before `main.tf` exists) forces you to commit to resource names (`aws_cloudwatch_metric_alarm.cpu`, not `aws_cloudwatch_metric_alarm.this`) and attribute values (`threshold == 80`) before any code generation. When you prompt the AI to generate `main.tf`, you can explicitly say "resource names must match the test file exactly" — producing predictable output.
+
+`mock_provider` requires Terraform 1.7+. It intercepts all provider API calls, returning synthetic responses. This makes the full TDD cycle work offline — write tests, generate code, run tests, all without AWS access.
+
+---
+
+## Superpower 2: Systematic Debugging of AI-Generated IaC
+
+### Why AI Generation Errors Are Predictable
+
+AI tools make predictable errors when generating IaC. Unlike human-authored bugs (which can be anywhere), AI generation errors cluster in specific categories:
+
+**Helm generation error patterns:**
+- Wrong `apiVersion` — AI may use `autoscaling/v2beta2` (removed in K8s 1.26) instead of `autoscaling/v2`
+- Wrong `matchLabels` — using chart name instead of matching the Deployment's `spec.selector.matchLabels`
+- Wrong port reference — ServiceMonitor must use the port *name* from the Service spec, not the port number
+- Missing template syntax — `{{ Release.Name }}` instead of `{{ .Release.Name }}` (the dot prefix is required)
+
+**Terraform generation error patterns:**
+- Wrong metric names — `cpu_utilization` instead of `CPUUtilization` (AWS metric names are camelCase)
+- Wrong comparison operators — `GreaterThanOrEqualToThreshold` instead of `GreaterThanThreshold`
+- Wrong resource names — `aws_instance.this` instead of the name the test expects
+- Missing data sources — hardcoding AMI IDs instead of using `data "aws_ami"` with filters
+
+Because these errors are predictable, you can recognize them quickly rather than treating every failure as a unique puzzle.
+
+### The 4-Phase Debugging Workflow
+
+**Phase 1 — Investigate:** Read the error output carefully. Do not guess. The error message from `helm lint --debug` or `terraform test` tells you exactly which resource, which attribute, and often the value that was found versus the value expected. Trace the error to a specific file and line number.
+
+**Phase 2 — Pattern match:** Find a working example to compare against. For Helm errors, `helm template` on a known-good chart shows what the resource should look like. For Terraform errors, the test assertion shows the expected value alongside the actual value.
+
+**Phase 3 — Hypothesize:** Form a single specific hypothesis: "The HPA uses `v2beta2` instead of `v2`." Test that hypothesis with the smallest possible change. Do not make two changes at once — you will not know which one fixed it.
+
+**Phase 4 — Fix and verify:** After applying the minimal fix, run the verification command immediately (`./verify-chart.sh` or `terraform test`). Confirm the specific error is gone before moving to the next one.
+
+### The 3-Fix Rule
+
+If you have made 3 sequential fixes and the same test still fails, stop debugging manually. Ask the AI with full context:
+
+```
+Here is my current [file]: [paste content]
+Here is the failing test/check: [paste test block or verify script output]
+Here is the exact error: [paste error]
+What specifically is wrong?
+```
+
+The 3-Fix Rule exists because after 3 manual fixes, you are likely dealing with a context problem rather than a code problem. The AI generated wrong output because the CLAUDE.md did not contain the information needed to generate correct output. Asking the AI with the code + test + error together is faster than continuing to guess — the AI can spot the mismatch immediately when shown all three.
+
+---
+
+## Superpower 3: Verification Before Completion
+
+### The Gate Function
+
+Verification means running a command and reading its output — not reviewing YAML visually and declaring it correct. The Gate Function has five steps:
+
+1. **Identify** the verification command that corresponds to the claim
+2. **Run** it (actually execute it, not imagine running it)
+3. **Read** the output — all of it, including warnings
+4. **Verify** the output matches the expected result
+5. **Claim** completion only after step 4 succeeds
+
+"It looks correct to me" skips steps 1-4 and goes straight to 5. This is an assumption, not verification.
+
+### What Counts as Evidence for IaC
+
+For Helm:
+- `helm lint` exits 0 with no warnings — syntax and schema are valid
+- `helm template | kubectl apply --dry-run=client` exits 0 and shows the expected resources created — rendered output is accepted by the cluster API
+- `helm install --dry-run` shows NOTES.txt content — the post-install instructions are functional
+
+For Terraform:
+- `terraform validate` exits 0 — syntax and type checking pass
+- `terraform test` shows `N passed, 0 failed` — all assertions pass against mock provider
+- `terraform fmt -check` exits 0 — formatting is consistent
+
+The difference between "I think the chart is correct" and "helm lint exits 0 and dry-run shows 5 resources created" is the difference between an assumption and a verified claim. In production infrastructure work, this difference determines whether you are debugging in test or in production.
+
+### Why Verification Matters More for AI-Generated Code
+
+AI generation is fast. It produces syntactically plausible output in seconds. The speed creates a temptation to accept output without running verification commands — the code looks right, it follows the patterns, it probably works.
+
+Verification commands exist precisely to catch the gap between "looks right" and "is right." A Helm chart that renders a `ServiceMonitor` with the wrong port reference (number instead of name) will pass `helm lint`, look correct in a review, and fail only when Prometheus tries to discover the service. Running `helm template` and checking the ServiceMonitor spec is what catches it before it reaches the cluster.
+
+---
+
+## Superpower 4: Code Review for Generated Code
+
+### The 5-Dimension Review Framework
+
+AI-generated IaC needs MORE structured code review, not less. The reason is the inverse of the speed argument above: AI generation is fast and syntactically correct, which makes it easy to accept without reviewing the semantics. A human-written HPA with `minReplicas: 5` and `maxReplicas: 3` looks obviously wrong. An AI-generated one with the same values passes `helm lint` and appears in a list of 20 other templates — easy to miss.
+
+The 5-dimension framework structures the review:
+
+**1. Code Quality** — naming conventions, DRY principle (no hardcoded values that should be variables), consistent naming patterns across resources. For Terraform: are all literal values that vary by environment expressed as variables?
+
+**2. Architecture** — resource relationships and data flow. Does the HPA target the correct Deployment? Does the CloudWatch alarm reference the correct EC2 instance? Does the SNS subscription reference the SNS topic (not hardcode the ARN)? Are dependency orderings correct?
+
+**3. Testing** — do the tests cover all critical behaviors? What is not tested? A `unit.tftest.hcl` that tests `ec2_instance_exists` but not the CloudWatch alarm's `metric_name` value is incomplete — the most common AI error in that attribute goes untested.
+
+**4. Requirements** — does the implementation match every constraint in the CLAUDE.md? Check each item explicitly. If CLAUDE.md says `monitoring = false` on the EC2 instance (because detailed monitoring costs money), does the generated `main.tf` have that? If CLAUDE.md says `apiVersion: autoscaling/v2` for HPA, does every HPA template use it?
+
+**5. Production Readiness** — free tier compliance (for this course), variable defaults that make sense, resource limits that are non-zero, tags applied, documentation present. A Helm chart with no `NOTES.txt` gives the operator no post-install guidance. A Terraform module with no `tags` block produces untagged resources that are invisible in cost reports.
+
+### Acting on Code Review Findings
+
+Code review findings come in three categories:
+
+**Critical** — fix before proceeding. HPA with `minReplicas > maxReplicas`, CloudWatch alarm with wrong `metric_name`, ServiceMonitor targeting wrong port name. These will cause runtime failures.
+
+**Important** — fix before the module is complete. Missing `treat_missing_data = "notBreaching"` on a CloudWatch alarm (causes false-positive alerts when metric data gaps occur), missing variable validation blocks, PDB `minAvailable` that blocks node drain for single-replica deployments.
+
+**Minor** — note for later or fix now. Missing tags, inconsistent naming, NOTES.txt that doesn't use template functions for release name and namespace.
+
+The goal of the code review phase is not to find every minor issue — it is to catch semantic correctness problems that tests did not catch.
+
+---
+
+## Context Engineering: The Starter That Replaces Starter Code
+
+Traditional IaC onboarding: you receive a skeleton file with TODO comments and fill in the blanks. The skeleton hints at structure but not at intent, constraints, or operational context.
+
+The Superpowers approach: you write a CLAUDE.md that describes what the system looks like, what is missing, and why it matters. The AI generates the complete implementation from that context.
+
+**Why context produces better output than skeletons:**
+
+A skeleton tells the AI where to put code. A CLAUDE.md tells the AI *why the code is needed*, *what constraints apply*, and *what the correct vocabulary is*. The Architecture section of the Track B CLAUDE.md includes exact AWS attribute names:
+
+```
+metric_name = "CPUUtilization"
+comparison_operator = "GreaterThanThreshold"
+evaluation_periods = 2
+```
+
+These are not hints — they are the exact values the AI needs to produce correct Terraform. A skeleton file with `# TODO: set metric name` produces an AI guess. A CLAUDE.md with the exact name produces a first-pass result that passes the tests.
+
+This is context engineering applied to IaC: encoding operational knowledge in a format the AI reads at generation time. The CLAUDE.md is the real engineering artifact. The generated code is its output.
+
+---
+
+## When to Apply Superpowers to IaC
+
+The Superpowers cycle has overhead — 90 minutes for a focused lab exercise, longer for a real module. When is that overhead worth it?
+
+| Scenario | Recommendation |
+|----------|---------------|
+| Greenfield Terraform module (nothing exists) | Full cycle — brainstorm through review |
+| Greenfield Helm chart (new chart from scratch) | Full cycle — brainstorm through review |
+| Adding resources to existing chart (new templates) | Skip brainstorm, start at TDD — baseline exists |
+| Bug fix in existing IaC (failing test) | Start at Debug phase — add regression test, then fix |
+| Single variable default change in tested module | Skip Superpowers — too much overhead for the risk |
+| Unknown domain (AWS service you have not Terraformed before) | Full cycle — brainstorm prevents architecture mistakes |
+| Familiar pattern (third HPA you have written this week) | TDD + Review only — pattern is established |
+
+The rule is not "always use the full cycle." The rule is "match the level of structure to the risk and novelty of the change." Superpowers are for substantive IaC work — new modules, new resources, unfamiliar services, high-consequence changes.
+
+---
+
+## Key Takeaways
+
+- **TDD constrains AI generation.** Writing tests before code forces commitment to resource names, attribute values, and success criteria. Constrained generation produces better output.
+- **AI generation errors are predictable.** Helm and Terraform have specific error categories that repeat. Recognizing patterns speeds up debugging from minutes to seconds.
+- **Verification requires evidence.** "Looks correct" is not verification. Running `helm lint`, `helm template | kubectl apply --dry-run=client`, and `terraform test` IS verification.
+- **Context replaces starter code.** A CLAUDE.md with system state, gaps, and exact vocabulary produces better AI output than a skeleton with TODO comments.
+- **Generated code needs more review, not less.** AI produces syntactically correct code at high speed. The review catches the semantic errors that speed and syntax-checking miss.

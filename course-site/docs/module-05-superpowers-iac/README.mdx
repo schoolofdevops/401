@@ -1,0 +1,89 @@
+---
+id: module-05-readme
+title: "Module 5: Superpowers for IaC"
+sidebar_label: "Overview"
+sidebar_position: 0
+---
+
+# Module 5: Superpowers for IaC
+
+**Duration:** 90 minutes
+**Day:** Day 2, Session 1
+
+---
+
+## What This Module Is About
+
+You have been writing IaC by hand or copy-pasting from docs. This module teaches a disciplined AI-assisted workflow — the Superpowers — where you brainstorm requirements, write tests first, generate with AI, debug AI's mistakes systematically, then verify and code review the result. The Superpowers transform how you produce Helm charts and Terraform modules.
+
+The four Superpowers are: **TDD** (test-driven development), **systematic debugging**, **verification before completion**, and **code review**. Each is a production engineering practice that becomes dramatically more powerful when combined with an AI coding agent. Applied to IaC, they eliminate the "generate and pray" anti-pattern.
+
+The central input to this workflow is not a prompt — it is a **CLAUDE.md** file encoding your system state, constraints, and goals. That context file is the real engineering artifact. The AI generates code from it. This module demonstrates the gap between weak context and strong context in action, using real infrastructure tools as the test harness.
+
+---
+
+## Choose Your Track
+
+| Track | What You Build | Best For |
+|-------|---------------|----------|
+| **[Track A: Helm Chart](./lab/module-05-lab-track-a)** | Production Helm chart additions (HPA, PDB, ServiceMonitor, resource limits, NOTES.txt) for the reference app — generated from scratch via Superpowers | Kubernetes and platform engineers |
+| **[Track B: Terraform](./lab/module-05-lab-track-b)** | Complete Terraform EC2 + CloudWatch + SNS module — built from zero using TDD with mock_provider | Cloud and IaC engineers |
+
+Both tracks follow the same Superpowers cycle. You generate all code from a CLAUDE.md context file — no starter code, no TODO templates.
+
+---
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. Apply the Superpowers workflow (brainstorm, TDD, implement, debug, verify, code review) to a real IaC project
+2. Write infrastructure tests BEFORE generating infrastructure code — TDD for Helm (`helm lint` + dry-run) and Terraform (`mock_provider`)
+3. Debug AI-generated IaC errors systematically using the 4-phase debugging workflow
+4. Verify infrastructure artifacts with evidence (not assumptions) before claiming completion
+5. Conduct AI-assisted code review of generated IaC using the 5-dimension review framework
+
+---
+
+## Prerequisites
+
+**Both tracks:**
+- Claude Code (or Crush) configured and connected to an LLM
+- Familiarity with the reference app from the setup guide
+
+**Track A — Helm:**
+- Helm v3.x installed (`helm version --short`)
+- kubectl installed and KIND cluster running (from setup guide)
+- Reference app deployed to KIND cluster
+
+**Track B — Terraform:**
+- Terraform 1.7+ installed (`terraform version`)
+- No AWS account or credentials required for the main lab flow
+
+---
+
+## Key Concept: Context as Starter Code
+
+In this module, you do not receive pre-written starter files. Your starter is a **CLAUDE.md** file that describes the system state, constraints, and goals. The Superpowers workflow generates everything from that context.
+
+This is the core difference between the Superpowers approach and traditional AI-assisted coding:
+
+| Traditional AI Approach | Superpowers Approach |
+|-------------------------|----------------------|
+| "Here is a skeleton file, fill in the gaps" | "Here is what the system looks like and what is missing" |
+| Starter code with TODO comments | CLAUDE.md with system state, gaps, constraints |
+| AI fills in blanks | AI builds from operational context |
+| Output: varies widely by prompt wording | Output: constrained by system vocabulary and explicit requirements |
+
+Writing the CLAUDE.md is the most important step in the lab. It encodes operational knowledge — system vocabulary, existing state, gap analysis, and hard constraints — that produces correct AI output instead of generic output.
+
+---
+
+## What You Will Learn (Not Just Do)
+
+The lab is the hands-on experience. The reading materials in this module explain **why** each Superpowers phase exists and when to apply them beyond this specific lab context.
+
+- **Concepts** (`reading/concepts.mdx`) — the reasoning behind each Superpower, applied to IaC, with concrete Helm and Terraform examples
+- **Reference** (`reading/reference.mdx`) — quick-reference cheat sheet with TDD commands, common AI generation errors, debugging phases, review dimensions, and a CLAUDE.md template
+
+After completing the lab, the reading materials help you generalize the workflow to your own infrastructure projects.
