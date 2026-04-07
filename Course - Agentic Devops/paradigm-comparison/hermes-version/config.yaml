@@ -2,13 +2,29 @@
 # Governance Level: L2 Advisory (read-only commands run freely,
 #   destructive commands require human approval)
 #
-# Install: cp -r hermes-version/ ~/.hermes/profiles/k8s-investigator/
-# Launch:  hermes -p k8s-investigator chat
-# Then:    "Investigate unhealthy pods in the payments namespace"
+# See README.md (one level up) for full install + run instructions.
+
+# ── Model: Google Gemini 2.5 Flash via the OpenAI-compatible endpoint ──
+# Hermes does not (yet) ship a first-class Google provider, so we wire
+# Gemini through a `custom_providers` entry. Hermes' custom-provider auth
+# chain looks for OPENAI_API_KEY for OpenAI-compatible endpoints, so the
+# install script writes `OPENAI_API_KEY=$GEMINI_API_KEY` into the profile
+# .env file. See README.md for the install steps.
+#
+# To use a different model/provider, edit the two blocks below. Examples:
+#   - Anthropic Claude: provider: "anthropic", default: "claude-sonnet-4-20250514"
+#   - OpenAI direct:    custom_providers base_url: https://api.openai.com/v1
+#   - Groq (free):      custom_providers base_url: https://api.groq.com/openai/v1
 
 model:
-  default: "anthropic/claude-sonnet-4-20250514"
-  provider: "auto"
+  default: "gemini-2.5-flash"
+  provider: "custom:google-ai-studio"
+
+custom_providers:
+  - name: google-ai-studio
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
+    api_mode: chat_completions
+    # api_key is read from OPENAI_API_KEY in the profile .env file
 
 platform_toolsets:
   cli: [terminal, file, web, skills]

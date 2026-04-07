@@ -13,7 +13,7 @@ import subprocess
 from typing import TypedDict, Literal, Annotated
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
-from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 # ============================================================
@@ -162,7 +162,7 @@ def check_recent_deployments(state: InvestigationState) -> dict:
 
 def generate_diagnosis(state: InvestigationState) -> dict:
     """Node 5: Use LLM to analyze all collected data."""
-    llm = ChatAnthropic(model="claude-sonnet-4-20250514")
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
 
     # YOU must construct the prompt manually
     # YOU must decide what context to include

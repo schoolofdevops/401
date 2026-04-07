@@ -1,0 +1,337 @@
+#!/usr/bin/env python3
+"""
+Mock kubectl for paradigm-comparison agent testing.
+
+Returns canned data for the 'payments' namespace so the LangGraph and
+Hermes agents can be exercised end-to-end without a real cluster.
+
+Supports the kubectl invocations used by both agents:
+  - get pods -n <ns> -o json
+  - describe pod <name> -n <ns>
+  - logs <name> -n <ns> [-c <container>] [--tail=N] [--previous]
+  - get deployments -n <ns> -o json
+  - rollout history deployment/<name> -n <ns>
+  - get events -n <ns> --sort-by=... --field-selector=...
+
+For the namespace 'payments', returns realistic unhealthy pod state:
+  - One pod in CrashLoopBackOff with OOMKilled logs
+  - One pod in ImagePullBackOff with bad image tag
+  - One healthy pod
+For any other namespace, returns 'all healthy' state.
+
+Activated by placing this directory ahead of /usr/local/bin on PATH.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from typing import List
+
+
+def _ns_from(args: List[str]) -> str:
+    if "-n" in args:
+        return args[args.index("-n") + 1]
+    if "--namespace" in args:
+        return args[args.index("--namespace") + 1]
+    return "default"
+
+
+def _pods_json(namespace: str) -> dict:
+    if namespace != "payments":
+        return {
+            "kind": "List",
+            "apiVersion": "v1",
+            "items": [
+                {
+                    "metadata": {"name": "demo-app-7d5f9c8b4-abcde", "namespace": namespace},
+                    "status": {
+                        "phase": "Running",
+                        "containerStatuses": [{
+                            "name": "app",
+                            "ready": True,
+                            "restartCount": 0,
+                            "state": {"running": {"startedAt": "2026-04-07T07:15:00Z"}},
+                        }],
+                    },
+                }
+            ],
+        }
+
+    return {
+        "kind": "List",
+        "apiVersion": "v1",
+        "items": [
+            {
+                "metadata": {
+                    "name": "checkout-api-6c4f7d9b5-xz9k2",
+                    "namespace": "payments",
+                    "labels": {"app": "checkout-api"},
+                },
+                "status": {
+                    "phase": "Running",
+                    "containerStatuses": [{
+                        "name": "checkout-api",
+                        "ready": False,
+                        "restartCount": 11,
+                        "state": {
+                            "waiting": {
+                                "reason": "CrashLoopBackOff",
+                                "message": "back-off 5m0s restarting failed container=checkout-api",
+                            }
+                        },
+                        "lastState": {
+                            "terminated": {
+                                "reason": "OOMKilled",
+                                "exitCode": 137,
+                                "startedAt": "2026-04-07T07:55:00Z",
+                                "finishedAt": "2026-04-07T07:58:23Z",
+                            }
+                        },
+                    }],
+                },
+            },
+            {
+                "metadata": {
+                    "name": "ledger-worker-58c9b76f4d-q4r7t",
+                    "namespace": "payments",
+                    "labels": {"app": "ledger-worker"},
+                },
+                "status": {
+                    "phase": "Pending",
+                    "containerStatuses": [{
+                        "name": "ledger-worker",
+                        "ready": False,
+                        "restartCount": 0,
+                        "state": {
+                            "waiting": {
+                                "reason": "ImagePullBackOff",
+                                "message": (
+                                    "Back-off pulling image "
+                                    "\"registry.internal/payments/ledger-worker:v2.4.99\""
+                                ),
+                            }
+                        },
+                    }],
+                },
+            },
+            {
+                "metadata": {
+                    "name": "fraud-scorer-7b8c4d6f9-mn3p1",
+                    "namespace": "payments",
+                    "labels": {"app": "fraud-scorer"},
+                },
+                "status": {
+                    "phase": "Running",
+                    "containerStatuses": [{
+                        "name": "fraud-scorer",
+                        "ready": True,
+                        "restartCount": 0,
+                        "state": {"running": {"startedAt": "2026-04-07T06:30:00Z"}},
+                    }],
+                },
+            },
+        ],
+    }
+
+
+def _describe_pod(pod_name: str, namespace: str) -> str:
+    if namespace != "payments":
+        return (
+            f"Name:         {pod_name}\n"
+            f"Namespace:    {namespace}\n"
+            f"Status:       Running\n"
+            f"Events:       <none>\n"
+        )
+    if pod_name.startswith("checkout-api"):
+        return f"""Name:         {pod_name}
+Namespace:    payments
+Priority:     0
+Node:         kind-worker/172.18.0.3
+Start Time:   Mon, 07 Apr 2026 06:42:11 +0530
+Labels:       app=checkout-api
+Status:       Running
+IP:           10.244.1.17
+Containers:
+  checkout-api:
+    Image:          registry.internal/payments/checkout-api:v3.8.2
+    State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       OOMKilled
+      Exit Code:    137
+      Started:      Tue, 07 Apr 2026 07:55:00 +0530
+      Finished:     Tue, 07 Apr 2026 07:58:23 +0530
+    Ready:          False
+    Restart Count:  11
+    Limits:
+      memory:  256Mi
+    Requests:
+      memory:  128Mi
+
+Events:
+  Type     Reason     Age                  From               Message
+  ----     ------     ----                 ----               -------
+  Warning  BackOff    2m (x47 over 1h12m)  kubelet            Back-off restarting failed container
+  Warning  OOMKilling 7m                   kernel-monitor     Memory cgroup out of memory: Killed process 1
+"""
+    if pod_name.startswith("ledger-worker"):
+        return f"""Name:         {pod_name}
+Namespace:    payments
+Status:       Pending
+Containers:
+  ledger-worker:
+    Image:          registry.internal/payments/ledger-worker:v2.4.99
+    State:          Waiting
+      Reason:       ImagePullBackOff
+    Ready:          False
+    Restart Count:  0
+
+Events:
+  Type     Reason     Age                From               Message
+  ----     ------     ----               ----               -------
+  Normal   Scheduled  18m                default-scheduler  Successfully assigned payments/{pod_name} to kind-worker
+  Warning  Failed     17m (x4 over 18m)  kubelet            Failed to pull image "registry.internal/payments/ledger-worker:v2.4.99": rpc error: code = NotFound desc = manifest for registry.internal/payments/ledger-worker:v2.4.99 not found: manifest unknown
+  Warning  Failed     17m (x4 over 18m)  kubelet            Error: ErrImagePull
+  Warning  Failed     2m (x65 over 18m)  kubelet            Error: ImagePullBackOff
+"""
+    return f"Name: {pod_name}\nNamespace: {namespace}\nStatus: Running\nEvents: <none>\n"
+
+
+def _logs(pod_name: str, namespace: str, previous: bool) -> str:
+    if namespace != "payments":
+        return "2026-04-07T07:15:01Z INFO  app started, listening on :8080\n"
+    if pod_name.startswith("checkout-api"):
+        if previous:
+            return """2026-04-07T07:55:00Z INFO  checkout-api v3.8.2 starting
+2026-04-07T07:55:01Z INFO  connected to postgres://payments-db:5432/checkout
+2026-04-07T07:55:02Z INFO  warming order cache (target=200000 entries)
+2026-04-07T07:56:14Z INFO  cache warm at 78432/200000 entries (heap=174MiB)
+2026-04-07T07:57:31Z WARN  cache warm at 152011/200000 entries (heap=238MiB) — approaching limit
+2026-04-07T07:58:22Z ERROR runtime: out of memory: cannot allocate 8388608-byte block
+2026-04-07T07:58:23Z FATAL exit status 137 (OOMKilled)
+"""
+        # No --previous → no logs from current container (it never started)
+        return "Error from server (BadRequest): container \"checkout-api\" in pod \"" + pod_name + "\" is waiting to start: CrashLoopBackOff\n"
+    if pod_name.startswith("ledger-worker"):
+        return "Error from server (BadRequest): container \"ledger-worker\" in pod \"" + pod_name + "\" is waiting to start: trying and failing to pull image\n"
+    return ""
+
+
+def _deployments_json(namespace: str) -> dict:
+    if namespace != "payments":
+        return {"kind": "List", "apiVersion": "apps/v1", "items": []}
+    return {
+        "kind": "List",
+        "apiVersion": "apps/v1",
+        "items": [
+            {
+                "metadata": {"name": "checkout-api", "namespace": "payments"},
+                "spec": {"replicas": 3},
+                "status": {
+                    "replicas": 3,
+                    "readyReplicas": 0,
+                    "unavailableReplicas": 3,
+                    "updatedReplicas": 3,
+                },
+            },
+            {
+                "metadata": {"name": "ledger-worker", "namespace": "payments"},
+                "spec": {"replicas": 2},
+                "status": {
+                    "replicas": 2,
+                    "readyReplicas": 0,
+                    "unavailableReplicas": 2,
+                },
+            },
+            {
+                "metadata": {"name": "fraud-scorer", "namespace": "payments"},
+                "spec": {"replicas": 2},
+                "status": {"replicas": 2, "readyReplicas": 2, "unavailableReplicas": 0},
+            },
+        ],
+    }
+
+
+def _events(namespace: str) -> str:
+    if namespace != "payments":
+        return "No resources found in " + namespace + " namespace.\n"
+    return """LAST SEEN   TYPE      REASON              OBJECT                                  MESSAGE
+2m          Warning   BackOff             pod/checkout-api-6c4f7d9b5-xz9k2        Back-off restarting failed container
+7m          Warning   OOMKilling          pod/checkout-api-6c4f7d9b5-xz9k2        Memory cgroup out of memory: Killed process 1
+17m         Warning   Failed              pod/ledger-worker-58c9b76f4d-q4r7t      Failed to pull image "registry.internal/payments/ledger-worker:v2.4.99": manifest unknown
+17m         Warning   Failed              pod/ledger-worker-58c9b76f4d-q4r7t      Error: ErrImagePull
+2m          Warning   Failed              pod/ledger-worker-58c9b76f4d-q4r7t      Error: ImagePullBackOff
+22m         Warning   FailedScheduling    pod/checkout-api-6c4f7d9b5-xz9k2        0/4 nodes had untolerated taint
+"""
+
+
+def _rollout_history(deployment: str, namespace: str) -> str:
+    if namespace != "payments":
+        return "deployment.apps/" + deployment + "\nREVISION  CHANGE-CAUSE\n1         <none>\n"
+    if "checkout-api" in deployment:
+        return """deployment.apps/checkout-api
+REVISION  CHANGE-CAUSE
+4         kubectl rollout restart deployment/checkout-api
+5         release: v3.8.1 → v3.8.2 (memory limit unchanged at 256Mi)
+6         <none>
+"""
+    return f"deployment.apps/{deployment}\nREVISION  CHANGE-CAUSE\n1         <none>\n"
+
+
+def main(argv: List[str]) -> int:
+    if len(argv) < 2:
+        print("kubectl (mock): no command", file=sys.stderr)
+        return 0
+
+    cmd = argv[1]
+    rest = argv[2:]
+    namespace = _ns_from(rest)
+
+    if cmd == "get" and rest and rest[0] == "pods":
+        print(json.dumps(_pods_json(namespace)))
+        return 0
+
+    if cmd == "get" and rest and rest[0] == "deployments":
+        print(json.dumps(_deployments_json(namespace)))
+        return 0
+
+    if cmd == "get" and rest and rest[0] == "events":
+        sys.stdout.write(_events(namespace))
+        return 0
+
+    if cmd == "describe" and rest and rest[0] == "pod":
+        pod_name = rest[1]
+        sys.stdout.write(_describe_pod(pod_name, namespace))
+        return 0
+
+    if cmd == "logs":
+        pod_name = rest[0]
+        previous = "--previous" in rest
+        out = _logs(pod_name, namespace, previous)
+        if out.startswith("Error from server"):
+            sys.stderr.write(out)
+            return 1
+        sys.stdout.write(out)
+        return 0
+
+    if cmd == "rollout" and rest and rest[0] == "history":
+        # form: rollout history deployment/<name> -n <ns>
+        target = rest[1] if len(rest) > 1 else ""
+        deployment = target.split("/", 1)[1] if "/" in target else target
+        sys.stdout.write(_rollout_history(deployment, namespace))
+        return 0
+
+    if cmd == "version":
+        print(json.dumps({
+            "clientVersion": {"gitVersion": "v1.32.3-mock"},
+            "serverVersion": {"gitVersion": "v1.32.3-mock"},
+        }))
+        return 0
+
+    sys.stderr.write(f"kubectl (mock): unsupported command: {cmd} {' '.join(rest)}\n")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
