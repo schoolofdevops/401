@@ -40,7 +40,7 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 - ✓ Module 5/6 consolidation: 5a→Module 5 (Superpowers for IaC), 5b→Module 6 (AI Workflow Tools), old Module 6 absorbed (Phase 5 complete)
 - ✓ K8s diagnostic SKILL.md with real kubectl commands replacing EC2 skill across Modules 7, 10 + Kiran agent profile (Phase 6 complete: sre-k8s-pod-health primary + 3 addon scaffolds + 6 baked KIND scenario manifests + cascade across 13 files, zero EC2 references in K8s/Kiran/Track C contexts)
 - ✓ Broken-pod scenarios on KIND as lab exercises (Phase 6 complete: 6 baked manifests for ImagePullBackOff/CrashLoopBackOff/OOMKilled/liveness probe/missing secret/port mismatch with sibling docs and capture-mock-data.sh; kube-troublesim deferred to v1.2 exploratory due to immaturity — 1 commit, no releases)
-- [ ] Hermes command allowlist/blocklist guardrails (kubectl get allowed, kubectl delete blocked) in Modules 10 and 13
+- ✓ Hermes command allowlist/blocklist guardrails with `wrapper_allowlist` enforcement across mock-kubectl/mock-aws/mock-psql, populated for all 3 tracks at L1-L4, Module 13 lab extended with L4 walkthrough (Phase 7 complete: PATH B wrapper extension since Hermes has no native DANGEROUS_PATTERNS extension; HERMES_LAB_GOVERNANCE + HERMES_LAB_TRACK env vars; three-layer defense narrative; 11/11 must-haves verified including live wrapper enforcement tests)
 - [ ] Agent trigger patterns: AlertManager webhook → triage agent, K8s CronJob scheduled agent, chat bot interaction, GitHub event PR review bot (Module 12)
 - [ ] K8s Agent Sandbox exploratory lab — productionizing agents on Kubernetes (new K8s SIG)
 - [ ] Deeper Hermes multi-agent workflows — end-to-end: alert → triage → diagnose → propose fix → human approval → apply
@@ -93,7 +93,8 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 | Consolidate Module 5/6 (v1.1) | 5a too basic, old Module 6 repetitive with 5a — Superpowers adds real value | ✓ Validated (Phase 5): 13/13 must-haves verified, 4/4 requirements met, no broken module-5/6 links |
 | K8s-first agent rebuild (v1.1) | EC2 skill on K8s agent undermines course credibility; baked KIND manifests provide real scenarios | ✓ Validated (Phase 6): 5/5 must-haves verified, all 5 K8S requirements (K8S-01..05) met, sre-k8s-pod-health 287-line skill mirrors EC2 template, 6 scenarios + cascade complete, zero EC2 refs in K8s/Kiran/Track C contexts |
 | Baked manifests over kube-troublesim (v1.1) | kube-troublesim repo has 1 commit, no releases, no README — too immature for required lab dependency | ✓ Validated (Phase 6): 6 hand-crafted YAML manifests in infrastructure/scenarios/k8s/ with mock JSON parity, kube-troublesim relegated to exploratory PROJECTS.mdx with "watch this space" framing |
-| Command allowlist/blocklist guardrails (v1.1) | Empty allowlists miss key governance teaching opportunity | — Pending (Phase 7) |
+| Command allowlist/blocklist guardrails (v1.1) | Empty allowlists miss key governance teaching opportunity | ✓ Validated (Phase 7): 11/11 must-haves verified, all 3 GOV requirements (GOV-01..03) met, populated wrapper_allowlist across 6 governance/*.yaml + 9 agent profile configs, mock-kubectl/aws/psql wrappers extended with HERMES_LAB_GOVERNANCE pre-flight, Module 13 lab extended with L4 walkthrough, three-layer defense taught explicitly |
+| PATH B wrapper enforcement over native Hermes patterns (v1.1) | Hermes has no extension mechanism for DANGEROUS_PATTERNS — researched and confirmed | ✓ Validated (Phase 7): wrapper-based enforcement with awk YAML parsing, GOVERNANCE REJECTED banner to stderr + exit 1, backward compat preserved for Module 10 lab |
 
 ## Current Milestone: v1.1 Realistic Agents & Production Workflows
 
@@ -108,9 +109,11 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 - K8s Agent Sandbox exploratory content
 - End-to-end multi-agent workflows that actually execute
 
-## Current State (v1.1 In Progress — Phase 6 Complete)
+## Current State (v1.1 In Progress — Phase 7 Complete)
 
-**v1.1 progress:** 2/5 phases complete. Phase 5 (Module Consolidation) and Phase 6 (K8s Skills & Agents) shipped. Phases 7 (Guardrails & Governance), 8 (Agent Triggers), 9 (Multi-Agent Workflows & Production) remaining.
+**v1.1 progress:** 3/5 phases complete. Phases 5 (Module Consolidation), 6 (K8s Skills & Agents), and 7 (Guardrails & Governance) shipped. Phases 8 (Agent Triggers), 9 (Multi-Agent Workflows & Production) remaining.
+
+**What shipped in Phase 7:** Wrapper-based governance enforcement (`wrapper_allowlist` key, separate from Hermes-native `command_allowlist`), populated allowlists across all 6 governance reference files and 9 agent profile configs, mock-kubectl/mock-aws/mock-psql extended with HERMES_LAB_GOVERNANCE + HERMES_LAB_TRACK pre-flight check producing GOVERNANCE REJECTED banner on stderr + exit 1, Module 13 lab extended from 13 to 17 steps with new L4 walkthrough demonstrating three-layer defense (allowlist → DANGEROUS_PATTERNS → SOUL.md), reading reference.mdx §1 + new §1.5 documenting env vars, quiz question on three-layer defense.
 
 **What shipped in Phase 6:** Real K8s diagnostic skills (`sre-k8s-pod-health` primary + 3 addon scaffolds), 6 baked KIND scenario manifests for the K8S-02 failure modes, mock-kubectl extended for offline parity, Kiran agent profile rebuilt with K8s skill (light-edited SOUL.md, command_allowlist preserved for Phase 7), full cascade across 13 cross-module references including the removal of the "cross-domain teaching moment" rationalization in Module 10 lab MDX.
 
@@ -127,12 +130,12 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 - ~~Track C K8s agent ships with EC2 health check skill~~ — RESOLVED in Phase 6
 - ~~Module 7 Track C solution is also the EC2 skill~~ — RESOLVED in Phase 6
 - ~~Hermes repo has ~100 skills, zero are K8s/DevOps/SRE relevant~~ — PARTIALLY RESOLVED in Phase 6 (4 K8s skills now exist in course skills/ directory; Hermes repo upstream skills not yet contributed)
-- All L4 governance configs have empty command_allowlist — no guardrails demonstrated (Phase 7 will fix)
+- ~~All L4 governance configs have empty command_allowlist — no guardrails demonstrated~~ — RESOLVED in Phase 7 (wrapper_allowlist populated; command_allowlist is intentionally empty as it's the Hermes-native bypass key, not the governance enforcement key)
 - Module 14 capstone templates referenced but files incomplete
 
 **Deployment:** Docusaurus site auto-deploys to GitHub Pages at https://schoolofdevops.github.io/401/ on pushes affecting course-site/**
 
-**Tech debt:** Module 14 template completion, empty governance allowlists (Phase 7 target).
+**Tech debt:** Module 14 template completion. Phase 6 UAT session (06-UAT.md) still in `testing` status with 10 pending tests — needs user-acceptance follow-through before milestone close.
 
 ## Evolution
 
@@ -154,4 +157,4 @@ This document evolves at phase transitions and milestone boundaries.
 6. Log key decisions with outcomes
 
 ---
-*Last updated: 2026-04-07 after Phase 6 (K8s Skills & Agents) complete*
+*Last updated: 2026-04-07 after Phase 7 (Guardrails & Governance) complete*
