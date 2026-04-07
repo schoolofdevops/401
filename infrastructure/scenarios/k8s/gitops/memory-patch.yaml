@@ -1,0 +1,42 @@
+# infrastructure/scenarios/k8s/gitops/memory-patch.yaml
+#
+# Phase 9 FLEET-01 Path B sample memory limit overlay.
+# This file models the output the Track C specialist agent produces during a Path B run:
+# after diagnosis, the agent generates a YAML patch file, commits it to a feature branch
+# in the GitOps repo, opens a PR via `gh pr create`, and after human merge, apply.sh runs
+# this patched manifest against the cluster.
+#
+# The patch sets an explicit memory limit on the crasher container. The baseline manifest
+# at infrastructure/scenarios/k8s/02-crashloop-backoff.yaml has no resource limits at all,
+# so this overlay ADDS them. In a real OOMKilled scenario the patch would INCREASE an
+# existing limit from 64Mi to 256Mi. Lab narrative in Plan 09-02 frames it as a resource
+# fix applied as a teachable Path B demonstration.
+#
+# Apply manually (outside the lab) for smoke-test verification:
+#   kubectl apply -f infrastructure/scenarios/k8s/gitops/memory-patch.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crasher
+  namespace: k8s-trouble-crashloop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crasher
+  template:
+    metadata:
+      labels:
+        app: crasher
+    spec:
+      containers:
+      - name: crasher
+        image: busybox:1.36
+        command: ["sh", "-c", "echo 'starting...'; echo 'fatal: missing config'; exit 1"]
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
