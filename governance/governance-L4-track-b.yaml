@@ -20,3 +20,28 @@ command_allowlist: []
 # Note: Track B dangerous commands (aws ec2 terminate-instances,
 # modify-instance-attribute) are not in DANGEROUS_PATTERNS. SOUL.md NEVER
 # rules are the enforcement mechanism. The allowlist cannot affect them.
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# Read by infrastructure/wrappers/mock-aws when HERMES_LAB_GOVERNANCE=L4 and HERMES_LAB_TRACK=track-b.
+# Track B L4 = L3 FinOps allowlist + ec2 create-tags (tagging only, never modifies resources).
+wrapper_allowlist:
+  aws:
+    # L3 baseline
+    - "sts get-caller-identity"
+    - "ec2 describe-"
+    - "rds describe-"
+    - "cloudwatch get-metric-"
+    - "cloudwatch describe-alarms"
+    - "cloudwatch describe-alarm-history"
+    - "ce get-"
+    - "cost-explorer get-"
+    - "elbv2 describe-target-health"
+    - "cloudtrail lookup-events"
+    - "logs describe-"
+    - "logs get-log-events"
+    - "logs filter-log-events"
+    - "iam get-"
+    - "iam list-"
+    # L4 additions: targeted tagging (read-only semantically — tags are metadata)
+    - "ec2 create-tags"
+  # Note: kubectl and psql sections omitted — Track B only uses aws wrapper.

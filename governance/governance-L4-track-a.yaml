@@ -23,3 +23,23 @@ command_allowlist: []
 # Format: description-key strings from tools/approval.py DANGEROUS_PATTERNS
 # Track A: no mutations pre-approved at course level
 # Example (DO NOT add without security review): "SQL DROP" would pre-approve DROP TABLE/DATABASE
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# Read by infrastructure/wrappers/mock-psql when HERMES_LAB_GOVERNANCE=L4 and HERMES_LAB_TRACK=track-a.
+# Track A L4 = L3 database allowlist + archival INSERT patterns (smart-approval gated).
+wrapper_allowlist:
+  psql:
+    # L3 baseline
+    - "SELECT "
+    - "EXPLAIN "
+    - "EXPLAIN ANALYZE "
+    - "SHOW "
+    - "DESCRIBE "
+    - "\\d"
+    - "\\dt"
+    - "\\l"
+    - "DELETE FROM "
+    - "UPDATE "
+    # L4 additions: archival INSERT SELECT patterns
+    - "INSERT INTO "
+  # Note: kubectl and aws sections omitted — Track A only uses psql wrapper.

@@ -13,3 +13,4 @@ approvals:
   timeout: 300
 
 command_allowlist: []     # Nothing pre-approved
+# wrapper_allowlist not present at L1 — no terminal toolset means no wrapper invocation possible

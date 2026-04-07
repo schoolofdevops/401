@@ -17,3 +17,28 @@ approvals:
 command_allowlist: []
 # Note: Track C dangerous commands (kubectl delete, kubectl drain, kubectl cordon)
 # are not in DANGEROUS_PATTERNS. SOUL.md NEVER rules are the enforcement mechanism.
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# Read by infrastructure/wrappers/mock-kubectl when HERMES_LAB_GOVERNANCE=L4 and HERMES_LAB_TRACK=track-c.
+# Track C L4 = L3 Kubernetes allowlist + apply and rollout undo (smart-approval gated).
+wrapper_allowlist:
+  kubectl:
+    # L3 baseline
+    - "get pods"
+    - "get pod "
+    - "get nodes"
+    - "get endpoints"
+    - "describe pod "
+    - "describe node "
+    - "logs "
+    - "top pods"
+    - "top nodes"
+    - "rollout history"
+    - "rollout status"
+    - "diff "
+    - "explain "
+    # L4 additions: targeted mutations (smart-approval + SOUL.md NEVER are Layers 2 and 3)
+    - "apply "
+    - "rollout undo"
+  # Note: aws and psql sections omitted — Track C only uses kubectl wrapper.
+  # NOTE: kubectl delete, drain, exec, cordon, uncordon, taint are NEVER in the allowlist at any level.

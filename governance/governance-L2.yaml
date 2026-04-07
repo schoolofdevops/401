@@ -14,3 +14,38 @@ approvals:
   timeout: 300
 
 command_allowlist: []     # Nothing pre-approved
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# NOT a Hermes config key. Read by infrastructure/wrappers/mock-{kubectl,aws,psql}
+# when HERMES_LAB_GOVERNANCE=L2. Each wrapper reads only its own tool subsection.
+# Prefix matching: a command is allowed if "$1 $2 $3" starts with any listed string.
+wrapper_allowlist:
+  kubectl:
+    - "get pods"
+    - "get pod "
+    - "get nodes"
+    - "get endpoints"
+    - "describe pod "
+    - "describe node "
+    - "logs "
+    - "top pods"
+    - "top nodes"
+  aws:
+    - "sts get-caller-identity"
+    - "ec2 describe-"
+    - "rds describe-"
+    - "cloudwatch get-metric-"
+    - "cloudwatch describe-alarms"
+    - "cloudwatch describe-alarm-history"
+    - "ce get-"
+    - "cost-explorer get-"
+    - "elbv2 describe-target-health"
+    - "cloudtrail lookup-events"
+  psql:
+    - "SELECT "
+    - "EXPLAIN "
+    - "SHOW "
+    - "DESCRIBE "
+    - "\\d"
+    - "\\dt"
+    - "\\l"

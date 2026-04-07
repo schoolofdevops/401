@@ -14,3 +14,55 @@ approvals:
   timeout: 300
 
 command_allowlist: []     # Nothing permanently pre-approved; smart handles case-by-case
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# Read by infrastructure/wrappers/mock-{kubectl,aws,psql} when HERMES_LAB_GOVERNANCE=L3.
+# L3 = L2 read-only commands + rollout/investigation/diff commands.
+wrapper_allowlist:
+  kubectl:
+    # L2 baseline
+    - "get pods"
+    - "get pod "
+    - "get nodes"
+    - "get endpoints"
+    - "describe pod "
+    - "describe node "
+    - "logs "
+    - "top pods"
+    - "top nodes"
+    # L3 additions: rollout history, diff, explain
+    - "rollout history"
+    - "rollout status"
+    - "diff "
+    - "explain "
+  aws:
+    # L2 baseline
+    - "sts get-caller-identity"
+    - "ec2 describe-"
+    - "rds describe-"
+    - "cloudwatch get-metric-"
+    - "cloudwatch describe-alarms"
+    - "cloudwatch describe-alarm-history"
+    - "ce get-"
+    - "cost-explorer get-"
+    - "elbv2 describe-target-health"
+    - "cloudtrail lookup-events"
+    # L3 additions: logs, IAM read-only
+    - "logs describe-"
+    - "logs get-log-events"
+    - "logs filter-log-events"
+    - "iam get-"
+    - "iam list-"
+  psql:
+    # L2 baseline
+    - "SELECT "
+    - "EXPLAIN "
+    - "SHOW "
+    - "DESCRIBE "
+    - "\\d"
+    - "\\dt"
+    - "\\l"
+    # L3 additions: scoped mutations and EXPLAIN ANALYZE
+    - "EXPLAIN ANALYZE "
+    - "DELETE FROM "
+    - "UPDATE "
