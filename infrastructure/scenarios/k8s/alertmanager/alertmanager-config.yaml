@@ -1,0 +1,30 @@
+# Phase 8 / TRIG-01: AlertManager receiver config (reference copy)
+#
+# This file mirrors the `alertmanager.config:` block in
+# infrastructure/helm/prometheus-lab-values.yaml for teaching clarity.
+# It is NOT applied directly — the actual AlertManager runtime config comes
+# from the Helm release. Edit the helm values file to change behavior.
+#
+# Teaching point: AlertManager receiver URL uses host.docker.internal:8644,
+# which resolves to the host machine from inside Docker Desktop KIND nodes.
+# On Linux Docker (not Docker Desktop), use 172.17.0.1 instead (the docker0
+# bridge gateway) OR rely on the extraPortMapping in cluster-config.yaml.
+---
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'namespace']
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 12h
+  receiver: hermes-webhook
+
+receivers:
+  - name: hermes-webhook
+    webhook_configs:
+      - url: "http://host.docker.internal:8644/webhooks/alertmanager"
+        send_resolved: false
+        # send_resolved: false means AlertManager only POSTs when alerts fire,
+        # not when they resolve. Flip to true in production to get paired
+        # firing + resolved events.

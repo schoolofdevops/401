@@ -1,0 +1,33 @@
+# Phase 8 / TRIG-01: PrometheusRule firing on Phase 6 crashloop2 scenario
+# Apply: kubectl apply -f infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml
+# Cleanup: kubectl delete -f infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml
+#
+# The `release: kube-prometheus` label is REQUIRED — kube-prometheus-stack Helm chart
+# configures its Prometheus CRD to only watch PrometheusRule resources matching this label.
+# Without it, the rule is silently ignored. (See 08-RESEARCH.md Pitfall 1.)
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: hermes-lab-rules
+  namespace: monitoring
+  labels:
+    release: kube-prometheus
+    phase: "08"
+    trigger: alertmanager
+spec:
+  groups:
+    - name: hermes-lab.k8s-crashloop
+      rules:
+        - alert: PodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="k8s-trouble-crashloop"}[2m]) > 2
+          for: 30s
+          labels:
+            severity: warning
+            track: c
+            trigger_source: alertmanager
+          annotations:
+            summary: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is crash-looping"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} has restarted more than 2 times in 2 minutes."
+            runbook_url: "https://hermes-lab.local/runbook/k8s-crashloop"

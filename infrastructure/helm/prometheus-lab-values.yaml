@@ -1,9 +1,35 @@
 # Prometheus + Grafana lab values — optimized for developer laptops
 # Reduces resource requests so KIND doesn't OOM on 8GB machines
-# Disables alertmanager (not needed for observability labs)
+# Phase 8: AlertManager enabled for TRIG-01 (AlertManager webhook → Hermes gateway)
+# AlertManager UI available at NodePort 30093
 
 alertmanager:
-  enabled: false
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+  service:
+    type: NodePort
+    nodePort: 30093
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['alertname', 'namespace']
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 12h
+      receiver: hermes-webhook
+    receivers:
+      - name: hermes-webhook
+        webhook_configs:
+          - url: "http://host.docker.internal:8644/webhooks/alertmanager"
+            send_resolved: false
+            # send_resolved: false means AlertManager only POSTs when alerts fire,
+            # not when they resolve. Flip to true in production to get paired
+            # firing + resolved events.
 
 nodeExporter:
   resources:
