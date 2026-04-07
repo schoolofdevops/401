@@ -1,0 +1,50 @@
+# Phase 8 / TRIG-04: Telegram bot configuration example
+#
+# THIS IS A REFERENCE FILE — copy to ~/.hermes/telegram.yaml and edit.
+# DO NOT commit real tokens. The example below uses ${ENV_VAR} references
+# so the runtime values come from your shell or ~/.hermes/.env.
+#
+# WARNING: If you accidentally commit a real bot token, IMMEDIATELY revoke
+# it via @BotFather (/revoke) and generate a new one. GitHub secret scanning
+# will flag committed Telegram bot tokens within minutes.
+#
+# Activation: this config is read by `gateway/platforms/telegram.py` when the
+# Hermes gateway starts with the [messaging] extra installed and
+# TELEGRAM_BOT_TOKEN set in the environment.
+
+telegram:
+  enabled: true
+
+  # Bot token from @BotFather (NEVER hard-code this value)
+  # Set in shell: export TELEGRAM_BOT_TOKEN="123456:ABC..."
+  # Or in ~/.hermes/.env: TELEGRAM_BOT_TOKEN=123456:ABC...
+  bot_token: "${TELEGRAM_BOT_TOKEN}"
+
+  # Comma-separated Telegram user IDs allowed to interact with the bot.
+  # Get your user ID from @userinfobot in Telegram.
+  # Multiple admins: "111,222,333"
+  # Empty/unset = bot ignores ALL messages (safe default).
+  allowed_users: "${TELEGRAM_ALLOWED_USERS}"
+
+  # Default chat ID for cron jobs and other background tasks that deliver to
+  # Telegram. Usually the same as your user ID for personal bots, or a chat ID
+  # for group chats.
+  home_channel: "${TELEGRAM_HOME_CHANNEL:-${TELEGRAM_ALLOWED_USERS}}"
+
+  # Polling mode (default: long_polling). Webhook mode is also supported but
+  # requires a public HTTPS endpoint, which the lab doesn't have.
+  mode: long_polling
+
+  # Maximum message length the adapter will accept before splitting.
+  # Telegram's hard limit is 4096; the adapter splits longer agent responses
+  # into multiple messages automatically.
+  max_message_length: 4096
+
+  # Reply behavior: when the bot replies, should it use Telegram's "Reply to"
+  # threading feature so the reply visually attaches to the original command?
+  thread_replies: true
+
+  # Inherit Phase 7 governance from gateway process environment.
+  # The agent invoked by a slash command runs with whatever HERMES_LAB_GOVERNANCE
+  # was set when `hermes gateway run` was started.
+  inherit_governance: true

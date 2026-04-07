@@ -1,0 +1,48 @@
+# Phase 8 / TRIG-04: Telegram bot admin allowlist example
+#
+# This file documents the TELEGRAM_ALLOWED_USERS env var format that the
+# Hermes Telegram adapter (gateway/platforms/telegram.py line 240) reads.
+#
+# The actual restriction is enforced by an env var, not a YAML file —
+# this file exists as a teaching artifact and as a place to document
+# WHO each user ID belongs to (so the admin list doesn't drift over time).
+#
+# To apply: set TELEGRAM_ALLOWED_USERS env var to the comma-joined IDs
+# from the `users` list below.
+#
+#   export TELEGRAM_ALLOWED_USERS="$(yq -r '.users[].id' admin-allowlist.example.yaml | tr '\n' ',' | sed 's/,$//')"
+#
+# Or hard-code in ~/.hermes/.env:
+#   TELEGRAM_ALLOWED_USERS=987654321,123456789,555000111
+
+# Hermes lab admin allowlist
+# Each entry is a real Telegram user ID (numeric) — get yours from @userinfobot.
+# Anyone NOT in this list is silently ignored by the bot.
+#
+# IDs below are PLACEHOLDERS — replace with real IDs from your team.
+
+users:
+  - id: 987654321
+    name: "you (placeholder — get from @userinfobot)"
+    role: primary_admin
+    governance_max: L4   # Documentation only — actual governance is per-process
+    notes: "Primary lab participant — full access to all slash commands at L4"
+
+  - id: 123456789
+    name: "secondary (placeholder)"
+    role: secondary_admin
+    governance_max: L3
+    notes: "On-call backup — read-only and proposal-mode access"
+
+  - id: 555000111
+    name: "observer (placeholder)"
+    role: observer
+    governance_max: L2
+    notes: "Read-only diagnostic access — for shadowing during onboarding"
+
+# Generation note:
+# To turn this into the actual env var that the Telegram adapter reads:
+#   yq -r '.users[].id' admin-allowlist.example.yaml | paste -sd, -
+# → 987654321,123456789,555000111
+#
+# Then export TELEGRAM_ALLOWED_USERS="$(...)"
