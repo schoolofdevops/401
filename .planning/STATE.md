@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Realistic Agents & Production Workflows
-status: Ready to plan
-stopped_at: Phase 8 context gathered
-last_updated: "2026-04-07T12:03:02.365Z"
+status: Ready to execute
+stopped_at: Completed 08-02-PLAN.md (TRIG-03 GitHub webhook + TRIG-04 Telegram bot infrastructure)
+last_updated: "2026-04-07T13:45:22.365Z"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 10
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** DevOps practitioners learn to build AI agents that encode their operational expertise — context engineering is THE skill that makes agents useful.
-**Current focus:** Phase 7 — guardrails-governance
+**Current focus:** Phase 8 — agent-triggers
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
+Phase: 8 (agent-triggers) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Plan: Not started
 | Phase 07-guardrails-governance P02 | 10min | 2 tasks | 13 files |
 | Phase 07-guardrails-governance P01 | 60 | 2 tasks | 9 files |
 | Phase 07-guardrails-governance P03 | 13 | 3 tasks | 4 files |
+| Phase 08 P02 | 5 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -153,6 +154,8 @@ Recent decisions affecting current work:
 - [Phase 07-01]: awk-based YAML parser chosen for wrapper allowlist extraction: avoids yq v3/v4 version mismatch; wrapper code stays readable as teaching material
 - [Phase 07-03]: Verification checklist check 8 uses mock-kubectl directly (wrapper named mock-kubectl not kubectl, no symlink in wrappers/)
 - [Phase 07-03]: SOUL.md is load-bearing narrative preserved and extended for Track B/C: Phase 7 Layer 1 adds mechanical defense but SOUL.md remains the sole protection for novel commands
+- [Phase 08]: smee-client pinned at v5.0.0 via npx for TRIG-03 (no global install required)
+- [Phase 08]: Telegram long-polling confirmed as lab default (BLOCKER-01 resolved — adapter exists in gateway/platforms/telegram.py)
 
 ### Pending Todos
 
@@ -166,6 +169,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T12:03:02.357Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-agent-triggers/08-CONTEXT.md
+Last session: 2026-04-07T13:45:22.359Z
+Stopped at: Completed 08-02-PLAN.md (TRIG-03 GitHub webhook + TRIG-04 Telegram bot infrastructure)
+Resume file: None

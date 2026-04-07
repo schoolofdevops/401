@@ -89,10 +89,10 @@ Plans:
   2. Participant applying the CronJob manifest to KIND observes the scheduled agent running on interval, completing a health check, and writing a status report — without any manual invocation
   3. Participant sending a GitHub webhook event (or using the PR review bot pattern) observes the agent receiving the event and producing a review comment or summary output
   4. Participant following the chat bot lab sends a slash command via Telegram or Slack and receives an agent response posted back to the channel — full round-trip without terminal interaction
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 Plans:
-- [ ] 08-01-PLAN.md — TRIG-01 + TRIG-02 KIND infrastructure: AlertManager helm/PrometheusRule/receiver, K8s CronJob Dockerfile + per-track manifests
-- [ ] 08-02-PLAN.md — TRIG-03 + TRIG-04 external services infrastructure: GitHub webhook (smee.io setup, sample payload, prompt template), Telegram bot (config, admin allowlist, slash command spec)
+- [x] 08-01-PLAN.md — TRIG-01 + TRIG-02 KIND infrastructure: AlertManager helm/PrometheusRule/receiver, K8s CronJob Dockerfile + per-track manifests
+- [x] 08-02-PLAN.md — TRIG-03 + TRIG-04 external services infrastructure: GitHub webhook (smee.io setup, sample payload, prompt template), Telegram bot (config, admin allowlist, slash command spec)
 - [ ] 08-03-PLAN.md — Module 12 lab extension (8 new GUIDED steps in both LAB.mdx + LAB.md mirrors), reading reference comparison table + Phase 8 env var docs, 3 new quiz questions
 
 ### Phase 9: Multi-Agent Workflows & Production
@@ -117,7 +117,7 @@ Plans:
 | 5. Module Consolidation | v1.1 | 3/3 | Complete   | 2026-04-07 |
 | 6. K8s Skills & Agents | v1.1 | 3/3 | Complete    | 2026-04-07 |
 | 7. Guardrails & Governance | v1.1 | 3/3 | Complete    | 2026-04-07 |
-| 8. Agent Triggers | v1.1 | 0/3 | Not started | - |
+| 8. Agent Triggers | v1.1 | 2/3 | In Progress|  |
 | 9. Multi-Agent Workflows & Production | v1.1 | 0/? | Not started | - |
 
 ---

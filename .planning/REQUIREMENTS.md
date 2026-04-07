@@ -26,8 +26,8 @@ Requirements for v1.1: Realistic Agents & Production Workflows. Each maps to roa
 
 - [ ] **TRIG-01**: AlertManager webhook triggers triage agent that diagnoses pod issues on KIND with Prometheus stack
 - [ ] **TRIG-02**: K8s CronJob scheduled agent runs periodic health checks and reports status
-- [ ] **TRIG-03**: GitHub webhook/command triggers PR review bot agent
-- [ ] **TRIG-04**: Chat bot interaction via Telegram or Slack — slash commands trigger agent workflows, results posted back
+- [x] **TRIG-03**: GitHub webhook/command triggers PR review bot agent
+- [x] **TRIG-04**: Chat bot interaction via Telegram or Slack — slash commands trigger agent workflows, results posted back
 
 ### Guardrails & Governance
 
@@ -87,8 +87,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | K8S-05 | Phase 6 | Complete |
 | TRIG-01 | Phase 8 | Pending |
 | TRIG-02 | Phase 8 | Pending |
-| TRIG-03 | Phase 8 | Pending |
-| TRIG-04 | Phase 8 | Pending |
+| TRIG-03 | Phase 8 | Complete |
+| TRIG-04 | Phase 8 | Complete |
 | GOV-01 | Phase 7 | Complete |
 | GOV-02 | Phase 7 | Complete |
 | GOV-03 | Phase 7 | Complete |
