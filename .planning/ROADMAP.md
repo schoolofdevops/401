@@ -121,7 +121,7 @@ Plans:
 | 6. K8s Skills & Agents | v1.1 | 3/3 | Complete    | 2026-04-07 |
 | 7. Guardrails & Governance | v1.1 | 3/3 | Complete    | 2026-04-07 |
 | 8. Agent Triggers | v1.1 | 3/3 | Complete    | 2026-04-07 |
-| 9. Multi-Agent Workflows & Production | v1.1 | 2/2 | Complete   | 2026-04-07 |
+| 9. Multi-Agent Workflows & Production | v1.1 | 2/2 | Complete    | 2026-04-07 |
 
 ---
 
