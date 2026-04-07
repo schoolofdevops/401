@@ -41,7 +41,7 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 - ✓ K8s diagnostic SKILL.md with real kubectl commands replacing EC2 skill across Modules 7, 10 + Kiran agent profile (Phase 6 complete: sre-k8s-pod-health primary + 3 addon scaffolds + 6 baked KIND scenario manifests + cascade across 13 files, zero EC2 references in K8s/Kiran/Track C contexts)
 - ✓ Broken-pod scenarios on KIND as lab exercises (Phase 6 complete: 6 baked manifests for ImagePullBackOff/CrashLoopBackOff/OOMKilled/liveness probe/missing secret/port mismatch with sibling docs and capture-mock-data.sh; kube-troublesim deferred to v1.2 exploratory due to immaturity — 1 commit, no releases)
 - ✓ Hermes command allowlist/blocklist guardrails with `wrapper_allowlist` enforcement across mock-kubectl/mock-aws/mock-psql, populated for all 3 tracks at L1-L4, Module 13 lab extended with L4 walkthrough (Phase 7 complete: PATH B wrapper extension since Hermes has no native DANGEROUS_PATTERNS extension; HERMES_LAB_GOVERNANCE + HERMES_LAB_TRACK env vars; three-layer defense narrative; 11/11 must-haves verified including live wrapper enforcement tests)
-- [ ] Agent trigger patterns: AlertManager webhook → triage agent, K8s CronJob scheduled agent, chat bot interaction, GitHub event PR review bot (Module 12)
+- ✓ Agent trigger patterns: real Prometheus + AlertManager stack on KIND firing on Phase 6 crashloop2 scenario, K8s CronJob comparison alongside Hermes cron primary, smee.io + real GitHub webhook with --deliver github_comment built-in, Telegram bot via @BotFather with three slash commands per track and L2-default + admin-override governance (Phase 8 complete: Module 12 lab extended from 8 to 16 GUIDED steps in both mirrors, 4/4 must-haves verified, all 4 TRIG requirements met, Phase 7 wrapper enforcement preserved, Telegram adapter exists in Hermes — no new code needed)
 - [ ] K8s Agent Sandbox exploratory lab — productionizing agents on Kubernetes (new K8s SIG)
 - [ ] Deeper Hermes multi-agent workflows — end-to-end: alert → triage → diagnose → propose fix → human approval → apply
 - [ ] Rebuild all Hermes module labs (7, 8, 10, 11, 12, 13) with working, relevant K8s-first content
@@ -95,6 +95,9 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 | Baked manifests over kube-troublesim (v1.1) | kube-troublesim repo has 1 commit, no releases, no README — too immature for required lab dependency | ✓ Validated (Phase 6): 6 hand-crafted YAML manifests in infrastructure/scenarios/k8s/ with mock JSON parity, kube-troublesim relegated to exploratory PROJECTS.mdx with "watch this space" framing |
 | Command allowlist/blocklist guardrails (v1.1) | Empty allowlists miss key governance teaching opportunity | ✓ Validated (Phase 7): 11/11 must-haves verified, all 3 GOV requirements (GOV-01..03) met, populated wrapper_allowlist across 6 governance/*.yaml + 9 agent profile configs, mock-kubectl/aws/psql wrappers extended with HERMES_LAB_GOVERNANCE pre-flight, Module 13 lab extended with L4 walkthrough, three-layer defense taught explicitly |
 | PATH B wrapper enforcement over native Hermes patterns (v1.1) | Hermes has no extension mechanism for DANGEROUS_PATTERNS — researched and confirmed | ✓ Validated (Phase 7): wrapper-based enforcement with awk YAML parsing, GOVERNANCE REJECTED banner to stderr + exit 1, backward compat preserved for Module 10 lab |
+| Hermes cron primary over K8s CronJob for scheduled agents (v1.1) | Most agent work needs gateway-shared state (skills, audit, conversation) — Hermes cron is the pragmatic choice; K8s CronJob is for stateless one-shot diagnostics | ✓ Validated (Phase 8): Module 12 Steps 2-4 keep Hermes cron as primary, ONE comparison K8s CronJob step in Step 11 with explicit "use this when…" decision matrix |
+| Telegram primary chat platform over Slack (v1.1) | Workshop accessibility — @BotFather is free and admin-free; Slack requires workspace admin and blocks Udemy learners | ✓ Validated (Phase 8): real Telegram bot setup hands-on (Steps 14-16), Slack stays as production-reference doc per existing Module 12 Step 8 |
+| Real KIND infrastructure for triggers, Solo Learner fallbacks (v1.1) | Workshop participants get authentic flow; Udemy learners get accessible alternative | ✓ Validated (Phase 8): full Prometheus + AlertManager stack on KIND firing on Phase 6 crashloop2 scenario; smee.io for real GitHub webhooks with sample-pr-payload.json fallback for Solo Learners |
 
 ## Current Milestone: v1.1 Realistic Agents & Production Workflows
 
@@ -109,9 +112,11 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 - K8s Agent Sandbox exploratory content
 - End-to-end multi-agent workflows that actually execute
 
-## Current State (v1.1 In Progress — Phase 7 Complete)
+## Current State (v1.1 In Progress — Phase 8 Complete)
 
-**v1.1 progress:** 3/5 phases complete. Phases 5 (Module Consolidation), 6 (K8s Skills & Agents), and 7 (Guardrails & Governance) shipped. Phases 8 (Agent Triggers), 9 (Multi-Agent Workflows & Production) remaining.
+**v1.1 progress:** 4/5 phases complete. Phases 5 (Module Consolidation), 6 (K8s Skills & Agents), 7 (Guardrails & Governance), and 8 (Agent Triggers) shipped. Phase 9 (Multi-Agent Workflows & Production) remaining.
+
+**What shipped in Phase 8:** Module 12 lab extended from 8 to 16 GUIDED steps in both course-site MDX and modules MD mirrors. Real Prometheus + AlertManager stack on KIND (helm value flipped, PrometheusRule with `release: kube-prometheus` discovery label, receiver to host.docker.internal:8644). PrometheusRule fires on Phase 6 crashloop2 scenario. Minimal Hermes Dockerfile (python:3.12-slim) and 3-track K8s CronJob manifest with Phase 7 governance env vars and `imagePullPolicy: IfNotPresent`. smee.io setup script using `npx --yes smee-client@5.0.0` for real GitHub webhook flow. Built-in `--deliver github_comment` (no custom HTTP). Telegram bot config examples (adapter already exists in Hermes — `gateway/platforms/telegram.py`). Three slash commands per track (/diagnose, /status, /help). Default L2 governance + admin override allowlist. Module 12 reference.mdx 4-trigger comparison table + Phase 8 env vars (GITHUB_TOKEN, TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USERS, SMEE_URL). 3 new quiz questions.
 
 **What shipped in Phase 7:** Wrapper-based governance enforcement (`wrapper_allowlist` key, separate from Hermes-native `command_allowlist`), populated allowlists across all 6 governance reference files and 9 agent profile configs, mock-kubectl/mock-aws/mock-psql extended with HERMES_LAB_GOVERNANCE + HERMES_LAB_TRACK pre-flight check producing GOVERNANCE REJECTED banner on stderr + exit 1, Module 13 lab extended from 13 to 17 steps with new L4 walkthrough demonstrating three-layer defense (allowlist → DANGEROUS_PATTERNS → SOUL.md), reading reference.mdx §1 + new §1.5 documenting env vars, quiz question on three-layer defense.
 
@@ -135,7 +140,7 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 
 **Deployment:** Docusaurus site auto-deploys to GitHub Pages at https://schoolofdevops.github.io/401/ on pushes affecting course-site/**
 
-**Tech debt:** Module 14 template completion. Phase 6 UAT session (06-UAT.md) still in `testing` status with 10 pending tests — needs user-acceptance follow-through before milestone close.
+**Tech debt:** Module 14 template completion. Phase 6 UAT session (06-UAT.md) still in `testing` status with 10 pending tests — needs user-acceptance follow-through before milestone close. Phase 8 has 4 human verification items requiring live infrastructure (KIND cluster running, Hermes gateway, real GitHub repo, real Telegram account) — captured in 08-VERIFICATION.md.
 
 ## Evolution
 
@@ -157,4 +162,4 @@ This document evolves at phase transitions and milestone boundaries.
 6. Log key decisions with outcomes
 
 ---
-*Last updated: 2026-04-07 after Phase 7 (Guardrails & Governance) complete*
+*Last updated: 2026-04-07 after Phase 8 (Agent Triggers) complete*
