@@ -59,10 +59,10 @@ Plans:
   3. The Track C agent (Kiran) loads with the K8s diagnostic skill, connects to a live KIND cluster, and returns meaningful diagnosis output — not an EC2 health check
   4. Module 7 Track C starter and solution files contain K8s skill content — opening either file shows kubectl-based diagnostics, not EC2 health checks
   5. Additional K8s skills (node health check, resource quota analysis, deployment rollback investigation) are available as starter files for participant extension
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 **UI hint**: no
 Plans:
-- [ ] 06-01-PLAN.md — Author primary sre-k8s-pod-health skill (full depth, 6 decision branches) + 3 starter scaffold addons (node-health, resource-quota, rollback-investigator)
+- [x] 06-01-PLAN.md — Author primary sre-k8s-pod-health skill (full depth, 6 decision branches) + 3 starter scaffold addons (node-health, resource-quota, rollback-investigator)
 - [ ] 06-02-PLAN.md — Build infrastructure: 6 baked KIND scenario manifests, 6 sibling scenario docs, mock-kubectl extension for 6 new SCENARIOs, capture-mock-data.sh, 13 mock data parity files
 - [ ] 06-03-PLAN.md — Cascade: install K8s skill into Kiran profiles, light-edit SOUL.md, replace Module 7/10 solution files, update 6 cascade files (lab MDX, reading guides, resources, exploratory)
 
@@ -107,7 +107,7 @@ Plans:
 | 3. Day 2 Modules | v1.0 | 5/5 | Complete | 2026-04-07 |
 | 4. Remaining Content | v1.0 | 3/3 | Complete | 2026-04-07 |
 | 5. Module Consolidation | v1.1 | 3/3 | Complete   | 2026-04-07 |
-| 6. K8s Skills & Agents | v1.1 | 0/3 | Planned | - |
+| 6. K8s Skills & Agents | v1.1 | 1/3 | In Progress|  |
 | 7. Guardrails & Governance | v1.1 | 0/? | Not started | - |
 | 8. Agent Triggers | v1.1 | 0/? | Not started | - |
 | 9. Multi-Agent Workflows & Production | v1.1 | 0/? | Not started | - |
