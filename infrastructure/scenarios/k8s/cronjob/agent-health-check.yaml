@@ -5,8 +5,8 @@
 #   - hermes-track-b-health (FinOps -- sre-ec2-health-check)
 #   - hermes-track-c-health (Kubernetes -- sre-k8s-pod-health)
 #
-# Phase 7 governance inheritance: each CronJob sets HERMES_LAB_GOVERNANCE,
-# HERMES_LAB_TRACK, HERMES_LAB_MODE, HERMES_LAB_SCENARIO, and MOCK_DATA_DIR.
+# Phase 7 governance inheritance: each CronJob sets governance and lab control
+# env vars. The wrappers in infrastructure/wrappers/ read these to enforce allowlists.
 # The wrappers in infrastructure/wrappers/ read these env vars and enforce
 # the Phase 7 wrapper_allowlist. Scheduled agents are governed exactly like
 # interactive ones. (See 08-CONTEXT.md D-02.)
