@@ -38,8 +38,8 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 ### Active (v1.1)
 
 - ✓ Module 5/6 consolidation: 5a→Module 5 (Superpowers for IaC), 5b→Module 6 (AI Workflow Tools), old Module 6 absorbed (Phase 5 complete)
-- [ ] K8s diagnostic SKILL.md with real kubectl commands (replace EC2 skill in Track C across Modules 7, 10)
-- [ ] kube-troublesim integration — broken pods on KIND as lab scenarios for agent diagnosis
+- ✓ K8s diagnostic SKILL.md with real kubectl commands replacing EC2 skill across Modules 7, 10 + Kiran agent profile (Phase 6 complete: sre-k8s-pod-health primary + 3 addon scaffolds + 6 baked KIND scenario manifests + cascade across 13 files, zero EC2 references in K8s/Kiran/Track C contexts)
+- ✓ Broken-pod scenarios on KIND as lab exercises (Phase 6 complete: 6 baked manifests for ImagePullBackOff/CrashLoopBackOff/OOMKilled/liveness probe/missing secret/port mismatch with sibling docs and capture-mock-data.sh; kube-troublesim deferred to v1.2 exploratory due to immaturity — 1 commit, no releases)
 - [ ] Hermes command allowlist/blocklist guardrails (kubectl get allowed, kubectl delete blocked) in Modules 10 and 13
 - [ ] Agent trigger patterns: AlertManager webhook → triage agent, K8s CronJob scheduled agent, chat bot interaction, GitHub event PR review bot (Module 12)
 - [ ] K8s Agent Sandbox exploratory lab — productionizing agents on Kubernetes (new K8s SIG)
@@ -91,8 +91,9 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 | Track selection in Module 5 & 6 | Accommodate different participant interests (IaC tools vary by team) | ✓ Validated: Helm (Track A) and CI/CD (Track B) completed; Terraform (6-A) and K8s+ArgoCD (6-B) completed |
 | Scope v1.0 to core (descope Hermes + Track C) | Ensure ship on deadline; Hermes labs and CI/CD orchestration deferred to v1.1 | ✓ Validated: v1.0 ships 14 modules (1-6, 9, 14 complete; 7-8, 10-13 documented for Hermes integration); MOD6-03 deferred |
 | Consolidate Module 5/6 (v1.1) | 5a too basic, old Module 6 repetitive with 5a — Superpowers adds real value | ✓ Validated (Phase 5): 13/13 must-haves verified, 4/4 requirements met, no broken module-5/6 links |
-| K8s-first agent rebuild (v1.1) | EC2 skill on K8s agent undermines course credibility; kube-troublesim provides real scenarios | — Pending |
-| Command allowlist/blocklist guardrails (v1.1) | Empty allowlists miss key governance teaching opportunity | — Pending |
+| K8s-first agent rebuild (v1.1) | EC2 skill on K8s agent undermines course credibility; baked KIND manifests provide real scenarios | ✓ Validated (Phase 6): 5/5 must-haves verified, all 5 K8S requirements (K8S-01..05) met, sre-k8s-pod-health 287-line skill mirrors EC2 template, 6 scenarios + cascade complete, zero EC2 refs in K8s/Kiran/Track C contexts |
+| Baked manifests over kube-troublesim (v1.1) | kube-troublesim repo has 1 commit, no releases, no README — too immature for required lab dependency | ✓ Validated (Phase 6): 6 hand-crafted YAML manifests in infrastructure/scenarios/k8s/ with mock JSON parity, kube-troublesim relegated to exploratory PROJECTS.mdx with "watch this space" framing |
+| Command allowlist/blocklist guardrails (v1.1) | Empty allowlists miss key governance teaching opportunity | — Pending (Phase 7) |
 
 ## Current Milestone: v1.1 Realistic Agents & Production Workflows
 
@@ -107,9 +108,11 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 - K8s Agent Sandbox exploratory content
 - End-to-end multi-agent workflows that actually execute
 
-## Current State (v1.0 Shipped)
+## Current State (v1.1 In Progress — Phase 6 Complete)
 
-**What shipped:** 14-module course with labs, reading, quizzes for Modules 1-6, 9, 14. Modules 7-8, 10-13 have design documents and external references pointing to Hermes repo.
+**v1.1 progress:** 2/5 phases complete. Phase 5 (Module Consolidation) and Phase 6 (K8s Skills & Agents) shipped. Phases 7 (Guardrails & Governance), 8 (Agent Triggers), 9 (Multi-Agent Workflows & Production) remaining.
+
+**What shipped in Phase 6:** Real K8s diagnostic skills (`sre-k8s-pod-health` primary + 3 addon scaffolds), 6 baked KIND scenario manifests for the K8S-02 failure modes, mock-kubectl extended for offline parity, Kiran agent profile rebuilt with K8s skill (light-edited SOUL.md, command_allowlist preserved for Phase 7), full cascade across 13 cross-module references including the removal of the "cross-domain teaching moment" rationalization in Module 10 lab MDX.
 
 **Codebase:** ~100K lines across 605 files (Docusaurus site, reference app, instructor guides, labs, reading materials).
 
@@ -121,15 +124,15 @@ DevOps practitioners learn to build AI agents that encode their operational expe
 - Need concrete guardrails demo (command allowlist/blocklist)
 
 **Known issues:**
-- Track C K8s agent ships with EC2 health check skill (sre-ec2-health-check) — completely wrong domain
-- Module 7 Track C solution is also the EC2 skill — no K8s diagnostic skill exists anywhere
-- Hermes repo has ~100 skills, zero are K8s/DevOps/SRE relevant
-- All L4 governance configs have empty command_allowlist — no guardrails demonstrated
+- ~~Track C K8s agent ships with EC2 health check skill~~ — RESOLVED in Phase 6
+- ~~Module 7 Track C solution is also the EC2 skill~~ — RESOLVED in Phase 6
+- ~~Hermes repo has ~100 skills, zero are K8s/DevOps/SRE relevant~~ — PARTIALLY RESOLVED in Phase 6 (4 K8s skills now exist in course skills/ directory; Hermes repo upstream skills not yet contributed)
+- All L4 governance configs have empty command_allowlist — no guardrails demonstrated (Phase 7 will fix)
 - Module 14 capstone templates referenced but files incomplete
 
 **Deployment:** Docusaurus site auto-deploys to GitHub Pages at https://schoolofdevops.github.io/401/ on pushes affecting course-site/**
 
-**Tech debt:** EC2→K8s skill replacement, Module 14 template completion, empty governance allowlists.
+**Tech debt:** Module 14 template completion, empty governance allowlists (Phase 7 target).
 
 ## Evolution
 
@@ -151,4 +154,4 @@ This document evolves at phase transitions and milestone boundaries.
 6. Log key decisions with outcomes
 
 ---
-*Last updated: 2026-04-07 after Phase 5 (Module Consolidation) complete*
+*Last updated: 2026-04-07 after Phase 6 (K8s Skills & Agents) complete*
