@@ -210,3 +210,564 @@ hermes --profile ./coordinator --task "Investigate: API latency spike started at
 ```
 
 The coordinator will delegate to each specialist, collect their analyses of the simulated data, and produce a cross-domain synthesis. You are playing the role of all three specialists' "infrastructure" — the mock data files provide the evidence each specialist reads.
+
+---
+
+## 7. Productionizing Hermes Agents
+
+Phase 9 closes v1.1 with a production-grade incident response chain running on KIND. This section
+answers the natural follow-up question: "How do I take this to production?" It covers four topics
+— packaging, deployment, monitoring, and scaling — with real Hermes config examples and
+cross-references to the Phase 6/7/8 components you built earlier in the course.
+
+This is not generic cloud architecture theory. Every example below ties to a specific artifact you
+created in the course repo.
+
+---
+
+### 7.1 Packaging
+
+Agents are shipped as three kinds of artifacts: profile directories (`agents/`), skills libraries
+(`skills/`), and the Hermes runtime (pip-installed or container-packaged).
+
+#### Container image structure
+
+The canonical Hermes agent container has four layers:
+
+```dockerfile
+FROM python:3.12-slim
+
+# Layer 1: Hermes runtime (pinned version from PyPI or GitHub source)
+RUN pip install 'hermes-agent[messaging,cron]==0.4.2'
+
+# Layer 2: Agent profile (copy your agents/fleet-coordinator/ or agents/track-c-kubernetes/)
+COPY agents/fleet-coordinator /app/profiles/fleet
+COPY agents/track-c-kubernetes /app/profiles/track-c
+
+# Layer 3: Skills library (required skills for the agent's domain)
+COPY skills/sre-k8s-pod-health /app/skills/sre-k8s-pod-health
+
+# Layer 4: Governance configs (per-track L1-L4 allowlists)
+COPY governance /app/governance
+
+# Runtime env
+ENV HERMES_PROFILE_DIR=/app/profiles \
+    HERMES_SKILLS_DIR=/app/skills \
+    HERMES_GOVERNANCE_DIR=/app/governance
+
+ENTRYPOINT ["hermes", "-p", "fleet", "gateway", "run"]
+```
+
+Build with explicit version tags — NEVER `:latest`. Tag by git sha + semver:
+
+```bash
+docker build -t fleet-coordinator:v0.4.2-$(git rev-parse --short HEAD) .
+docker push your-registry/fleet-coordinator:v0.4.2-a1b2c3d
+```
+
+#### Version pinning
+
+Hermes runtime version pinning matters because inter-agent delegation semantics change between
+releases. The toolset intersection logic you observed in Morgan's Phase 9 fix (why `terminal` must
+be in Morgan's `platform_toolsets.cli`) was introduced in a specific minor version. Pin exact
+versions in production:
+
+| Artifact | Pin strategy |
+|---|---|
+| `hermes-agent` pip package | `==0.4.2` exact version, bump in a dedicated PR |
+| Container base image | `python:3.12.8-slim` exact patch version |
+| Agent profile | Git commit SHA tracked in your agent registry |
+| Skills | Git commit SHA tracked per skill |
+| Governance configs | Git commit SHA, synced together with skills |
+
+Tag all four together: `fleet-coordinator:0.4.2-skills-a1b2c3d-gov-e4f5g6h`.
+
+#### Dependency management
+
+Agents with external dependencies (`gh` CLI for Path B, `kubectl` for Track C, `aws` CLI for
+Track B) must ship those binaries in the container. Phase 9 uses:
+
+```dockerfile
+# Additional Layer 5: external CLIs the agent will invoke via terminal toolset
+RUN apt-get update && apt-get install -y curl git jq \
+    && curl -LO "https://dl.k8s.io/release/v1.32.0/bin/linux/amd64/kubectl" \
+    && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl \
+    && curl -LO "https://github.com/cli/cli/releases/download/v2.63.0/gh_2.63.0_linux_amd64.tar.gz" \
+    && tar -xzf gh_2.63.0_linux_amd64.tar.gz \
+    && mv gh_2.63.0_linux_amd64/bin/gh /usr/local/bin/gh
+```
+
+This is also where you install `infrastructure/wrappers/mock-kubectl` (Phase 7) if you want
+wrapper enforcement to travel with the container rather than requiring runtime PATH manipulation.
+
+#### Pitfall: profile directory naming
+
+Hermes loads profiles by the directory name inside `HERMES_PROFILE_DIR`. If you copy your
+`agents/fleet-coordinator/` to `/app/profiles/fleet/`, Hermes launches it as `hermes -p fleet`.
+If the directory is named `fleet-coordinator` (not `fleet`), the launch command changes to
+`hermes -p fleet-coordinator`. The Module 11 lab uses `-p fleet` — match the convention in your
+Dockerfile's COPY destination path.
+
+---
+
+### 7.2 Deployment
+
+Three deployment patterns are in scope for Hermes agents running in production.
+
+#### Pattern A — Kubernetes Deployment (long-lived agents)
+
+Long-lived agents like Morgan (webhook-triggered fleet coordinator) run as K8s Deployments.
+The Phase 9 FLEET-01 chain runs this way in production — a single `fleet-coordinator` Deployment
+receives webhook traffic from AlertManager and scales horizontally under alert volume.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fleet-coordinator
+  namespace: hermes-agents
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fleet-coordinator
+  template:
+    metadata:
+      labels:
+        app: fleet-coordinator
+    spec:
+      containers:
+      - name: fleet-coordinator
+        image: your-registry/fleet-coordinator:0.4.2-a1b2c3d
+        env:
+        - name: HERMES_LAB_GOVERNANCE
+          value: "L4"
+        - name: HERMES_LAB_TRACK
+          value: "track-c"
+        - name: TELEGRAM_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: telegram-bot
+              key: token
+        - name: TELEGRAM_ALLOWED_USERS
+          valueFrom:
+            secretKeyRef:
+              name: telegram-bot
+              key: allowed-users
+        ports:
+        - containerPort: 8644
+          name: webhook
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8644
+          periodSeconds: 30
+        resources:
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+```
+
+Create the Telegram secret from Phase 8 setup:
+
+```bash
+kubectl create namespace hermes-agents
+kubectl create secret generic telegram-bot \
+  --from-literal=token="$TELEGRAM_BOT_TOKEN" \
+  --from-literal=allowed-users="$TELEGRAM_ALLOWED_USERS" \
+  -n hermes-agents
+```
+
+#### Pattern B — Kubernetes CronJob (scheduled agents)
+
+Scheduled agents like periodic health-check bots run as K8s CronJobs. This is the Phase 8
+TRIG-02 pattern — see `infrastructure/scenarios/k8s/cronjob/` for the manifests you built in
+Module 12.
+
+Key production considerations for scheduled agents:
+
+- Use `restartPolicy: Never` and `backoffLimit: 2` — failed health checks should not retry
+  forever
+- Mount a secret volume for API tokens (not env vars embedded in the manifest)
+- Set explicit `activeDeadlineSeconds` to kill runaway agents
+- Use `successfulJobsHistoryLimit: 3` and `failedJobsHistoryLimit: 5` to prevent audit log bloat
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: track-c-health-check
+  namespace: hermes-agents
+spec:
+  schedule: "*/15 * * * *"   # every 15 minutes
+  concurrencyPolicy: Forbid   # never run two simultaneously
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 300
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: track-c-check
+            image: your-registry/track-c-kubernetes:0.4.2-a1b2c3d
+            args: ["hermes", "-p", "track-c", "run", "--task", "Periodic pod health check — all namespaces"]
+            envFrom:
+            - secretRef:
+                name: hermes-agent-secrets
+```
+
+#### Pattern C — GitOps deployment via PR merge
+
+The Phase 9 FLEET-01 Path B pattern (specialist opens PR → human merges → `apply.sh` syncs) is
+the same pattern used in production GitOps deployments. ArgoCD, Flux, or plain CI-triggered
+`helm upgrade` calls all implement this pattern. Decision table:
+
+| Your setup | Recommended sync mechanism |
+|---|---|
+| Team already runs ArgoCD | ArgoCD Application → auto-sync on merge |
+| Team runs Flux | Flux Kustomization → auto-sync on merge |
+| Team runs CI-driven deploys | CI pipeline on merge → `helm upgrade` or `kubectl apply` |
+| Small shop / solo ops | `apply.sh` equivalent script triggered manually or via webhook |
+
+Phase 9 Path B Sub-path B2 (`infrastructure/scenarios/k8s/gitops/apply.sh`) models the last row.
+ArgoCD (Sub-path B1) is a v1.2 course alternative once ArgoCD infrastructure is established.
+
+#### GitOps repo structure recommendation
+
+For agent-managed changes, keep the GitOps repo structure simple:
+
+```
+hermes-fleet-fixes/
+├── README.md                    # from gitops-repo-template/README.md
+├── patches/                     # YAML overlays generated by agents
+│   └── memory-patch-<sha>.yaml  # each agent run creates a new file
+└── applied/                     # move patches here after apply.sh syncs
+    └── memory-patch-<sha>.yaml
+```
+
+The `applied/` subdirectory provides a lightweight audit trail without a separate CMDB.
+
+---
+
+### 7.3 Monitoring
+
+Four classes of telemetry matter for production Hermes agents: agent metrics, audit logs,
+governance events, and business outcome metrics.
+
+#### Agent metrics (Prometheus-native)
+
+Hermes emits Prometheus-compatible metrics at `/metrics` on the gateway port. Prometheus scrape
+configuration:
+
+```yaml
+- job_name: 'hermes-fleet'
+  static_configs:
+  - targets: ['fleet-coordinator.hermes-agents.svc:8644']
+  metrics_path: /metrics
+  scrape_interval: 15s
+```
+
+Key metrics to alert on:
+
+| Metric | Alert condition | What it means |
+|---|---|---|
+| `hermes_agent_run_duration_seconds` | p99 > 120s | Runaway agent — likely delegation loop |
+| `hermes_delegate_task_errors_total` | rate > 0.05/min | Delegation failures (toolset intersection, allowlist rejection) |
+| `hermes_webhook_events_received_total` | rate > 20/min | Alert storm — consider circuit breaker |
+| `hermes_approval_pending_total` | count > 10 | Human approval queue backing up |
+| `hermes_governance_denied_total` | rate > 0.1/5m | Agent attempting out-of-allowlist commands |
+
+#### Audit logs — Phase 7 governance event stream
+
+The `infrastructure/wrappers/mock-kubectl` wrapper (Phase 7) emits an audit event for every
+intercepted command. In production, pipe these to a central log aggregator via a fluent-bit
+sidecar or the wrapper's JSON output mode.
+
+Cross-reference: `governance/governance-L4-track-c.yaml` defines the allowlist. Every allowlist
+hit and miss becomes an audit event. A blocked command produces:
+
+```json
+{
+  "ts": "2026-04-07T14:32:01Z",
+  "wrapper": "mock-kubectl",
+  "command": "kubectl delete deployment crasher",
+  "governance_level": "L4",
+  "track": "track-c",
+  "allowlist_hit": false,
+  "decision": "BLOCKED",
+  "caller_profile": "track-c",
+  "caller_agent_run_id": "run-abc123"
+}
+```
+
+Send these to your SIEM or compliance tooling. Audit logs are the "black box recorder" for agent
+actions — critical for postmortems after automated remediation incidents.
+
+#### Governance event stream
+
+Beyond raw audit logs, aggregate governance events by `(agent_profile, track, decision)` to
+produce operational dashboards:
+
+| Panel | PromQL aggregation |
+|---|---|
+| Denied command rate | `sum by (profile) (rate(hermes_governance_denied_total[5m]))` |
+| L4 escalation rate | `sum by (profile) (rate(hermes_governance_escalated_total[5m]))` |
+| Apply volume | `sum(rate(hermes_kubectl_apply_total[1h]))` |
+| Mean approval latency | `histogram_quantile(0.5, hermes_approval_duration_seconds_bucket)` |
+
+Alert when denied rate spikes — it usually means an agent is attempting commands outside its
+allowlist, which indicates either a misconfigured profile or unexpected agent behavior.
+
+#### Phase 8 AlertManager integration for self-monitoring
+
+Cross-reference: `infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml` — the same
+Prometheus stack that fires alerts INTO Morgan can also fire alerts ON Morgan. Self-monitoring
+PrometheusRules belong next to the cluster monitoring rules:
+
+```yaml
+# Add to infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml
+groups:
+- name: hermes-agent-health
+  rules:
+  - alert: FleetCoordinatorHighErrorRate
+    expr: rate(hermes_delegate_task_errors_total{profile="fleet"}[5m]) > 0.1
+    for: 5m
+    labels:
+      severity: warning
+      release: kube-prometheus   # required for kube-prometheus-stack discovery
+    annotations:
+      summary: "Morgan delegation error rate > 10% over 5m"
+      description: "Delegation errors may indicate toolset intersection failures or allowlist misconfig"
+
+  - alert: HermesPendingApprovalQueueDepth
+    expr: hermes_approval_pending_total > 10
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Human approval queue depth > 10 for 10m"
+      description: "Check Telegram bot connectivity and admin allowlist configuration"
+```
+
+Note the `release: kube-prometheus` label — this is the same requirement you discovered in
+Phase 8 (PrometheusRule discovery label). Hermes-specific rules follow the same pattern.
+
+#### Structured logging for delegation traces
+
+Enable structured logging in the gateway for delegation trace reconstruction in postmortems:
+
+```yaml
+# In agents/fleet-coordinator/config.yaml
+logging:
+  level: INFO
+  format: json    # structured output for log aggregators
+  fields:
+    - agent_run_id
+    - delegation_depth
+    - governance_level
+    - profile_name
+```
+
+JSON logs make it possible to reconstruct the full delegation trace per `agent_run_id` across
+all tool calls, even when Morgan delegates across multiple in-process child agents.
+
+---
+
+### 7.4 Scaling
+
+Production agent scaling has four axes: horizontal replica scaling, queue-based trigger rate
+limiting, multi-tenancy isolation, and Sandbox CRD isolation.
+
+#### Horizontal replica scaling
+
+Morgan (webhook receiver) scales horizontally under alert volume. The webhook gateway is
+stateless between requests — each webhook fires a fresh agent run. Use a K8s HPA:
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fleet-coordinator-hpa
+  namespace: hermes-agents
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fleet-coordinator
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Pods
+    pods:
+      metric:
+        name: hermes_webhook_events_received_rate
+      target:
+        type: AverageValue
+        averageValue: "5"   # scale up if > 5 events/min/pod
+```
+
+Track C specialists are spawned in-process as children of a parent Morgan agent run. Scaling
+specialists horizontally requires scaling the parent Morgan deployment. If Morgan runs 5 replicas,
+you have up to 5 concurrent Track C children — each in its own Morgan process.
+
+#### Queue-based vs trigger-based
+
+Two patterns for agent execution at scale:
+
+| Pattern | When to use | Example in this course |
+|---|---|---|
+| Trigger-based (webhook → agent run) | Bursty, low-volume, latency-sensitive | Morgan FLEET-01 (Phase 9) |
+| Queue-based (SQS/Kafka → worker pool) | High-volume, latency-tolerant, needs retry | Not in v1.1 — v1.2 candidate |
+
+Phase 9 uses trigger-based for FLEET-01. If your alert volume exceeds ~10 alerts/second, switch
+to queue-based: drop the webhook gateway in front of a queue, run a pool of agent workers pulling
+from the queue, with retry + dead-letter handling.
+
+The Phase 8 K8s CronJob pattern (TRIG-02) is a time-triggered variant — not queue-based, but
+it decouples the trigger (time) from the agent execution via the K8s scheduler.
+
+#### Multi-tenant isolation
+
+Production fleets often serve multiple teams. Two isolation models:
+
+**Model 1 — Profile-per-team:** Each team gets its own fleet profile (`fleet-teamA`,
+`fleet-teamB`, ...) with team-specific allowlists and skill libraries. Shared Hermes runtime and
+container image.
+
+```yaml
+# fleet-teamA/config.yaml
+platform_toolsets:
+  cli: [terminal, web, skills]
+delegation:
+  max_iterations: 15    # tighter limit for team A's use cases
+# ...
+```
+
+**Model 2 — Deployment-per-team:** Each team gets its own Hermes deployment and namespace.
+Stronger isolation at cost of operational overhead.
+
+```bash
+kubectl create namespace hermes-agents-teamA
+kubectl create namespace hermes-agents-teamB
+# Deploy fleet-coordinator per namespace with team-specific secrets
+```
+
+Small shops use Model 1. Regulated environments or teams with conflicting governance requirements
+use Model 2.
+
+#### Network policies for agent isolation
+
+Even within a shared deployment, apply Kubernetes NetworkPolicy to prevent agents from accessing
+resources they should not:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: fleet-coordinator-netpol
+  namespace: hermes-agents
+spec:
+  podSelector:
+    matchLabels:
+      app: fleet-coordinator
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: monitoring   # can reach AlertManager
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: k8s-trouble-crashloop  # can apply patches here
+  - ports:
+    - port: 53     # DNS
+    - port: 443    # HTTPS (Telegram API, GitHub API)
+```
+
+#### K8s Agent Sandbox CRD isolation (alpha — exploratory)
+
+The K8s Agent Sandbox project (`kubernetes-sigs/agent-sandbox`) is an emerging approach to
+per-agent isolation using CRDs. It is currently alpha (v0.2.1 as of 2026-04-07) and Phase 9
+ships it only as an exploratory project — see
+`course-site/docs/module-11-fleet/exploratory/PROJECTS.mdx` Project 3.
+
+The Sandbox CRD model provides:
+
+- Namespace-scoped agent deployment with lifecycle management
+- Resource quota enforcement per agent instance
+- Network policy isolation via SandboxTemplate spec
+- Automatic cleanup via `ttl` field on Sandbox objects
+
+When Sandbox reaches beta/stable (v1.2+ course candidate), it becomes the recommended isolation
+mechanism for multi-tenant agent fleets. Until then, treat it as forward-looking architecture.
+
+#### Scaling decision checklist
+
+Before adding replicas or switching to queue-based, ask:
+
+1. Is the bottleneck latency (trigger → agent response) or throughput (agents/second)?
+   - Latency → reduce model context window, simplify SOUL.md, remove unused skills
+   - Throughput → add replicas (Pattern A HPA) or queue-based worker pool
+
+2. Are agents failing because of governance rejections (over-restrictive allowlist) or
+   timeout (agent takes too long)?
+   - Governance rejections → review allowlist configuration
+   - Timeout → increase `approvals.timeout` in config.yaml or reduce task scope
+
+3. Is the queue of human approvals backing up?
+   - If `hermes_approval_pending_total` stays high, the bottleneck is human review latency,
+     not agent throughput. Adding replicas does not help.
+
+---
+
+### 7.5 Production Decision Table
+
+When you are ready to take a Phase 6-9 agent to production, use this table to choose the right
+deployment strategy:
+
+| Your constraints | Packaging | Deployment | Monitoring | Scaling |
+|---|---|---|---|---|
+| Small team, single cluster, bursty alerts | Single container image, pinned versions | K8s Deployment, `replicas: 2` | Prometheus scrape + audit logs to stdout | HPA on webhook event rate |
+| Regulated environment, audit mandate | Container + image signing (cosign), SBOM | K8s Deployment + GitOps sync only (no direct apply) | SIEM integration, all audit logs persisted off-cluster | Manual scaling, change-control gates before replica changes |
+| Multi-team, shared infra | Multi-profile container, team-specific configs via ConfigMap | Namespace-per-team, shared runtime | Per-team dashboards, team-scoped PrometheusRules | HPA per team namespace, resource quotas |
+| High-volume scheduled checks | CronJob-optimized image (no gateway runtime) | K8s CronJob, multiple schedules | CronJob success/failure metrics, time-to-report SLA | More concurrent jobs, adjusted `backoffLimit` |
+| Experimental / learning | Minimal image, Hermes from GitHub source | K8s Deployment, single replica | Local log inspection only | No autoscaling, manual scale-to-zero |
+| Production + ArgoCD already deployed | Container + GitOps repo | GitOps sync via ArgoCD Application (Sub-path B1) | ArgoCD sync status as alert surface | ArgoCD-managed replica count |
+
+**Rule of thumb:** Start with the smallest deployment option that satisfies your audit requirements.
+Add complexity only when a specific scaling or isolation requirement drives it.
+
+---
+
+### 7.6 Cross-References
+
+The following artifacts from earlier in the course map directly to the productionization topics
+in this section:
+
+| Artifact | Phase | Relevant section |
+|---|---|---|
+| `infrastructure/wrappers/mock-kubectl` | Phase 7 | 7.3 Monitoring — governance audit events |
+| `governance/governance-L4-track-c.yaml` | Phase 7 | 7.3 Monitoring — allowlist definition |
+| `infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml` | Phase 8 | 7.3 Monitoring — self-monitoring rules |
+| `infrastructure/scenarios/k8s/cronjob/` | Phase 8 | 7.2 Deployment Pattern B — CronJob manifests |
+| `infrastructure/scenarios/k8s/gitops/apply.sh` | Phase 9 Plan 01 | 7.2 Deployment Pattern C — GitOps sync |
+| `agents/fleet-coordinator/config.yaml` | Phase 9 Plan 01 | 7.1 Packaging — platform_toolsets.cli |
+| `agents/fleet-coordinator/SOUL.md` | Phase 9 Plan 01 | 7.1 Packaging — behavioral spec travels with container |
+| `course-site/docs/module-11-fleet/exploratory/PROJECTS.mdx` Project 3 | Phase 9 | 7.4 Scaling — Sandbox CRD exploratory |
+| Phase 9 Module 11 Lab | Phase 9 | Full live FLEET-01 walkthrough for all sections |
+
+---
+
+**End of Section 7.** The rest of the reading above covers fleet patterns and coordinator templates
+that are the architectural foundation. Section 7 builds on that foundation to answer "how do I run
+this in production." Module 13 reference covers governance depth; Module 12 reference covers
+trigger patterns. This section covers everything that sits between those and the production cluster.
+
