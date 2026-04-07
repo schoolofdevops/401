@@ -2,9 +2,11 @@
 # Apply: kubectl apply -f infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml
 # Cleanup: kubectl delete -f infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml
 #
-# The `release: kube-prometheus` label is REQUIRED — kube-prometheus-stack Helm chart
-# configures its Prometheus CRD to only watch PrometheusRule resources matching this label.
+# The `release` label MUST match your Helm release name — kube-prometheus-stack configures
+# Prometheus to only watch PrometheusRule resources with a matching label.
 # Without it, the rule is silently ignored. (See 08-RESEARCH.md Pitfall 1.)
+# The Helm release name in this course is "monitoring" (helm install monitoring ...).
+# Verify with: kubectl get prometheus -n monitoring -o jsonpath='{.items[0].spec.ruleSelector}'
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
@@ -12,7 +14,7 @@ metadata:
   name: hermes-lab-rules
   namespace: monitoring
   labels:
-    release: kube-prometheus
+    release: monitoring
     phase: "08"
     trigger: alertmanager
 spec:

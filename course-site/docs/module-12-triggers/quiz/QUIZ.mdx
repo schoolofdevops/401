@@ -241,7 +241,7 @@ Symptoms:
 - The Prometheus UI Rules page does NOT show the `PodCrashLooping` rule
 - AlertManager pods are running and healthy
 
-A) The PrometheusRule manifest is missing the `release: kube-prometheus` label, so kube-prometheus-stack's ruleSelector silently ignores it
+A) The PrometheusRule manifest has a `release` label that doesn't match the Helm release name, so kube-prometheus-stack's ruleSelector silently ignores it
 B) The Hermes gateway is not running on port 8644
 C) The agent's `sre-k8s-pod-health` skill is not loaded
 D) The webhook prompt template uses `{alerts[0].labels.pod}` which doesn't render
@@ -249,13 +249,13 @@ D) The webhook prompt template uses `{alerts[0].labels.pod}` which doesn't rende
 <details>
 <summary>Show Answer</summary>
 
-**Correct answer: A) The PrometheusRule manifest is missing the `release: kube-prometheus` label, so kube-prometheus-stack's ruleSelector silently ignores it**
+**Correct answer: A) The PrometheusRule manifest has a `release` label that doesn't match the Helm release name, so kube-prometheus-stack's ruleSelector silently ignores it**
 
 The decisive symptom is: "The Prometheus UI Rules page does NOT show the `PodCrashLooping` rule." Even though the PrometheusRule resource exists in the cluster (`kubectl get prometheusrule` shows it), Prometheus has not loaded it.
 
-The kube-prometheus-stack Helm chart configures its Prometheus CRD with a `ruleSelector` that matches PrometheusRule resources by label. The default selector is `release: kube-prometheus` (matching the helm release name). Without that label, the rule is silently ignored — present in the cluster, invisible to Prometheus, never evaluated, never fires.
+The kube-prometheus-stack Helm chart configures its Prometheus CRD with a `ruleSelector` that matches PrometheusRule resources by label. The selector matches `release: <helm-release-name>`. In this course the release is named `monitoring`, so the label must be `release: monitoring`. Without a matching label, the rule is silently ignored — present in the cluster, invisible to Prometheus, never evaluated, never fires.
 
-The fix: add `labels.release: kube-prometheus` to the PrometheusRule metadata. The Phase 8 PrometheusRule manifest at `infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml` includes this label specifically to prevent this class of failure.
+The fix: ensure `labels.release` in the PrometheusRule metadata matches your Helm release name. Verify with: `kubectl get prometheus -n monitoring -o jsonpath='{.items[0].spec.ruleSelector}'`
 
 **Why not B (gateway not running)?** If the gateway were down, `curl http://localhost:8644/health` would fail. The symptoms don't mention this — and more importantly, the alert never even reached AlertManager to try the delivery. The failure is upstream in Prometheus never loading the rule.
 
@@ -263,7 +263,7 @@ The fix: add `labels.release: kube-prometheus` to the PrometheusRule metadata. T
 
 **Why not D (broken prompt template)?** A broken template would render as literal text and the agent would still run (just with a garbage prompt). The symptoms say the agent never runs at all.
 
-**Reference:** The `release: kube-prometheus` label requirement is documented in Module 12 Step 9 (AlertManager setup). Verify with: `kubectl get prometheusrule -n monitoring hermes-lab-rules -o yaml | yq '.metadata.labels'`.
+**Reference:** The `release` label requirement is documented in Module 12 Step 9 (AlertManager setup). Verify with: `kubectl get prometheusrule -n monitoring hermes-lab-rules -o yaml | yq '.metadata.labels'`.
 
 </details>
 

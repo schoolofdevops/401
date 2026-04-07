@@ -554,8 +554,8 @@ PodCrashLooping
 
 Open the Prometheus UI at http://localhost:30091 → Status → Rules. You should see `hermes-lab.k8s-crashloop` group with the `PodCrashLooping` rule listed and state "inactive" (no broken pods YET).
 
-:::tip Why `release: kube-prometheus` matters
-The PrometheusRule manifest in `infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml` includes a `labels: release: kube-prometheus` field. The kube-prometheus-stack Helm chart configures Prometheus to ONLY load rules with this label. Without it, your rule would be silently ignored — `kubectl get prometheusrule` would show it, but the Prometheus UI Rules page would not.
+:::tip Why the `release` label matters
+The PrometheusRule manifest includes a `labels: release: monitoring` field. The kube-prometheus-stack Helm chart configures Prometheus to ONLY load rules whose label matches the Helm release name. In this course the release is named `monitoring` (from `helm install monitoring ...`), so the label must be `release: monitoring`. Without it, your rule would be silently ignored — `kubectl get prometheusrule` would show it, but the Prometheus UI Rules page would not. Verify the expected label with: `kubectl get prometheus -n monitoring -o jsonpath='{.items[0].spec.ruleSelector}'`
 :::
 
 ### Skipping AlertManager (no KIND)

@@ -342,11 +342,13 @@ webhook.alertmanager received: {alerts: [{labels: {alertname: KubePodCrashLoopin
 > **NOTE: The PrometheusRule that fires this alert**
 >
 > The alert originates from `infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml`
-> (Phase 8, `KubePodCrashLooping` rule). It requires the label `release: kube-prometheus` for
-> auto-discovery by kube-prometheus-stack. If the alert is not firing after 3 minutes, verify:
+> (Phase 8, `PodCrashLooping` rule). It requires the label `release: monitoring` (matching the
+> Helm release name) for auto-discovery by kube-prometheus-stack. If the alert is not firing
+> after 3 minutes, verify the label matches:
 >
 > ```bash
-> kubectl get prometheusrule -n monitoring -o yaml | grep -A2 'release:'
+> kubectl get prometheus -n monitoring -o jsonpath='{.items[0].spec.ruleSelector}'
+> kubectl get prometheusrule hermes-lab-rules -n monitoring -o yaml | grep -A2 'labels:'
 > ```
 
 ---

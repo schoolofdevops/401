@@ -540,7 +540,7 @@ groups:
     for: 5m
     labels:
       severity: warning
-      release: kube-prometheus   # required for kube-prometheus-stack discovery
+      release: monitoring   # must match your Helm release name (verify: kubectl get prometheus -n monitoring -o jsonpath='{.items[0].spec.ruleSelector}')
     annotations:
       summary: "Morgan delegation error rate > 10% over 5m"
       description: "Delegation errors may indicate toolset intersection failures or allowlist misconfig"
@@ -555,8 +555,9 @@ groups:
       description: "Check Telegram bot connectivity and admin allowlist configuration"
 ```
 
-Note the `release: kube-prometheus` label — this is the same requirement you discovered in
-Phase 8 (PrometheusRule discovery label). Hermes-specific rules follow the same pattern.
+Note the `release: monitoring` label — this must match the Helm release name (the same
+requirement you discovered in Phase 8). The course setup uses `monitoring` as the release name;
+adjust if your release is named differently.
 
 #### Structured logging for delegation traces
 

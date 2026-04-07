@@ -10,6 +10,14 @@ alertmanager:
       requests:
         cpu: 50m
         memory: 64Mi
+    # Pin to control-plane so KIND extraPortMappings (hostPort: 30093) are reachable.
+    # KIND only forwards hostPort traffic hitting the control-plane container.
+    nodeSelector:
+      ingress-ready: "true"
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
   service:
     type: NodePort
     nodePort: 30093
@@ -30,6 +38,9 @@ alertmanager:
             # send_resolved: false means AlertManager only POSTs when alerts fire,
             # not when they resolve. Flip to true in production to get paired
             # firing + resolved events.
+      - name: "null"
+        # Watchdog alert sink — kube-prometheus-stack injects a route for
+        # alertname=Watchdog pointing to "null". This receiver silently drops it.
 
 nodeExporter:
   resources:
