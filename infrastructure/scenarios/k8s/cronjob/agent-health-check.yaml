@@ -1,0 +1,224 @@
+# Phase 8 / TRIG-02: K8s CronJob running a scheduled Hermes agent
+#
+# Ships THREE per-track variants in one multi-document YAML file:
+#   - hermes-track-a-health (Database -- sre-dba-rds-slow-query)
+#   - hermes-track-b-health (FinOps -- sre-ec2-health-check)
+#   - hermes-track-c-health (Kubernetes -- sre-k8s-pod-health)
+#
+# Phase 7 governance inheritance: each CronJob sets HERMES_LAB_GOVERNANCE,
+# HERMES_LAB_TRACK, HERMES_LAB_MODE, HERMES_LAB_SCENARIO, and MOCK_DATA_DIR.
+# The wrappers in infrastructure/wrappers/ read these env vars and enforce
+# the Phase 7 wrapper_allowlist. Scheduled agents are governed exactly like
+# interactive ones. (See 08-CONTEXT.md D-02.)
+#
+# Prerequisites:
+#   1. Build image:  docker build -t hermes-lab:cronjob infrastructure/scenarios/k8s/cronjob/
+#   2. Load to KIND: kind load docker-image hermes-lab:cronjob --name lab
+#   3. Create API key secret (avoid committing tokens to git):
+#      kubectl create secret generic hermes-secrets \
+#        --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY"
+#   4. (Optional) Mount mock data via ConfigMap if running in mock mode.
+#
+# Apply ONE track (Track C example):
+#   kubectl apply -f infrastructure/scenarios/k8s/cronjob/agent-health-check.yaml -l track=track-c
+#
+# Or apply all three:
+#   kubectl apply -f infrastructure/scenarios/k8s/cronjob/agent-health-check.yaml
+#
+# Observe:
+#   kubectl get cronjob
+#   kubectl get jobs
+#   kubectl logs -l job-name=<latest-job-name>
+#
+# Cleanup:
+#   kubectl delete -f infrastructure/scenarios/k8s/cronjob/agent-health-check.yaml
+---
+# =========================================================================
+# Track A (Database) -- Daily slow-query health check
+# =========================================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hermes-track-a-health
+  namespace: default
+  labels:
+    phase: "08"
+    trigger: k8s-cronjob
+    track: track-a
+spec:
+  schedule: "*/5 * * * *"   # Every 5 min for lab iteration speed
+                            # Production: "0 8 * * *" (daily at 08:00 UTC)
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0       # Don't retry failed jobs -- surface failure to operator
+      template:
+        metadata:
+          labels:
+            phase: "08"
+            trigger: k8s-cronjob
+            track: track-a
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: hermes-agent
+              image: hermes-lab:cronjob
+              imagePullPolicy: IfNotPresent   # REQUIRED for kind load docker-image workflow
+              env:
+                - name: HERMES_LAB_MODE
+                  value: "mock"
+                - name: HERMES_LAB_SCENARIO
+                  value: "clean"
+                - name: HERMES_LAB_GOVERNANCE
+                  value: "L2"
+                - name: HERMES_LAB_TRACK
+                  value: "track-a"
+                - name: MOCK_DATA_DIR
+                  value: "/data/mock-data/database"
+                - name: ANTHROPIC_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: hermes-secrets
+                      key: anthropic-api-key
+              command:
+                - hermes
+                - run
+                - --skill
+                - sre-dba-rds-slow-query
+                - --prompt
+                - "Run scheduled slow-query health check. Report only if queries over 1000ms are found."
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 1Gi
+---
+# =========================================================================
+# Track B (FinOps) -- Daily EC2 health + cost check
+# =========================================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hermes-track-b-health
+  namespace: default
+  labels:
+    phase: "08"
+    trigger: k8s-cronjob
+    track: track-b
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            phase: "08"
+            trigger: k8s-cronjob
+            track: track-b
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: hermes-agent
+              image: hermes-lab:cronjob
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: HERMES_LAB_MODE
+                  value: "mock"
+                - name: HERMES_LAB_SCENARIO
+                  value: "clean"
+                - name: HERMES_LAB_GOVERNANCE
+                  value: "L2"
+                - name: HERMES_LAB_TRACK
+                  value: "track-b"
+                - name: MOCK_DATA_DIR
+                  value: "/data/mock-data/finops"
+                - name: ANTHROPIC_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: hermes-secrets
+                      key: anthropic-api-key
+              command:
+                - hermes
+                - run
+                - --skill
+                - sre-ec2-health-check
+                - --prompt
+                - "Run scheduled EC2 cost and health check. Report anomalies only."
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 1Gi
+---
+# =========================================================================
+# Track C (Kubernetes) -- Pod health check, fires on Phase 6 crashloop2 scenario
+# =========================================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hermes-track-c-health
+  namespace: default
+  labels:
+    phase: "08"
+    trigger: k8s-cronjob
+    track: track-c
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            phase: "08"
+            trigger: k8s-cronjob
+            track: track-c
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: hermes-agent
+              image: hermes-lab:cronjob
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: HERMES_LAB_MODE
+                  value: "mock"
+                - name: HERMES_LAB_SCENARIO
+                  value: "crashloop2"
+                - name: HERMES_LAB_GOVERNANCE
+                  value: "L2"
+                - name: HERMES_LAB_TRACK
+                  value: "track-c"
+                - name: MOCK_DATA_DIR
+                  value: "/data/mock-data/kubernetes"
+                - name: ANTHROPIC_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: hermes-secrets
+                      key: anthropic-api-key
+              command:
+                - hermes
+                - run
+                - --skill
+                - sre-k8s-pod-health
+                - --prompt
+                - "Scheduled K8s pod health check on namespace k8s-trouble-crashloop. Report only if pods show errors or restart counts exceed 2."
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 1Gi
