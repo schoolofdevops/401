@@ -27,10 +27,19 @@ approvals:
   # 300 = 5 minutes; required for lab flows with multiple kubectl investigation steps
   timeout: "[seconds] # recommended: 300"
 
+# command_allowlist: Hermes-native bypass key. Leave empty for L2 Advisory (Track C default)
 # Track C safety note: kubectl delete, kubectl drain, kubectl cordon are NOT in
 # Hermes DANGEROUS_PATTERNS. SOUL.md NEVER rules enforce the behavioral boundary.
-# L1-L3: leave command_allowlist empty.
 command_allowlist: []
+
+# wrapper_allowlist: Course-local enforcement key (Phase 7). Read by mock-kubectl.
+# Leave empty during Module 10 exercise. Module 13 lab shows you how to populate it.
+# Example (populate during Module 13):
+# wrapper_allowlist:
+#   kubectl:
+#     - "get pods"
+#     - "describe pod "
+# wrapper_allowlist not set — intentionally absent at starter state
 
 agent:
   max_turns: 30

@@ -24,9 +24,17 @@ approvals:
   # Default is 60. For lab flows with multiple approval steps, use 300 (5 minutes).
   timeout: "[seconds] # recommended: 300"
 
-# command_allowlist: leave empty for L2 Advisory (Track A default)
-# L4 only: add description-key strings from tools/approval.py DANGEROUS_PATTERNS
+# command_allowlist: Hermes-native bypass key. Leave empty for L2 Advisory (Track A default)
 command_allowlist: []
+
+# wrapper_allowlist: Course-local enforcement key (Phase 7). Read by mock-psql.
+# Leave empty during Module 10 exercise. Module 13 lab shows you how to populate it.
+# Example (populate during Module 13):
+# wrapper_allowlist:
+#   psql:
+#     - "SELECT "
+#     - "EXPLAIN "
+# wrapper_allowlist not set — intentionally absent at starter state
 
 agent:
   # max_turns: 30 is sufficient for lab scenarios

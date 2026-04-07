@@ -17,7 +17,23 @@ approvals:
 # Track B safety note: aws ec2 terminate/modify-instance-attribute are not in
 # Hermes DANGEROUS_PATTERNS. SOUL.md NEVER rules enforce the behavioral boundary.
 # For L4, add custom patterns to command_allowlist if your hermes version supports it.
-command_allowlist: []  # L2: nothing pre-approved
+command_allowlist: []  # L2: nothing pre-approved (Hermes-native bypass mechanism; unchanged)
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# Read by infrastructure/wrappers/mock-aws when HERMES_LAB_GOVERNANCE=L2.
+# Track B uses only the aws subsection. The wrapper matches "${1} ${2}" prefix.
+wrapper_allowlist:
+  aws:
+    - "sts get-caller-identity"
+    - "ec2 describe-"
+    - "rds describe-"
+    - "cloudwatch get-metric-"
+    - "cloudwatch describe-alarms"
+    - "cloudwatch describe-alarm-history"
+    - "ce get-"
+    - "cost-explorer get-"
+    - "elbv2 describe-target-health"
+    - "cloudtrail lookup-events"
 
 agent:
   max_turns: 30

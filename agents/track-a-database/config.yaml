@@ -14,7 +14,20 @@ approvals:
   mode: manual       # L2: all flagged dangerous commands require human approval
   timeout: 300       # 5 min — required for lab flows with multiple approval steps
 
-command_allowlist: []  # L2: nothing pre-approved; L4 would add "SELECT", "EXPLAIN", "SHOW"
+command_allowlist: []  # L2: nothing pre-approved (Hermes-native bypass mechanism; unchanged)
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# Read by infrastructure/wrappers/mock-psql when HERMES_LAB_GOVERNANCE=L2.
+# Track A uses only the psql subsection. The wrapper matches the first SQL keyword.
+wrapper_allowlist:
+  psql:
+    - "SELECT "
+    - "EXPLAIN "
+    - "SHOW "
+    - "DESCRIBE "
+    - "\\d"
+    - "\\dt"
+    - "\\l"
 
 agent:
   max_turns: 30

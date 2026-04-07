@@ -27,11 +27,19 @@ approvals:
   # Recommended: 300 (5 minutes) for lab flows with multiple investigation steps.
   timeout: "[seconds] # recommended: 300"
 
-# command_allowlist: [] — L2: nothing pre-approved
+# command_allowlist: Hermes-native bypass key. Leave empty for L2 Advisory (Track B default)
 # Track B safety note: aws ec2 terminate-instances and modify-instance-attribute are NOT
 # in Hermes DANGEROUS_PATTERNS. SOUL.md NEVER rules enforce the behavioral boundary.
-# For L4 Semi-Autonomous, you would add read-only AWS command patterns here.
 command_allowlist: []
+
+# wrapper_allowlist: Course-local enforcement key (Phase 7). Read by mock-aws.
+# Leave empty during Module 10 exercise. Module 13 lab shows you how to populate it.
+# Example (populate during Module 13):
+# wrapper_allowlist:
+#   aws:
+#     - "ec2 describe-"
+#     - "rds describe-"
+# wrapper_allowlist not set — intentionally absent at starter state
 
 agent:
   max_turns: 30

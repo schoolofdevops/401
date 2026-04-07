@@ -17,7 +17,22 @@ approvals:
 
 # Track C safety note: kubectl delete, kubectl drain, kubectl cordon are not in
 # Hermes DANGEROUS_PATTERNS. SOUL.md NEVER rules enforce the behavioral boundary.
-command_allowlist: []
+command_allowlist: []  # L2: nothing pre-approved (Hermes-native bypass mechanism; unchanged)
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# Read by infrastructure/wrappers/mock-kubectl when HERMES_LAB_GOVERNANCE=L2.
+# Track C uses only the kubectl subsection. The wrapper matches "${1} ${2}" prefix.
+wrapper_allowlist:
+  kubectl:
+    - "get pods"
+    - "get pod "
+    - "get nodes"
+    - "get endpoints"
+    - "describe pod "
+    - "describe node "
+    - "logs "
+    - "top pods"
+    - "top nodes"
 
 agent:
   max_turns: 30
