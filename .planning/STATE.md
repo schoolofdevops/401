@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Realistic Agents & Production Workflows
 status: Ready to execute
-stopped_at: Completed 07-02-PLAN.md (wrapper_allowlist populated in 9 configs, Module 10 cascade done)
-last_updated: "2026-04-07T09:55:00.539Z"
+stopped_at: Completed 07-guardrails-governance/07-01-PLAN.md
+last_updated: "2026-04-07T10:58:44.144Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-07)
 ## Current Position
 
 Phase: 7 (guardrails-governance) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Plan: 2 of 3
 | Phase 06-k8s-skills-agents P02 | 10 | 2 tasks | 28 files |
 | Phase 06-k8s-skills-agents P03 | 15min | 2 tasks | 13 files |
 | Phase 07-guardrails-governance P02 | 10min | 2 tasks | 13 files |
+| Phase 07-guardrails-governance P01 | 60 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -146,6 +147,9 @@ Recent decisions affecting current work:
 - [Phase 07-guardrails-governance]: Track A Challenge 3 restructured: two-allowlist section leads, then L3 promotion instructions follow — teaches mechanism before showing the action
 - [Phase 07-guardrails-governance]: command_allowlist: [] preserved unchanged in all 9 configs (Hermes-native bypass key; Phase 7 adds wrapper_allowlist alongside it)
 - [Phase 07-guardrails-governance]: Track C Module 10 lab confirmed no-op: zero command_allowlist/wrapper_allowlist refs in both Track C lab files
+- [Phase 07-01]: PATH B wrapper extension confirmed (D-01): Hermes DANGEROUS_PATTERNS is hardcoded Python, no extension hook exists — wrapper pre-flight is the only course-local mechanism
+- [Phase 07-01]: wrapper_allowlist is a NEW yaml key (not command_allowlist): Hermes-native command_allowlist: [] preserved untouched; wrapper reads only wrapper_allowlist
+- [Phase 07-01]: awk-based YAML parser chosen for wrapper allowlist extraction: avoids yq v3/v4 version mismatch; wrapper code stays readable as teaching material
 
 ### Pending Todos
 
@@ -159,6 +163,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T09:55:00.531Z
-Stopped at: Completed 07-02-PLAN.md (wrapper_allowlist populated in 9 configs, Module 10 cascade done)
+Last session: 2026-04-07T10:58:44.140Z
+Stopped at: Completed 07-guardrails-governance/07-01-PLAN.md
 Resume file: None
