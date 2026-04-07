@@ -93,8 +93,9 @@ kubectl apply -f infrastructure/scenarios/k8s/02-crashloop-backoff.yaml
 
 Hermes `_render_prompt` does NOT support array index access. Use `{alerts}` (which
 expands to the full JSON-serialized alerts array) and let the agent parse the array
-itself. **Do NOT** use `{alerts[0].labels.pod}` — this will render as a literal string,
-not the pod name.
+itself. **Do NOT** use array index notation (e.g. accessing a specific element from the
+alerts array by position) — that syntax is not supported and will render as a literal
+string, not the pod name.
 
 The prompt above instructs the agent to "diagnose the affected pod in the namespace
 shown in the alert labels" — the agent reads `{alerts}` and extracts the namespace
