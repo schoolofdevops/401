@@ -1,0 +1,255 @@
+---
+id: module-06-quiz
+title: "Quiz: AI Workflow Tools"
+sidebar_label: "Quiz"
+sidebar_position: 1
+description: "Test your understanding of context engineering, GSD workflows, memory systems, and plan modes"
+---
+
+# Quiz: AI Workflow Tools
+
+These questions test your understanding of context engineering, structured AI workflows, cross-session memory, and plan modes from the lab and reading. Questions focus on conceptual understanding — not syntax.
+
+---
+
+### Question 1: Context Engineering vs Prompt Engineering
+
+What is the key difference between context engineering and prompt engineering?
+
+A) Context engineering writes longer, more detailed requests
+B) Context engineering focuses on WHAT information the model sees; prompt engineering focuses on HOW to phrase the request
+C) Prompt engineering is the production-grade approach used by professional developers
+D) Context engineering only works with Claude; prompt engineering is model-agnostic
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Context engineering focuses on WHAT information the model sees; prompt engineering focuses on HOW to phrase the request**
+
+The distinction matters for how you approach AI-assisted infrastructure work:
+
+| | Prompt Engineering | Context Engineering |
+|---|---|---|
+| Core question | "How do I word this?" | "What does the AI need to know?" |
+| Quality driver | Clever phrasing | Information richness |
+| Skill required | Linguistic creativity | Operational expertise |
+| Scales with | Model capability | Your domain knowledge |
+
+In the Module 1 lab, you used the same task instruction ("Analyze this alarm:") across all four context layers. The wording never changed. Quality improved because the *information* improved — system topology at Layer 3, runbook at Layer 4.
+
+In Module 6, the CLAUDE.md before/after comparison demonstrates the same principle: the request was identical ("Create a Prometheus alerting rule..."), the context changed (CLAUDE.md present vs absent), the output quality was completely different.
+
+Context engineering is model-agnostic and scales with your expertise. It is the primary skill for building AI agents that work reliably in production.
+
+</details>
+
+---
+
+### Question 2: CLAUDE.md as System Context
+
+What is the purpose of CLAUDE.md, and what type of context does it provide?
+
+A) CLAUDE.md is a configuration file for Claude Code's pricing settings
+B) CLAUDE.md is a project README that happens to be read by AI tools
+C) CLAUDE.md is system context — it defines the environment (cluster state, constraints, vocabulary) that Claude Code operates within automatically at session start
+D) CLAUDE.md stores the conversation history from previous sessions
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) CLAUDE.md is system context — it defines the environment (cluster state, constraints, vocabulary) that Claude Code operates within automatically at session start**
+
+CLAUDE.md is the most immediately teachable context engineering artifact because it:
+
+1. Is read automatically by Claude Code at session start — no explicit injection needed
+2. Applies to every interaction in the session — persistent system context
+3. Contains exactly what Layer 3 (System) and Layer 4 (Procedure) context requires: cluster state, constraints, naming conventions, vocabulary
+
+**The Kubernetes ConfigMap analogy:** CLAUDE.md is to Claude Code what a ConfigMap is to a container workload. The container runs the same code regardless; what changes is the configuration it reads at startup. CLAUDE.md that specifies `namespace: monitoring, CRD version: v1, constraint: no source code changes` transforms every interaction in the session without requiring you to re-state those facts each time.
+
+The before/after comparison in Section 2 of the lab proved this: identical request, radically different output quality, solely because CLAUDE.md was present in one case and absent in the other.
+
+</details>
+
+---
+
+### Question 3: The 4-Layer Context Model
+
+Name the 4 layers of the context engineering model used throughout this course.
+
+A) Input, Processing, Output, Validation
+B) Task, Role, System, Procedure
+C) Goal, Actor, Environment, Rules
+D) What, Who, Where, How
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) Task, Role, System, Procedure**
+
+The 4-layer context model:
+
+| Layer | What It Provides | Infrastructure Example |
+|-------|-----------------|----------------------|
+| **Task** | What should be done — the output specification | "Add HPA, PDB, ServiceMonitor to the reference-app Helm chart" |
+| **Role** | Who is doing it — expertise frame and responsibilities | "I am an SRE building production Kubernetes infrastructure on KIND" |
+| **System** | Where it's happening — specific environment details | "Kubernetes 1.32, kube-prometheus-stack in monitoring namespace, ServiceMonitor requires release: prometheus" |
+| **Procedure** | How it should be done — constraints and conventions | "Helm 3 template syntax only; stable APIs only; use fullname helper for all resource names; minReplicas: 2" |
+
+Layers 3 (System) and 4 (Procedure) are where generic output becomes environment-specific output. Missing Layer 3 means AI doesn't know your environment. Missing Layer 4 means AI doesn't know your constraints. Without both, output is statistically plausible but not environmentally correct.
+
+</details>
+
+---
+
+### Question 4: Cross-Session Memory
+
+What problem do cross-session memory systems (claude-mem, MCP memory) solve for AI-assisted infrastructure work?
+
+A) They increase the AI model's context window size
+B) They enable multiple AI agents to share context simultaneously
+C) They persist decisions and patterns across sessions — AI tools forget everything when a session ends, like a stateless container
+D) They cache frequently-used prompts to reduce API costs
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) They persist decisions and patterns across sessions — AI tools forget everything when a session ends, like a stateless container**
+
+**The stateless container analogy:** Each Claude Code or Crush session is like a stateless container. When the session ends, the context is gone — no persistent storage. You restart a new session and the AI has no recollection of previous decisions, established constraints, or discovered patterns.
+
+For production infrastructure work, this creates real operational friction:
+
+- Session 1: You spend 20 minutes establishing that ServiceMonitor requires `release: prometheus` for kube-prometheus-stack discovery
+- Session 2 (3 days later): You start from scratch — that constraint lives in session 1's chat history
+
+Memory systems solve this by persisting valuable context:
+- **claude-mem**: Semantic search over past Claude Code sessions — `/mem search prometheus serviceMonitor` surfaces the relevant decision
+- **MCP memory**: Explicit fact storage in Crush — save and retrieve specific facts on demand
+
+Memory is for recurring patterns and decisions. It is not a replacement for CLAUDE.md (which handles project-level system context) or GSD plans (which handle structured workflow context).
+
+</details>
+
+---
+
+### Question 5: GSD Plan Mode vs Quick Plan
+
+When should you use GSD plan-phase (`/gsd:plan-phase`) instead of Claude Code's built-in `/plan` command?
+
+A) GSD plan-phase should always be used; it is more reliable than /plan
+B) /plan is for Claude Pro subscribers; GSD plan-phase is for enterprise
+C) GSD plan-phase is appropriate for multi-file, production-impacting changes that require research, review, and an audit trail; /plan is for single-file, low-risk, well-understood changes
+D) GSD plan-phase only works with Helm and Terraform; /plan works with all file types
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) GSD plan-phase is appropriate for multi-file, production-impacting changes that require research, review, and an audit trail; /plan is for single-file, low-risk, well-understood changes**
+
+The decision framework from the reference:
+
+| Question | Answer → Mode |
+|----------|---------------|
+| One file, low risk, well-understood? | `/plan` or direct execution |
+| Multi-file, production-impacting? | GSD plan-phase |
+| Needs research before implementation? | GSD plan-phase |
+| Needs an audit trail for later review? | GSD plan-phase |
+| Unfamiliar territory? | GSD plan-phase |
+
+**The change management analogy:** `/plan` is like `kubectl apply --dry-run` — you see what would happen before committing, quick and immediate. GSD plan-phase is like a change management RFC — research is done, approach is documented, the plan is reviewed before execution, and the rationale is committed to version control.
+
+The goal is not to always use GSD (overhead exists) and not to always use direct execution (visibility disappears). The right level of structure should match the risk level of the change.
+
+</details>
+
+---
+
+### Question 6: GSD Workflow — Requirements Locking
+
+In the GSD workflow, which command locks requirements and decisions before planning begins?
+
+A) `/gsd:new-project`
+B) `/gsd:discuss-phase`
+C) `/gsd:plan-phase`
+D) `/gsd:execute-phase`
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) `/gsd:discuss-phase`**
+
+The GSD workflow has a deliberate separation between requirements and planning:
+
+1. **`/gsd:new-project`** — initializes the project workspace (PROJECT.md)
+2. **`/gsd:discuss-phase`** — structured Q&A that locks requirements into `CONTEXT.md`
+3. **`/gsd:plan-phase`** — reads the locked context and generates a research-backed plan
+
+`/gsd:discuss-phase` is the requirements lock step. In Section 1 of the lab, you answered specific questions about alerting rules (which rules, thresholds, severities) and constraints ("do not modify reference-app source code"). These decisions were persisted in CONTEXT.md.
+
+The planner (`/gsd:plan-phase`) and executor (`/gsd:execute-phase`) agents both read CONTEXT.md as their primary context source — they never re-ask the questions you already answered. This is what gives GSD its traceability: every decision made at discuss-phase is visible in the CONTEXT.md file alongside the infrastructure it governs.
+
+Separating discuss (requirements) from plan (tasks) prevents the common failure mode of starting implementation before requirements are clear.
+
+</details>
+
+---
+
+### Question 7: Selective Injection and Context Window Management
+
+Why is selective injection important for context window management in production AI workflows?
+
+A) Selective injection reduces the API's rate limit by sending smaller requests
+B) The context window is finite — injecting only what the task needs keeps quality high and prevents less relevant content from competing with task-relevant content
+C) Selective injection enables parallel AI requests to run faster
+D) Without selective injection, Claude Code cannot access files larger than 1MB
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: B) The context window is finite — injecting only what the task needs keeps quality high and prevents less relevant content from competing with task-relevant content**
+
+The Section 2 lab exercise demonstrates this directly. Two approaches:
+
+```
+@CLAUDE.md Add a PrometheusRule for disk usage
+```
+versus
+```
+@. Add a PrometheusRule for disk usage...
+```
+
+The first injects ~500 tokens of relevant project context. The second injects the entire repository — potentially 100,000+ tokens of files that have nothing to do with Prometheus.
+
+**Why this matters beyond token cost:**
+
+The context window is fixed. If you fill most of it with repository files that are irrelevant to the current task, the model must process all of that context during prefill. The signal-to-noise ratio of your context decreases. For complex requests, more irrelevant context can actively hurt output quality by diluting the relevant signal.
+
+**Practical guidance:**
+- Use `@CLAUDE.md` for system context (always relevant)
+- Use `@specific-file.tf` for the file you're working on
+- Use `@directory/` only when the task genuinely requires multiple files in that directory
+- Check `/cost` periodically to track context growth — if context is ballooning, apply selective injection more aggressively
+
+Selective injection is context engineering applied at the window management level — not what to include, but how much of it to include.
+
+</details>
+
+---
+
+## Score Interpretation
+
+| Score | Interpretation |
+|-------|---------------|
+| 7/7 | Strong command of context engineering and workflow tools — ready for Module 6 |
+| 5–6/7 | Good understanding — review the explanations for any you missed |
+| 3–4/7 | Re-read concepts.mdx, focus on context engineering and GSD workflow sections |
+| 0–2/7 | Work through the Section 1 and Section 2 lab exercises again before proceeding |
+
+## What's Next
+
+Context engineering and GSD workflows from Module 6 are the foundation for the Hermes agent labs in Modules 7 and 8, where you'll use GSD to manage SKILL.md authoring and tool integration at production scale.
+
+Modules 7 and 8 deepen the context engineering thread further — SKILL.md files for Hermes agents are precisely context engineering artifacts: domain expertise encoded in a format an agent reads at runtime.
+
+**Continue to:** [Module 7 — Agent Skills](../../module-07-agent-skills/module-07-readme)
