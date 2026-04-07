@@ -52,18 +52,44 @@ approvals:
   mode: manual           # every DANGEROUS_PATTERNS match pauses for human decision
   timeout: 300
 
-command_allowlist: []    # nothing pre-approved
+command_allowlist: []    # nothing pre-approved (Hermes-native bypass key)
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# NOT a Hermes config key. Read by infrastructure/wrappers/mock-{kubectl,aws,psql}
+# when HERMES_LAB_GOVERNANCE=L2.
+wrapper_allowlist:
+  kubectl:
+    - "get pods"
+    - "get pod "
+    - "get nodes"
+    - "describe pod "
+    - "logs "
+    - "top pods"
+    # ... 4 more entries (get endpoints, describe node, top nodes) ...
+  aws:
+    - "sts get-caller-identity"
+    - "ec2 describe-"
+    - "rds describe-"
+    - "cloudwatch get-metric-"
+    - "ce get-"
+    # ... 5 more entries (cloudwatch describe-alarms, cost-explorer get-, elbv2 describe-, cloudtrail lookup-events) ...
+  psql:
+    - "SELECT "
+    - "EXPLAIN "
+    - "SHOW "
+    # ... 4 more entries (DESCRIBE, \d, \dt, \l) ...
 
 agent:
   max_turns: 30
 ```
 
-**Diff from L1:** `platform_toolsets.cli` gains `terminal` and `file`. The approval mode is the same (`manual`), but it now has commands to potentially flag.
+**Diff from L1:** `platform_toolsets.cli` gains `terminal` and `file`. The approval mode is the same (`manual`), but it now has commands to potentially flag. A new `wrapper_allowlist` block is added — read by the course-local `mock-{kubectl,aws,psql}` wrappers to enforce a per-tool command prefix allowlist. This is the course-specific Layer 1 defense (see subsection 1.5 below).
 
 ```bash
 diff course/governance/governance-L1.yaml course/governance/governance-L2.yaml
 # < cli: [web, skills]
 # > cli: [terminal, file, web, skills]
+# ... + wrapper_allowlist block added
 ```
 
 ### L3: Proposal
@@ -83,16 +109,54 @@ approvals:
 
 command_allowlist: []
 
+# ── Course-local wrapper enforcement (Phase 7) ──
+# Read by infrastructure/wrappers/mock-{kubectl,aws,psql} when HERMES_LAB_GOVERNANCE=L3.
+# L3 = L2 read-only commands + rollout/investigation/diff commands.
+wrapper_allowlist:
+  kubectl:
+    # L2 baseline: get/describe/logs/top
+    - "get pods"
+    - "get pod "
+    - "get nodes"
+    - "describe pod "
+    - "logs "
+    - "top pods"
+    # L3 additions: rollout history, diff, explain
+    - "rollout history"
+    - "rollout status"
+    - "diff "
+    - "explain "
+  aws:
+    # L2 baseline: describe/get commands
+    - "sts get-caller-identity"
+    - "ec2 describe-"
+    - "ce get-"
+    # ... L2 baseline entries ...
+    # L3 additions: logs and IAM read-only
+    - "logs describe-"
+    - "logs get-log-events"
+    - "iam get-"
+    - "iam list-"
+  psql:
+    # L2 baseline: SELECT/EXPLAIN/SHOW/meta
+    - "SELECT "
+    - "EXPLAIN "
+    # L3 additions: scoped mutations and EXPLAIN ANALYZE
+    - "EXPLAIN ANALYZE "
+    - "DELETE FROM "
+    - "UPDATE "
+
 agent:
   max_turns: 30
 ```
 
-**Diff from L2:** Only `approvals.mode` changes. The toolsets and allowlist are identical.
+**Diff from L2:** `approvals.mode` changes from `manual` to `smart`. The `wrapper_allowlist` also gains investigation-level entries per tool — kubectl adds rollout history/status/diff/explain, aws adds logs and IAM read-only commands, psql adds `EXPLAIN ANALYZE` and scoped `DELETE/UPDATE`.
 
 ```bash
 diff course/governance/governance-L2.yaml course/governance/governance-L3.yaml
 # < mode: manual
 # > mode: smart
+# ... + investigation commands added to wrapper_allowlist per tool
 ```
 
 ### L4: Semi-Autonomous (Track A — DBA)
@@ -116,7 +180,28 @@ approvals:
 # legitimately needs to run and has demonstrated as safe over its L2-L3 track record.
 # Example (not added until formal review):
 # - "SQL SELECT"   # Read-only queries — never flagged but not yet pre-approved at course level
+# The course-local wrapper_allowlist below shows the populated Track A L4 additions.
 command_allowlist: []
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# Read by infrastructure/wrappers/mock-psql when HERMES_LAB_GOVERNANCE=L4 and HERMES_LAB_TRACK=track-a.
+# Track A L4 = L3 psql allowlist + archival INSERT patterns (smart-approval gated).
+wrapper_allowlist:
+  psql:
+    # L3 baseline
+    - "SELECT "
+    - "EXPLAIN "
+    - "EXPLAIN ANALYZE "
+    - "SHOW "
+    - "DESCRIBE "
+    - "\\d"
+    - "\\dt"
+    - "\\l"
+    - "DELETE FROM "
+    - "UPDATE "
+    # L4 additions: archival INSERT SELECT patterns
+    - "INSERT INTO "
+  # Note: kubectl and aws sections omitted — Track A only uses psql wrapper.
 
 agent:
   max_turns: 30
@@ -132,6 +217,9 @@ agent:
 # This means the command_allowlist cannot help for Track B's most dangerous commands.
 # SOUL.md NEVER rules are load-bearing for Track B — removing them would leave
 # NO mechanical backstop for terminate-instances.
+# As of Phase 7, the course-local wrapper_allowlist adds Layer 1 mechanical enforcement
+# to the SOUL.md behavioral layer — but SOUL.md remains the ONLY defense against novel
+# commands not yet discovered and added to the allowlist. SOUL.md remains load-bearing.
 
 platform_toolsets:
   cli: [terminal, file, web, skills]
@@ -141,6 +229,27 @@ approvals:
   timeout: 300
 
 command_allowlist: []
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# Read by infrastructure/wrappers/mock-aws when HERMES_LAB_GOVERNANCE=L4 and HERMES_LAB_TRACK=track-b.
+# Track B L4 = L3 FinOps allowlist + ec2 create-tags (tagging only, never modifies resources).
+wrapper_allowlist:
+  aws:
+    # L3 baseline
+    - "sts get-caller-identity"
+    - "ec2 describe-"
+    - "rds describe-"
+    - "cloudwatch get-metric-"
+    - "cloudwatch describe-alarms"
+    - "ce get-"
+    - "cost-explorer get-"
+    - "logs describe-"
+    - "logs get-log-events"
+    - "iam get-"
+    - "iam list-"
+    # L4 additions: targeted tagging only (read-only semantically)
+    - "ec2 create-tags"
+  # Note: kubectl and psql sections omitted — Track B only uses aws wrapper.
 ```
 
 ### L4: Semi-Autonomous (Track C — Kubernetes)
@@ -151,6 +260,7 @@ command_allowlist: []
 # are NOT in Hermes DANGEROUS_PATTERNS. Same pattern as Track B.
 # SOUL.md NEVER rules are the primary governance mechanism for K8s destructive commands.
 # Removing NEVER rules from Kiran's SOUL.md would leave no protection against kubectl drain.
+# SOUL.md remains load-bearing even after Phase 7 Layer 1 addition.
 
 platform_toolsets:
   cli: [terminal, file, web, skills]
@@ -160,7 +270,107 @@ approvals:
   timeout: 300
 
 command_allowlist: []
+
+# ── Course-local wrapper enforcement (Phase 7) ──
+# Read by infrastructure/wrappers/mock-kubectl when HERMES_LAB_GOVERNANCE=L4 and HERMES_LAB_TRACK=track-c.
+# Track C L4 = L3 Kubernetes allowlist + apply and rollout undo (smart-approval gated).
+wrapper_allowlist:
+  kubectl:
+    # L3 baseline
+    - "get pods"
+    - "get pod "
+    - "get nodes"
+    - "get endpoints"
+    - "describe pod "
+    - "describe node "
+    - "logs "
+    - "top pods"
+    - "top nodes"
+    - "rollout history"
+    - "rollout status"
+    - "diff "
+    - "explain "
+    # L4 additions: targeted mutations (smart-approval + SOUL.md NEVER are Layers 2 and 3)
+    - "apply "
+    - "rollout undo"
+  # NOTE: kubectl delete, drain, exec, cordon, uncordon, taint are NEVER in the allowlist at any level.
+  # Note: aws and psql sections omitted — Track C only uses kubectl wrapper.
 ```
+
+## 1.5. Course-Local Wrapper Enforcement (wrapper_allowlist)
+
+Phase 7 introduces a new allowlist mechanism. The `wrapper_allowlist` key in `governance/*.yaml` files is NOT a Hermes config key — it is read by the course-local wrapper scripts (`mock-kubectl`, `mock-aws`, `mock-psql`) and used to enforce per-tool command prefix allowlists.
+
+### Two allowlists, two purposes
+
+Your governance yaml files now have two allowlist keys:
+
+| Key | Scope | Read by | Purpose |
+|-----|-------|---------|---------|
+| `command_allowlist` | Hermes-native | `tools/approval.py` via `load_permanent_allowlist()` | Bypass the DANGEROUS_PATTERNS approval prompt for specific description-key strings (e.g., `"SQL DROP"` is a description-key, not a command). Entries are pattern-description strings from Hermes's hardcoded DANGEROUS_PATTERNS list. |
+| `wrapper_allowlist` | Course-local | `infrastructure/wrappers/mock-*` via awk-based YAML parsing | Command-prefix allowlist. A command is allowed if `${1} ${2}` (or the first SQL keyword) matches any entry as a prefix. Nothing in the list means the wrapper rejects with banner and exit 1. |
+
+They are **independent**. A command can be:
+- In `command_allowlist` AND `wrapper_allowlist` → runs with no gate
+- In `command_allowlist` but NOT `wrapper_allowlist` → wrapper rejects at Layer 1, Hermes never sees it
+- NOT in `command_allowlist` but in `wrapper_allowlist` → wrapper allows, Hermes gate fires if pattern matches DANGEROUS_PATTERNS
+- In neither → wrapper rejects at Layer 1
+
+### Environment variables controlling wrapper_allowlist
+
+Phase 7 adds two environment variables to the lab toolchain:
+
+| Env Var | Values | Required When | Purpose |
+|---------|--------|---------------|---------|
+| `HERMES_LAB_GOVERNANCE` | `L1` \| `L2` \| `L3` \| `L4` | Always (or wrappers fall back to no enforcement) | Selects which `governance/governance-${VAR}.yaml` file the wrapper reads. When unset, wrappers behave as pre-Phase-7 (backward compat). |
+| `HERMES_LAB_TRACK` | `track-a` \| `track-b` \| `track-c` | When `HERMES_LAB_GOVERNANCE=L4` | L4 has 3 track-specific files. This variable resolves which file to load. Unused at L1/L2/L3 (shared files). |
+
+Complete Track C L4 export block:
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=clean
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/course/infrastructure/mock-data"
+export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"
+```
+
+### The three-layer defense model
+
+Phase 7 completes the three-layer defense story for Track A and clarifies the two-layer model for Tracks B and C.
+
+| Layer | Mechanism | Scope | Track A (DROP TABLE) | Track B (terminate-instances) | Track C (kubectl delete) |
+|-------|-----------|-------|---------------------|-------------------------------|--------------------------|
+| **Layer 1** | `wrapper_allowlist` prefix check | Course-local, mechanical | REJECTS (not in allowlist) | REJECTS (not in allowlist) | REJECTS (not in allowlist) |
+| **Layer 2** | Hermes `DANGEROUS_PATTERNS` regex | Platform-native, mechanical | FIRES (`SQL DROP` is hardcoded) | NO MATCH (not in DANGEROUS_PATTERNS) | NO MATCH (not in DANGEROUS_PATTERNS) |
+| **Layer 3** | SOUL.md NEVER rules | Identity-level, behavioral | REFUSES (DBA SOUL.md NEVER rule) | REFUSES (FinOps SOUL.md NEVER rule) | REFUSES (SRE SOUL.md NEVER rule) |
+
+Track A is the gold standard — all three layers fire for destructive SQL. Track B and Track C rely on a two-layer defense: Layer 1 (`wrapper_allowlist`, added by Phase 7) + Layer 3 (SOUL.md NEVER rules). Layer 2 is NOT available for `aws ec2 terminate-instances`, `kubectl delete`, `kubectl drain`, or `kubectl exec` because these commands are NOT in Hermes's hardcoded DANGEROUS_PATTERNS list.
+
+**Implication:** Before Phase 7, Track B and Track C had ONLY Layer 3 (SOUL.md) as protection against destructive commands. Phase 7 adds Layer 1 to make the protection mechanical as well as behavioral. SOUL.md remains load-bearing because the `wrapper_allowlist` has a finite enumeration — any command NOT in the list is implicitly blocked, but a novel dangerous command that happens to match an allowed prefix (e.g., `kubectl apply -f some-malicious-manifest.yaml` at L4) would pass Layer 1 and fall entirely on Layer 3.
+
+### How the wrapper parses the allowlist
+
+The wrapper uses `awk` (not `yq`, for cross-version compatibility) to extract the tool-specific subsection from the active governance yaml:
+
+```bash
+# Extract wrapper_allowlist.kubectl from the active governance file
+awk '
+  /^wrapper_allowlist:/{found=1; next}
+  found && /^  kubectl:/{in_section=1; next}
+  found && in_section && /^    - "/{
+    line=$0
+    gsub(/^    - "|"$/, "", line)
+    gsub(/\\\\/, "\\", line)
+    print line
+  }
+  found && in_section && /^  [a-z]/{in_section=0}
+  found && /^[a-z]/{found=0}
+' "$GOVERNANCE_FILE"
+```
+
+Each wrapper reads ONLY its own tool subsection (`kubectl:`, `aws:`, or `psql:`). This means Track B's `mock-aws` wrapper cannot be tricked into checking `wrapper_allowlist.kubectl` — per-track isolation is enforced by wrapper selection, not by separate governance files.
 
 ---
 

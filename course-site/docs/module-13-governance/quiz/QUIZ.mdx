@@ -191,3 +191,36 @@ The governance principle: encode human judgment into the policy once (DO conditi
 
 </details>
 
+---
+
+### Question 7: Three-Layer Defense Model
+
+A Track C Kubernetes agent attempts to run `kubectl delete pod api-deployment-def456`. The agent is at governance level L4 with `HERMES_LAB_TRACK=track-c`. The `wrapper_allowlist.kubectl` at L4-track-c contains `"apply "` and `"rollout undo"` as the L4 additions on top of the L3 baseline (get/describe/logs/top/rollout history/rollout status/diff/explain). The agent's SOUL.md has a NEVER rule: "NEVER execute kubectl delete without explicit human approval." Which layers of the three-layer defense model fire for this command attempt?
+
+A) Only Layer 2 (Hermes DANGEROUS_PATTERNS) fires because kubectl delete is hardcoded in DANGEROUS_PATTERNS.
+
+B) Only Layer 3 (SOUL.md NEVER rule) fires because the mechanical layers don't cover kubectl.
+
+C) Layer 1 (`wrapper_allowlist`) rejects the command first because `delete` is not in the allowlist at L4. Layer 3 (SOUL.md NEVER) would also refuse the intent. Layer 2 does NOT fire because `kubectl delete` is not in Hermes DANGEROUS_PATTERNS.
+
+D) All three layers fire simultaneously, identical to a Track A DROP TABLE attempt.
+
+<details>
+<summary>Show Answer</summary>
+
+**Correct answer: C) Layer 1 rejects at wrapper_allowlist. Layer 3 SOUL.md NEVER would also refuse. Layer 2 does NOT fire.**
+
+Track C's destructive commands (`kubectl delete`, `kubectl drain`, `kubectl exec`, `kubectl cordon`) are NOT in Hermes's hardcoded DANGEROUS_PATTERNS list in `tools/approval.py`. This means Layer 2 cannot fire for these commands regardless of `approvals.mode`.
+
+**Before Phase 7:** Track C had only Layer 3 (SOUL.md NEVER rules) as protection for these commands — SOUL.md was the sole mechanical backstop.
+
+**After Phase 7:** Layer 1 (`wrapper_allowlist.kubectl`) is added as a mechanical enforcement. The L4 Track C allowlist never includes `delete` at any level. The attempt is rejected at Layer 1 by the wrapper, and would also be refused at Layer 3 by the agent's SOUL.md identity. Layer 2 does not fire.
+
+**Why not A?** `kubectl delete` is intentionally absent from DANGEROUS_PATTERNS. The Hermes team chose not to gate it mechanically — the behavioral (SOUL.md) layer was the design choice. Phase 7 adds Layer 1 as a course-local supplement.
+
+**Why not D?** The three-layer stack fires fully for Track A's `DROP TABLE` because `SQL DROP` IS in DANGEROUS_PATTERNS (Line ~75 in `tools/approval.py`). Track C's destructive commands do not have this Layer 2 coverage. Track A is the gold standard for three-layer defense; Track B and Track C have two-layer defense.
+
+**Implication:** SOUL.md remains load-bearing for Track B and Track C even after Phase 7. If SOUL.md NEVER rules were removed, Layer 2 would not catch `kubectl delete`. This is why the reference documentation says "SOUL.md is load-bearing for Track B and Track C" — the wrapper_allowlist is a defense in depth addition, not a replacement.
+
+</details>
+
