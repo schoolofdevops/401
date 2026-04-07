@@ -89,7 +89,10 @@ ls $MOCK_DATA_DIR/kubernetes/
 Copy the complete Track C reference agent into your Hermes profiles directory.
 
 ```bash
-cp -r course/agents/track-c-kubernetes/ ~/.hermes/profiles/track-c/
+hermes profile create track-c
+cp agents/track-c-kubernetes/config.yaml ~/.hermes/profiles/track-c/
+cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/
+cp -r agents/track-c-kubernetes/skills/sre-k8s-pod-health ~/.hermes/profiles/track-c/skills/
 
 # Verify the profile structure
 ls ~/.hermes/profiles/track-c/

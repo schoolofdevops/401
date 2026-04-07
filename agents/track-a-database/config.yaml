@@ -1,6 +1,10 @@
 # Track A: Database Health & Tuning Agent
 # Governance Level: L2 Advisory
-# Install: cp -r course/agents/track-a-database/ ~/.hermes/profiles/track-a/
+# Install:
+#   hermes profile create track-a
+#   cp agents/track-a-database/config.yaml ~/.hermes/profiles/track-a/
+#   cp agents/track-a-database/SOUL.md ~/.hermes/profiles/track-a/
+#   cp -r agents/track-a-database/skills/dba-rds-slow-query ~/.hermes/profiles/track-a/skills/
 # Launch:  hermes -p track-a chat
 
 model:

@@ -1,6 +1,10 @@
 # Track C: Kubernetes Health & Self-Healing Agent
 # Governance Level: L2 Advisory
-# Install: cp -r course/agents/track-c-kubernetes/ ~/.hermes/profiles/track-c/
+# Install:
+#   hermes profile create track-c
+#   cp agents/track-c-kubernetes/config.yaml ~/.hermes/profiles/track-c/
+#   cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/
+#   cp -r agents/track-c-kubernetes/skills/sre-k8s-pod-health ~/.hermes/profiles/track-c/skills/
 # Launch:  hermes -p track-c chat
 # Prerequisite: KIND cluster running (see course/setup/setup-kind.md)
 

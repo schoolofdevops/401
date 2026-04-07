@@ -52,7 +52,10 @@ export PATH="$(pwd)/infrastructure/wrappers:$PATH"
 Install the completed Track A reference agent into your Hermes profiles directory:
 
 ```bash
-cp -r course/agents/track-a-database/ ~/.hermes/profiles/track-a/
+hermes profile create track-a
+cp agents/track-a-database/config.yaml ~/.hermes/profiles/track-a/
+cp agents/track-a-database/SOUL.md ~/.hermes/profiles/track-a/
+cp -r agents/track-a-database/skills/dba-rds-slow-query ~/.hermes/profiles/track-a/skills/
 ```
 
 Verify the installation:

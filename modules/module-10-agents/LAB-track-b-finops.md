@@ -46,7 +46,10 @@ which aws
 Copy the Track B reference agent into your Hermes profiles directory:
 
 ```bash
-cp -r course/agents/track-b-finops/ ~/.hermes/profiles/track-b/
+hermes profile create track-b
+cp agents/track-b-finops/config.yaml ~/.hermes/profiles/track-b/
+cp agents/track-b-finops/SOUL.md ~/.hermes/profiles/track-b/
+cp -r agents/track-b-finops/skills/devops-deployment-safety-check ~/.hermes/profiles/track-b/skills/
 ```
 
 Verify the profile structure:

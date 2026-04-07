@@ -1,6 +1,10 @@
 # Track B: Cost Anomaly & FinOps Agent
 # Governance Level: L2 Advisory
-# Install: cp -r course/agents/track-b-finops/ ~/.hermes/profiles/track-b/
+# Install:
+#   hermes profile create track-b
+#   cp agents/track-b-finops/config.yaml ~/.hermes/profiles/track-b/
+#   cp agents/track-b-finops/SOUL.md ~/.hermes/profiles/track-b/
+#   cp -r agents/track-b-finops/skills/devops-deployment-safety-check ~/.hermes/profiles/track-b/skills/
 # Launch:  hermes -p track-b chat
 
 model:

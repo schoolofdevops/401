@@ -110,7 +110,9 @@ kubectl get prometheusrule -n monitoring -l release=kube-prometheus
 Install the Morgan fleet coordinator profile from the course repo:
 
 ```bash
-cp -r agents/fleet-coordinator ~/.hermes/profiles/fleet
+hermes profile create fleet
+cp agents/fleet-coordinator/config.yaml ~/.hermes/profiles/fleet/
+cp agents/fleet-coordinator/SOUL.md ~/.hermes/profiles/fleet/
 ```
 
 Inspect the critical toolset change from Phase 9 Plan 01:
@@ -125,14 +127,20 @@ If you see `cli: [web, skills]` (no terminal), the delegation chain WILL fail â€
 cannot inherit `terminal` from a parent that lacks it. Copy again to pick up the Phase 9 fix:
 
 ```bash
-cp -r agents/fleet-coordinator ~/.hermes/profiles/fleet
+# Re-running 'hermes profile create fleet' is safe â€” it is idempotent.
+hermes profile create fleet
+cp agents/fleet-coordinator/config.yaml ~/.hermes/profiles/fleet/
+cp agents/fleet-coordinator/SOUL.md ~/.hermes/profiles/fleet/
 grep -A1 'cli:' ~/.hermes/profiles/fleet/config.yaml
 ```
 
 Also verify Track C is installed:
 
 ```bash
-cp -r agents/track-c-kubernetes ~/.hermes/profiles/track-c
+hermes profile create track-c
+cp agents/track-c-kubernetes/config.yaml ~/.hermes/profiles/track-c/
+cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/
+cp -r agents/track-c-kubernetes/skills/sre-k8s-pod-health ~/.hermes/profiles/track-c/skills/
 hermes profiles list
 # Expected: fleet, track-a, track-b, track-c (plus any other Module 10 profiles)
 ```

@@ -1,6 +1,9 @@
 # Fleet Coordinator Agent
 # Role: Cross-domain incident triage and specialist delegation
-# Install: cp -r course/agents/fleet-coordinator/ ~/.hermes/profiles/fleet/
+# Install:
+#   hermes profile create fleet
+#   cp agents/fleet-coordinator/config.yaml ~/.hermes/profiles/fleet/
+#   cp agents/fleet-coordinator/SOUL.md ~/.hermes/profiles/fleet/
 # Launch:  hermes -p fleet chat
 # Note: This agent has no skills/ directory. Its capability is delegation.
 # Specialists (track-a, track-b, track-c) must be installed as separate profiles.
