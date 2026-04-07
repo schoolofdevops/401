@@ -1,406 +1,719 @@
-# Module 11 Lab: Fleet Orchestration — Cross-Domain Incident Response
+# Module 11 Lab: Fleet Orchestration — Live FLEET-01 Incident Response
 
-**Duration:** 90 minutes (45 min guided + 45 min free explore)
-**Track:** Fleet — Cross-Domain Incident Response
-**Prerequisite:** Module 10 complete — all three track agents installed and responding in mock mode
-**Outcome:** Running a full fleet coordinator scenario in mock mode, observing how cross-domain synthesis identifies a root cause that no single-domain agent can find alone
+**Duration:** ~135 minutes (90 min guided + 45 min free explore)
+**Track:** Fleet — Live incident response chain on KIND
+**Prerequisites:**
+- Module 6 complete — KIND cluster running with Phase 6 crashloop2 scenario applied
+- Module 12 complete — Phase 8 AlertManager + Telegram bot working
+- Module 13 complete — Phase 7 L4 governance understood
+- Morgan profile installed at `~/.hermes/profiles/fleet/` (Plan 01 updated toolset)
+- Track C profile installed at `~/.hermes/profiles/track-c/`
 
-> You are the incident commander. Three alerts fired within 5 minutes of each other. Your three
-> specialist agents each find domain-specific findings. The fleet coordinator's job — and the lesson
-> of this module — is to find the single root cause that explains all three. By the end of this lab,
-> you will have run Morgan (the fleet coordinator) against the cross-domain scenario and evaluated
-> whether it identified the `memory-hog` analytics service as the common cause across all three domains.
-
----
+**Outcome:** An end-to-end automated incident response chain running LIVE on your KIND cluster:
+AlertManager fires → Morgan (fleet profile) triages → Track C specialist diagnoses with sre-k8s-pod-health
+→ Morgan synthesizes + proposes fix → Telegram approval → Track C re-delegated at L4 → kubectl apply
+succeeds. You will observe every handoff in the gateway logs. You will also walk the Path B production
+upgrade path where the fix flows through a GitHub PR instead of direct apply.
 
 > **SOLO LEARNER PATH (Udemy / self-paced)**
 >
-> You will install all 4 profiles yourself and run them all locally. This lab is designed for a
-> single person running all agents on one machine. There is no team dependency.
+> The full live chain requires a Telegram bot (Phase 8 setup) and a running KIND cluster with
+> AlertManager. If either is not available, set `HERMES_LAB_MODE=mock` and follow the Solo Learner
+> callouts embedded at each step — they walk you through the equivalent mock-mode commands. You
+> will see the same delegation → synthesis → proposal → approval flow without live infrastructure.
+
+> **LIVE WORKSHOP VARIANT (Instructor-led)**
 >
-> **Steps 1–7 are your complete path.** All agents run as Hermes profiles on your local machine:
-> `fleet`, `track-a`, `track-b`, and `track-c`. The fleet coordinator routes to your locally
-> installed specialist profiles.
->
-> ---
->
-> **LIVE WORKSHOP VARIANT (Teams of 3)**
->
-> If you are in a live workshop where each participant has already built their own Module 10 agent:
->
-> - Person 1 (Track A) runs `hermes -p track-a chat` on their machine
-> - Person 2 (Track B) runs `hermes -p track-b chat` on their machine
-> - Person 3 (Track C) runs `hermes -p track-c chat` on their machine
-> - Any one person installs Morgan (`fleet` profile) per Step 2
-> - Morgan routes to each person's agent — the team variant happens organically
->
-> The lab steps are identical. Skip the individual track installs in Step 2 if your track agent
-> is already installed from Module 10.
+> In a live workshop, the instructor typically demos Steps 1-5 on a shared screen (setting up
+> Morgan + subscribing the webhook), then each team member runs Steps 6-11 on their own cluster
+> to observe Morgan's behavior. The lab steps are identical for both modes.
 
 ---
 
-## GUIDED PHASE — 45 minutes
+## GUIDED PHASE — 90 minutes
 
 ---
 
-## Step 1: Prerequisites and Individual Agent Verification (10 min)
+## Step 1: Prerequisites and Complete Environment Export (10 min)
 
-Before running the fleet coordinator, verify each specialist agent works independently. A broken
-specialist gives the coordinator incomplete findings — and coordinator synthesis will silently miss
-an entire domain.
-
-Export the environment variables from the root of your course directory:
+Before starting the gateway, export all environment variables at the root of your course directory.
+This is the single canonical export block for the entire lab — every subsequent step assumes
+these values are set. Phase 9 adds `GITOPS_REPO_URL` and `GITOPS_BRANCH_PREFIX` to the
+accumulated Phase 1-8 set.
 
 ```bash
-export HERMES_LAB_SCENARIO=messy
-export HERMES_LAB_MODE=mock
-export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
-export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+cd ~/work/agentic/devops/course   # adjust to your course root
+
+# Cluster + mode
+export HERMES_LAB_MODE=live                              # Phase 1 — set mock for Solo Learner
+export HERMES_LAB_SCENARIO=crashloop2                    # Phase 6 scenario name
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"   # Phase 1
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"       # Phase 1
+
+# Governance (L4 = allows kubectl apply, Phase 7)
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-c                          # K8s specialist
+
+# Telegram approval (from Phase 8 setup)
+export TELEGRAM_BOT_TOKEN="<your-bot-token-from-BotFather>"
+export TELEGRAM_ALLOWED_USERS="<your-telegram-user-id>"
+
+# GitHub for Path B Production Upgrade (Steps 10-11)
+export GITHUB_TOKEN="<your-PAT-with-repo-scope>"
+
+# GitOps Path B (Phase 9 NEW per D-22)
+export GITOPS_REPO_URL="https://github.com/<your-username>/hermes-fleet-fixes"
+export GITOPS_BRANCH_PREFIX="hermes-fix-"
 ```
 
-> **Verify mock wrappers are on PATH:**
+Verify the exports are active:
+
+```bash
+echo "MODE=$HERMES_LAB_MODE"
+echo "GOVERNANCE=$HERMES_LAB_GOVERNANCE"
+echo "TRACK=$HERMES_LAB_TRACK"
+[[ -n "$TELEGRAM_BOT_TOKEN" ]] && echo "TELEGRAM: configured" || echo "TELEGRAM: MISSING"
+[[ -n "$GITOPS_REPO_URL" ]] && echo "GITOPS_REPO_URL: $GITOPS_REPO_URL" || echo "GITOPS_REPO_URL: MISSING (needed for Step 10)"
+```
+
+Run the KIND cluster readiness checks:
+
+```bash
+# KIND running
+kubectl cluster-info --context kind-kind
+
+# crashloop2 scenario applied (apply now if not yet done)
+kubectl apply -f infrastructure/scenarios/k8s/02-crashloop-backoff.yaml
+kubectl get pods -n k8s-trouble-crashloop
+# Expected: crasher pod in CrashLoopBackOff
+
+# AlertManager + Prometheus running
+kubectl get pods -n monitoring
+# Expected: prometheus-*, alertmanager-* pods all Running
+
+# PrometheusRule loaded (Phase 8 rule fires on crashloop2)
+kubectl get prometheusrule -n monitoring -l release=kube-prometheus
+```
+
+> **SOLO LEARNER**
+>
+> Set `HERMES_LAB_MODE=mock` if you cannot run KIND. The mock-kubectl wrapper
+> intercepts every kubectl command in this lab and returns pre-canned crashloop2 output.
+> You can still observe the full delegation chain in gateway logs — just no real cluster mutation.
+> Skip the KIND/Prometheus readiness checks; they don't apply in mock mode. The Solo Learner
+> callouts in Steps 5-9 give you mock-mode equivalents for every live step.
+
+---
+
+## Step 2: Install and Verify Morgan Profile with the Phase 9 Toolset Update (8 min)
+
+Install the Morgan fleet coordinator profile from the course repo:
+
+```bash
+cp -r agents/fleet-coordinator ~/.hermes/profiles/fleet
+```
+
+Inspect the critical toolset change from Phase 9 Plan 01:
+
+```bash
+grep -A3 'platform_toolsets:' ~/.hermes/profiles/fleet/config.yaml
+# Expected output includes:
+#   cli: [terminal, web, skills]
+```
+
+If you see `cli: [web, skills]` (no terminal), the delegation chain WILL fail — Track C children
+cannot inherit `terminal` from a parent that lacks it. Copy again to pick up the Phase 9 fix:
+
+```bash
+cp -r agents/fleet-coordinator ~/.hermes/profiles/fleet
+grep -A1 'cli:' ~/.hermes/profiles/fleet/config.yaml
+```
+
+Also verify Track C is installed:
+
+```bash
+cp -r agents/track-c-kubernetes ~/.hermes/profiles/track-c
+hermes profiles list
+# Expected: fleet, track-a, track-b, track-c (plus any other Module 10 profiles)
+```
+
+Quick smoke test — send Morgan a test prompt to confirm she introduces herself correctly:
+
+```bash
+hermes -p fleet chat
+```
+
+Prompt:
+
+```
+What is your role?
+```
+
+Expected: Morgan introduces herself as the fleet coordinator, mentions delegation to Track A/B/C
+specialists, and confirms she does not execute domain commands directly. Exit with Ctrl+D.
+
+> **WHY TERMINAL IS IN MORGAN'S CONFIG**
+>
+> Hermes delegation uses a toolset intersection: when Morgan calls `delegate_task`, the child
+> agent's toolsets are intersected with Morgan's `enabled_toolsets`. Without `terminal` in
+> Morgan's `platform_toolsets.cli`, the intersection strips `terminal` from Track C — and Track C
+> cannot run kubectl.
+>
+> The `terminal` entry in Morgan's config is a **mechanical capability for delegation** (belt).
+> The behavioral prohibition against Morgan calling terminal directly is enforced by Morgan's
+> NEVER rule in SOUL.md (suspenders). Belt + suspenders = Morgan can delegate kubectl apply to
+> Track C without herself executing any kubectl commands.
+
+> **SOLO LEARNER**
+>
+> Everything in this step runs identically in mock mode — `hermes -p fleet chat` works without a cluster.
+
+---
+
+## Step 3: Read Morgan's Updated SOUL.md — The Delegation-with-Approval Pattern (7 min)
+
+Open Morgan's SOUL.md from the installed profile:
+
+```bash
+cat ~/.hermes/profiles/fleet/SOUL.md
+```
+
+Find these 4 Phase 9 additions (added in Plan 01). They appear after the original 4 NEVER rules:
+
+**1. The NEW NEVER terminal rule (in Behavior Rules section):**
+
+```
+NEVER call terminal tools directly — your role is delegation, not execution.
+```
+
+**2. The re-delegation rule (in Phase 9 belt + suspenders section):**
+
+```
+After human approval, re-delegate to the SAME specialist that diagnosed the issue
+with HERMES_LAB_GOVERNANCE=L4 in the instructions context
+```
+
+**3. The fix proposal format rule:**
+
+```
+Generate fix proposals as kubectl patch commands OR YAML diff overlays — kubectl
+commands for Path A (direct apply), YAML overlays for Path B (GitOps PR)
+```
+
+**4. The Telegram approval gate (in Escalation Policy section):**
+
+```
+Await human approval via Telegram before re-delegating apply — never trigger a fix
+without explicit /approve <incident-id> confirmation
+```
+
+Compare Morgan's before vs. after state:
+
+| Before Phase 9 | After Phase 9 |
+|---|---|
+| 4 NEVER rules (db, aws, kubectl, delegation loops) | 5 NEVER rules (+ terminal direct) |
+| No approval gate in Escalation Policy | Awaits Telegram `/approve` before re-delegating apply |
+| No fix-format rule | Generates kubectl patches OR YAML overlays |
+| `cli: [web, skills]` — delegation chain broken | `cli: [terminal, web, skills]` — delegation chain works |
+
+> **TIP: Read SOUL.md as a behavioral spec**
+>
+> Every line in SOUL.md is a constraint on what Morgan will do. `delegation:` in `config.yaml`
+> tells Hermes HOW to spawn child agents. SOUL.md tells the LLM WHEN and WHY. Together they
+> fully specify Morgan's behavior for the FLEET-01 chain.
+
+> **SOLO LEARNER**
+>
+> Everything in this step is file reading — no infrastructure needed.
+
+---
+
+## Step 4: Start the Gateway and Subscribe Morgan to AlertManager Webhook (10 min)
+
+This step starts the Hermes gateway and wires Morgan to receive AlertManager events via the
+Plan 01 helper script.
+
+Open **Terminal 1** (stays running throughout the lab):
+
+```bash
+# Set env vars first — gateway process inherits them at startup
+# (already done in Step 1 — confirm HERMES_LAB_GOVERNANCE is in scope)
+echo "GOVERNANCE=$HERMES_LAB_GOVERNANCE"   # must print L4
+
+# Start the gateway with the fleet profile
+hermes gateway run --profile fleet
+```
+
+The gateway should start on port 8644 and show both webhook and telegram platforms active.
+
+Open **Terminal 2**:
+
+```bash
+bash infrastructure/scenarios/k8s/alertmanager/fleet-webhook-subscribe.sh
+# Expected output:
+#   [fleet-webhook-subscribe.sh] Subscribed. AlertManager -> Morgan is now wired.
+#   Next step: trigger a test alert to verify the chain...
+```
+
+> **CAUTION: HERMES_LAB_GOVERNANCE must be set BEFORE gateway start**
+>
+> Environment variables are inherited by the gateway process at startup. If you export
+> `HERMES_LAB_GOVERNANCE=L4` AFTER the gateway is already running, child agents inherit the OLD
+> value (empty or L1). The wrapper will then block `kubectl apply` at the L1 level.
+>
+> Verify the gateway process has L4 in its environment:
 >
 > ```bash
-> which mock-psql
-> # Expected: <course-dir>/infrastructure/wrappers/mock-psql
+> # Linux
+> GATEWAY_PID=$(pgrep -f 'hermes gateway')
+> cat /proc/$GATEWAY_PID/environ | tr '\0' '\n' | grep HERMES_LAB
+>
+> # macOS
+> GATEWAY_PID=$(pgrep -f 'hermes gateway')
+> ps eww $GATEWAY_PID | tr ' ' '\n' | grep HERMES_LAB
 > ```
 >
-> If `which mock-psql` returns nothing, re-run the `export PATH=` line above.
+> Expected: `HERMES_LAB_MODE=live`, `HERMES_LAB_GOVERNANCE=L4`, `HERMES_LAB_TRACK=track-c`.
 
-Now verify each track agent against the messy scenario. Run each in a separate terminal tab and
-paste the prompt shown — you want a one-line confirmation that each agent finds domain findings:
+> **SOLO LEARNER**
+>
+> Run `hermes gateway run --profile fleet` the same way in mock mode. You still see webhook
+> subscriptions succeed. Instead of waiting for AlertManager to fire, proceed to Step 5 where
+> you hand-craft the webhook test payload.
 
-**Track A — Database:**
+---
 
-```bash
-hermes -p track-a chat
-```
+## Step 5: Trigger the AlertManager Alert and Observe Morgan Receiving the Webhook (10 min)
 
-Prompt:
+**Live path (KIND + AlertManager running):**
 
-```
-Check RDS slow queries — HERMES_LAB_SCENARIO=messy
-```
-
-Expected: Aria confirms `[MOCK MODE]` and reports slow queries on the production RDS instance.
-
-**Track B — FinOps:**
+Restart the crasher to force a fresh CrashLoopBackOff event that AlertManager will detect:
 
 ```bash
-hermes -p track-b chat
+# Terminal 2 — trigger the crash loop
+kubectl rollout restart deployment/crasher -n k8s-trouble-crashloop
+
+# Watch pods restart (wait 2-3 minutes for alert to fire)
+watch -n 5 'kubectl get pods -n k8s-trouble-crashloop'
 ```
 
-Prompt:
+Expected sequence in Terminal 1 (gateway log):
 
 ```
-Check for cost anomalies — HERMES_LAB_SCENARIO=messy
+webhook.alertmanager received: {alerts: [{labels: {alertname: KubePodCrashLooping,
+  namespace: k8s-trouble-crashloop, pod: crasher-xxx}, ...}]}
+→ invoking profile: fleet
+→ Morgan (fleet-coordinator) starting triage...
 ```
 
-Expected: The Track B agent confirms `[MOCK MODE]` and reports the 2026-04-02 cost spike.
+> **SOLO LEARNER**
+>
+> No live AlertManager? Send a hand-crafted AlertManager-shaped payload:
+>
+> ```bash
+> cat > /tmp/test-alert.json <<'EOF'
+> {
+>   "alerts": [{
+>     "status": "firing",
+>     "labels": {
+>       "alertname": "KubePodCrashLooping",
+>       "namespace": "k8s-trouble-crashloop",
+>       "pod": "crasher-xxx"
+>     },
+>     "annotations": {
+>       "description": "Pod crasher is crash looping in namespace k8s-trouble-crashloop"
+>     }
+>   }]
+> }
+> EOF
+> hermes webhook test alertmanager --payload @/tmp/test-alert.json
+> ```
+>
+> You will see the same Morgan triage output in Terminal 1 — the delegation mechanics are identical.
 
-**Track C — Kubernetes:**
+> **NOTE: The PrometheusRule that fires this alert**
+>
+> The alert originates from `infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml`
+> (Phase 8, `KubePodCrashLooping` rule). It requires the label `release: kube-prometheus` for
+> auto-discovery by kube-prometheus-stack. If the alert is not firing after 3 minutes, verify:
+>
+> ```bash
+> kubectl get prometheusrule -n monitoring -o yaml | grep -A2 'release:'
+> ```
+
+---
+
+## Step 6: Observe Morgan's Triage and Delegation to Track C (10 min)
+
+Watch Terminal 1 (gateway log) as Morgan processes the AlertManager webhook:
+
+**Expected gateway output:**
+
+```
+Morgan: Triage: This is a Kubernetes pod failure (alertname=KubePodCrashLooping).
+        Affected domains: kubernetes only (no database or cost signals in this alert).
+        Delegating to Track C for diagnosis.
+
+[delegate_task] spawning child agent: track-c
+  toolsets: [terminal, web, skills]   <- Phase 9 fix: terminal inherited from Morgan
+  env: HERMES_LAB_GOVERNANCE=L4, HERMES_LAB_TRACK=track-c, HERMES_LAB_SCENARIO=crashloop2
+
+Track C specialist: Received task — "Diagnose crasher pod in k8s-trouble-crashloop namespace.
+  Alert: KubePodCrashLooping. Check pod status, logs, and resource configuration."
+```
+
+Point out the `toolsets: [terminal, web, skills]` line in the log. Without the Phase 9 toolset
+fix, this line would say `[web, skills]` and Track C would fail on its first kubectl call with
+"terminal tool not available."
+
+The delegation is **in-process**: Track C specialist is a child `AIAgent` object spawned inside
+the same Python process as Morgan. This means `os.environ` is shared — `HERMES_LAB_GOVERNANCE=L4`
+is visible to Track C without any additional passing mechanism.
+
+> **SOLO LEARNER**
+>
+> Same log output in mock mode — the wrapper intercepts kubectl calls but the delegation mechanics
+> are identical. You see the same triage statement and delegation logs.
+
+---
+
+## Step 7: Observe Track C Specialist Diagnosing the Pod with sre-k8s-pod-health (10 min)
+
+Track C runs its diagnostic sequence using the sre-k8s-pod-health SKILL.md from Phase 6.
+Watch the continuation in Terminal 1:
+
+**Expected Track C output:**
+
+```
+Track C: Running sre-k8s-pod-health diagnostic tree for namespace k8s-trouble-crashloop...
+
+$ kubectl get pods -n k8s-trouble-crashloop -l app=crasher
+  NAME          READY   STATUS             RESTARTS   AGE
+  crasher-xxx   0/1     CrashLoopBackOff   5 (45s ago)   8m
+
+$ kubectl describe pod crasher-xxx -n k8s-trouble-crashloop
+  ...
+  Last State: Terminated
+    Reason: Error
+    Exit Code: 1
+  ...
+  Limits: <none>        <- no resource limits set (root cause contributing factor)
+  Requests: <none>
+
+$ kubectl logs crasher-xxx -n k8s-trouble-crashloop --previous
+  starting...
+  fatal: missing config
+
+Root cause: Container exits 1 on startup (startup failure).
+Contributing factor: No resource limits or requests configured on the crasher deployment.
+In a production cluster with memory pressure, this pod would be an OOMKill candidate.
+
+Recommended fix: Add resource limits and requests to the crasher deployment.
+  Path A (direct apply):  kubectl apply -f infrastructure/scenarios/k8s/gitops/memory-patch.yaml
+  Path B (GitOps PR):     Generate YAML overlay in your GitOps repo, open PR, run apply.sh on merge.
+
+Returning findings to Morgan.
+```
+
+> **NOTE: Lab narrative note**
+>
+> The crasher deployment exits 1 (startup failure from `busybox exit 1`) — the actual FLEET-01
+> fix teaches the resource limit pattern, not a literal OOMKill fix. The mock data for
+> `crashloop2` correctly reflects this. The teaching point is the delegation flow and the apply
+> governance, not the specific patch content.
+
+> **SOLO LEARNER**
+>
+> mock-kubectl returns the same structured output from Phase 6 mock data files in
+> `infrastructure/mock-data/kubernetes/`. The diagnosis is identical — the wrapper just doesn't
+> touch a real cluster.
+
+---
+
+## Step 8: Observe Morgan Synthesizing Findings and Posting the Proposal to Telegram (10 min)
+
+After Track C returns findings, Morgan:
+1. Receives findings in-process (return value from `delegate_task`)
+2. Synthesizes: root cause summary + proposed fix
+3. Composes a self-contained Telegram proposal message
+4. Delivers via `deliver: telegram` cross-platform routing
+
+**Expected Telegram message (also visible in gateway Terminal 1):**
+
+```
+INCIDENT PROPOSAL — crasher pod in k8s-trouble-crashloop
+
+Root cause: Container exits 1 on startup (startup failure). Missing resource limits
+and requests — contributing factor for production memory pressure.
+
+Proposed fix (Path A — direct apply):
+  kubectl apply -f infrastructure/scenarios/k8s/gitops/memory-patch.yaml -n k8s-trouble-crashloop
+
+Alternative (Path B — GitOps PR):
+  See Step 10 to walk the production upgrade path instead.
+
+Governance: L4 (re-delegation at L4 level, kubectl apply is in wrapper_allowlist)
+Reply: /approve incident-001   OR   /reject incident-001
+```
+
+> **CAUTION: Self-contained proposal message (Pitfall 5)**
+>
+> Morgan's proposal message contains the **full kubectl command**. This is intentional: when the
+> `/approve` handler fires, it creates a NEW Morgan agent invocation. That new invocation must
+> know what to apply. The self-contained proposal message provides that context.
+>
+> If the proposal contains only "apply the fix" without specifying the command, the approval
+> handler cannot re-delegate correctly.
+
+> **SOLO LEARNER**
+>
+> If no Telegram bot is configured, Morgan's proposal text appears in the gateway Terminal 1 log
+> instead. Read the proposed command there and proceed to Step 9 using the manual apply path.
+
+---
+
+## Step 9: Approve via Telegram and Observe Path A Re-delegation + kubectl Apply (10 min)
+
+Send the approval from your Telegram client:
+
+```
+/approve incident-001
+```
+
+**Expected gateway flow (Terminal 1):**
+
+```
+Telegram bot received: /approve incident-001
+Admin allowlist check: user_id=<your-id> — ALLOWED (in TELEGRAM_ALLOWED_USERS)
+
+New Morgan invocation: processing /approve incident-001
+Morgan: Approval received. Re-delegating fix to Track C at L4 governance.
+
+[delegate_task] spawning child agent: track-c (re-delegation for apply)
+  toolsets: [terminal, web, skills]
+  env: HERMES_LAB_GOVERNANCE=L4, HERMES_LAB_TRACK=track-c
+
+Track C (apply run):
+$ kubectl apply -f infrastructure/scenarios/k8s/gitops/memory-patch.yaml -n k8s-trouble-crashloop
+[mock-kubectl] HERMES_LAB_GOVERNANCE=L4 HERMES_LAB_TRACK=track-c
+[mock-kubectl] Loading allowlist: governance/governance-L4-track-c.yaml
+[mock-kubectl] Checking: "apply " against wrapper_allowlist.kubectl
+[mock-kubectl] PASS — "apply " is in L4 Track C allowlist
+deployment.apps/crasher configured
+
+Track C: Apply succeeded. Deployment crasher updated in k8s-trouble-crashloop.
+Morgan: Posting success confirmation to Telegram...
+```
+
+Verify the patch applied:
 
 ```bash
+kubectl get deployment crasher -n k8s-trouble-crashloop -o yaml | grep -A5 resources:
+# Expected:
+#   resources:
+#     limits:
+#       memory: "256Mi"
+#       cpu: "200m"
+#     requests:
+#       memory: "128Mi"
+#       cpu: "100m"
+```
+
+> **NOTE: The pod may still crash-loop**
+>
+> Our memory-patch.yaml adds resource limits but does NOT fix the `exit 1` startup failure in the
+> crasher container. This is intentional — the lab demonstrates the resource limit governance
+> pattern, not a complete bug fix. The Free Explore section challenges you to write a real fix.
+
+> **SOLO LEARNER**
+>
+> Without a Telegram bot, skip `/approve`. Run the apply directly with governance intact:
+>
+> ```bash
+> hermes -p track-c chat
+> ```
+>
+> Prompt:
+>
+> ```
+> Apply the approved fix: kubectl apply -f infrastructure/scenarios/k8s/gitops/memory-patch.yaml -n k8s-trouble-crashloop
+> ```
+>
+> Observe the L4 governance wrapper pass-through in the output. Same mechanism as live — just no
+> Telegram in the loop.
+
+**This is the end of Path A.** Steps 10-11 walk Path B (Production Upgrade — GitOps PR flow).
+
+---
+
+## Step 10: PRODUCTION UPGRADE — Path B GitOps PR Flow with `gh pr create` (10 min)
+
+> **NOTE: Production upgrade section**
+>
+> This section demonstrates the production-grade pattern. In a real production deployment, you
+> would typically use a GitOps PR-based flow rather than direct apply. Paths A and B exist in
+> Phase 9 because not every team runs ArgoCD — some run kubectl or helm from CI on PR merge.
+> The diff between A and B IS the teaching moment.
+
+Initialize your GitOps repo (choose Option A or Option B):
+
+**Option A: GitHub repo (requires GITHUB_TOKEN):**
+
+```bash
+mkdir ~/hermes-fleet-fixes && cd ~/hermes-fleet-fixes
+git init
+cp $OLDPWD/infrastructure/scenarios/k8s/gitops/gitops-repo-template/README.md ./README.md
+cp $OLDPWD/infrastructure/scenarios/k8s/gitops/memory-patch.yaml ./memory-patch.yaml
+git add . && git commit -m "chore: bootstrap GitOps repo"
+
+# Create the repo on GitHub
+gh repo create hermes-fleet-fixes --public --source=. --push
+
+export GITOPS_REPO_URL="https://github.com/$(gh api user -q .login)/hermes-fleet-fixes"
+echo "GITOPS_REPO_URL=$GITOPS_REPO_URL"
+```
+
+**Option B: Local-only repo (Solo Learner — no GitHub required):**
+
+```bash
+mkdir ~/hermes-fleet-fixes && cd ~/hermes-fleet-fixes
+git init
+cp $OLDPWD/infrastructure/scenarios/k8s/gitops/memory-patch.yaml ./memory-patch.yaml
+git add . && git commit -m "chore: bootstrap local GitOps repo"
+export GITOPS_REPO_URL="file://$HOME/hermes-fleet-fixes"
+```
+
+Now trigger the Path B flow — invoke Track C directly with a Path B instruction:
+
+```bash
+cd $OLDPWD   # back to course root
 hermes -p track-c chat
 ```
 
 Prompt:
 
 ```
-Check pod health — HERMES_LAB_SCENARIO=messy
+Generate a YAML overlay that adds memory limits to the crasher deployment (memory: 256Mi).
+Write it to ~/hermes-fleet-fixes/memory-patch.yaml.
+Commit to a feature branch named hermes-fix-<timestamp>.
+Push to origin (if GitHub repo is set up).
+Open a PR with: gh pr create --title "fix: add memory limits to crasher" --body "Adds resource limits: memory 256Mi, cpu 200m." --base main
+Post back the PR URL.
 ```
 
-Expected: The Track C agent confirms `[MOCK MODE]` and reports the api-deployment CrashLoopBackOff.
+**Expected specialist output:**
 
-> **If any agent fails here, fix it before Step 2.**
+```
+Track C: Generating YAML overlay for crasher deployment...
+Writing to ~/hermes-fleet-fixes/memory-patch.yaml
+
+$ git -C ~/hermes-fleet-fixes checkout -b hermes-fix-1712534400
+$ git -C ~/hermes-fleet-fixes add memory-patch.yaml
+$ git -C ~/hermes-fleet-fixes commit -m "fix: add memory limits to crasher deployment"
+$ git -C ~/hermes-fleet-fixes push origin HEAD
+$ gh pr create --title "fix: add memory limits to crasher" \
+    --body "Adds resource limits: memory 256Mi, cpu 200m." \
+    --base main
+  https://github.com/your-username/hermes-fleet-fixes/pull/1
+
+PR URL: https://github.com/your-username/hermes-fleet-fixes/pull/1
+```
+
+> **NOTE: No `_deliver_github_pr` in Hermes (RESEARCH BLOCKER-01)**
 >
-> A broken specialist gives the coordinator incomplete findings. Common causes:
-> - Profile not installed: run the `cp -r` install command from Module 10 for that track
-> - Mock wrappers not on PATH: re-run the `export PATH=` line above in the terminal running the agent
-> - Wrong scenario: confirm `HERMES_LAB_SCENARIO=messy` is set in the current shell
+> Track C calls `gh pr create` **directly** from its terminal toolset. Hermes has a
+> `_deliver_github_comment` method for posting to EXISTING PRs, but **no `_deliver_github_pr`
+> method for opening new ones**. The `gh` CLI is not a kubectl command, so the mock-kubectl
+> governance wrapper does NOT intercept it — PR creation is un-governed (git/gh commands are
+> outside the wrapper's scope).
 >
-> Reference `course/infrastructure/scenarios/cross-domain.md` for the full expected behavior per agent.
+> This is noted in `infrastructure/scenarios/k8s/gitops/gitops-repo-template/README.md`.
 
-Exit each agent when done: type `exit` or press Ctrl+C.
-
----
-
-## Step 2: Install the Fleet Coordinator (5 min)
-
-Install Morgan, the fleet coordinator, into your Hermes profiles directory:
-
-```bash
-cp -r course/agents/fleet-coordinator/ ~/.hermes/profiles/fleet/
-```
-
-Solo learners — also confirm all three track agents are installed (they were installed in Module 10,
-but verify):
-
-```bash
-hermes profiles list
-```
-
-Expected output shows all four profiles:
-
-```
-fleet
-track-a
-track-b
-track-c
-```
-
-If any track profile is missing, install it:
-
-```bash
-cp -r course/agents/track-a-database/   ~/.hermes/profiles/track-a/
-cp -r course/agents/track-b-finops/     ~/.hermes/profiles/track-b/
-cp -r course/agents/track-c-kubernetes/ ~/.hermes/profiles/track-c/
-```
-
-> **Note: The coordinator has NO skills/ directory. Its only capability is delegation.**
+> **SOLO LEARNER**
 >
-> Compare the profile directories:
+> Use `file://$HOME/hermes-fleet-fixes` for GITOPS_REPO_URL (Option B above). Skip `gh pr create`
+> — merge the feature branch locally instead:
 >
 > ```bash
-> ls ~/.hermes/profiles/fleet/
-> # Expected: SOUL.md  config.yaml   (no skills/ directory)
->
-> ls ~/.hermes/profiles/track-a/
-> # Expected: SOUL.md  config.yaml  skills/
+> cd ~/hermes-fleet-fixes
+> git checkout main
+> git merge --no-ff hermes-fix-<timestamp>
+> git log --oneline main
 > ```
 >
-> The fleet coordinator's `config.yaml` uses the `delegation:` block instead of `skills/`.
-> This is the key architectural difference: specialists have domain skills, coordinators have
-> delegation configuration. A coordinator with skills would execute domain commands itself —
-> defeating the purpose of delegation.
+> The merged local commit is your "PR". Proceed to Step 11 with your local repo path.
 
 ---
 
-## Step 3: Read the Cross-Domain Incident Scenario (5 min)
+## Step 11: Sync via apply.sh and Verify the Full Path B Chain (8 min)
 
-Read the full scenario that Morgan will investigate:
+Review the PR in the GitHub UI (Option A) or inspect the local git log (Option B), then merge:
 
 ```bash
-cat course/infrastructure/scenarios/cross-domain.md
+# Option A: merge in GitHub UI, then pull locally
+gh pr merge 1 --squash
+cd ~/hermes-fleet-fixes && git checkout main && git pull
+cd $OLDPWD   # back to course root
+
+# Option B: already merged locally in Step 10
 ```
 
-Read the **Context** section carefully. Three alerts fire within 5 minutes of each other:
-
-```
-[08:47 UTC]  PagerDuty:  api-deployment CrashLoopBackOff (OOMKilled, 8 restarts)
-[08:51 UTC]  CloudWatch: rds-cpu-high — 97.3% CPU, 5 consecutive periods
-[08:52 UTC]  FinOps:     cost spike — $52.34 today (4x normal), EC2 primary driver
-```
-
-> **Callout: What individual agents find vs. what the coordinator's job is**
->
-> Each specialist agent investigates its own domain:
-> - Track A finds: 5 slow queries on RDS. Cannot identify which service is generating them.
-> - Track B finds: EC2 cost spike starting 2026-04-02. Correlates to analytics workload but
->   cannot confirm causation.
-> - Track C finds: api-deployment CrashLoopBackOff + memory-hog pod with no memory limit.
->   Cannot confirm whether memory-hog is connected to the database load or cost spike.
->
-> The fleet coordinator's job is NOT to add a fourth set of domain findings. Its job is to find
-> the **common thread** across all three sets of findings — the single change that explains why
-> all three alerts fired within 5 minutes of each other.
-
-Consider: if you ran each agent separately and got three reports, what would you need to do
-manually to find the root cause? That manual synthesis step is what Morgan does.
-
----
-
-## Step 4: Understand the Coordinator's Delegation Rules (5 min)
-
-Read Morgan's SOUL.md:
+Run `apply.sh` to sync the merged manifest:
 
 ```bash
-cat ~/.hermes/profiles/fleet/SOUL.md
+bash infrastructure/scenarios/k8s/gitops/apply.sh ~/hermes-fleet-fixes/memory-patch.yaml
 ```
 
-Two rules are critical. Find them and understand why they exist:
-
-**Anti-loop rule:**
+Expected output:
 
 ```
-NEVER spawn more than one delegation per domain per incident — avoid delegation loops
+[gitops/apply.sh] Phase 9 FLEET-01 Path B sync
+[gitops/apply.sh] Patch file: /Users/.../hermes-fleet-fixes/memory-patch.yaml
+[gitops/apply.sh] Namespace:  k8s-trouble-crashloop
+deployment.apps/crasher configured
+[gitops/apply.sh] Sync complete. Waiting for rollout...
+deployment.apps/crasher: 0 of 1 updated replicas are available...
+deployment.apps/crasher condition met
+[gitops/apply.sh] Rollout complete.
 ```
 
-**Sequencing rule:**
-
-```
-Wait for specialist response before delegating the next task
-```
-
-> **Why these rules exist**
->
-> Without the anti-loop rule, a coordinator receiving an incomplete response from a specialist
-> might delegate to that specialist again — and again — creating an infinite delegation loop.
-> The rule enforces a hard cap: one delegation per domain per incident.
->
-> Without the sequencing rule, the coordinator might send all three delegations simultaneously
-> before receiving any findings. If a specialist returns an error, the coordinator cannot adjust
-> subsequent delegations based on that information. Sequential dispatch is the safe default.
->
-> **What this means for the lab run:** You will see Morgan delegate to track-a first, wait for
-> a response, then delegate to track-b, wait, then delegate to track-c, wait — then synthesize.
-> This is sequential, not parallel, even though the scenario says "parallel investigation."
->
-> Morgan's `config.yaml` sets `MAX_CONCURRENT_CHILDREN=3` — the architecture supports parallel
-> dispatch. Sequential is the behavioral default from SOUL.md. The free explore challenges you
-> to test what changes when you modify this behavior.
-
----
-
-## Step 5: Run the Fleet Scenario (20 min)
-
-Your environment variables are already set from Step 1. Launch the fleet coordinator:
+Verify the deployed configuration:
 
 ```bash
-hermes -p fleet chat
+kubectl get deployment crasher -n k8s-trouble-crashloop -o yaml | grep -A5 resources:
 ```
 
-Verify Morgan introduces itself and confirms the model and mock mode. Then paste this full
-incident prompt verbatim:
-
-```
-Three alerts fired at 08:47 UTC:
-[08:47] PagerDuty: api-deployment CrashLoopBackOff (OOMKilled, 8 restarts)
-[08:51] CloudWatch: rds-cpu-high — 97.3% CPU, 5 consecutive periods
-[08:52] FinOps: cost spike — $52.34 today (4x normal), EC2 primary driver
-Investigate and identify root cause.
-```
-
-Watch the coordinator behavior as it runs:
-
-**Expected sequence:**
-
-1. Morgan triages: identifies all three domains are involved
-2. Morgan delegates to track-a (database): asks for RDS slow query investigation
-3. Track-a responds with findings (5 slow queries, analytics-pattern query structure)
-4. Morgan delegates to track-b (FinOps): asks for cost anomaly analysis with 2026-04-02 focus
-5. Track-b responds with findings (EC2 launch on 2026-04-02, data transfer spike)
-6. Morgan delegates to track-c (Kubernetes): asks for pod health and resource investigation
-7. Track-c responds with findings (api CrashLoopBackOff, memory-hog with no memory limit)
-8. Morgan synthesizes: identifies memory-hog deployed 2026-04-02 as the common root cause
-
-> **Model note:** This lab uses `anthropic/claude-haiku-4` for all four agents. Expected cost
-> for the full fleet run: < $0.10 total. If you hit rate limits, wait 60 seconds and retry.
+> **Path A vs Path B — what changed?**
 >
-> If Morgan delegates to all three simultaneously (not sequentially), check that
-> `~/.hermes/profiles/fleet/SOUL.md` contains the sequencing rule. The delegation order
-> should be visible in Morgan's response as it proceeds.
-
-**Expected synthesis (root cause statement):**
-
-Morgan should identify that:
-- All three anomalies trace back to 2026-04-02 — the date of the `memory-hog` deployment
-- The `memory-hog` analytics service has a memory leak causing cascading failures across all 3 domains
-- A single corrective action (fix or rollback `memory-hog`) addresses all three alerts
-
-> **If Morgan produces three separate recommendations (one per domain) without naming a unified root
-> cause:** Prompt it:
+> | | Path A (direct apply) | Path B (GitOps PR) |
+> |---|---|---|
+> | **Who executes** | Track C under L4 governance | apply.sh (you, after PR merge) |
+> | **Auditability** | Wrapper audit log only | Git history + PR review + wrapper log |
+> | **Rollback** | `kubectl rollout undo` | Revert PR + apply.sh again |
+> | **Governance gate** | Telegram approval | PR review + Telegram approval |
+> | **ArgoCD** | Not needed | v1.2 alternative to replace apply.sh |
 >
-> ```
-> What is the single earliest change that could explain all three findings simultaneously?
-> ```
+> Path B Sub-path B2 (`apply.sh`) is the v1.1 implementation. ArgoCD (Sub-path B1) would replace
+> this script in a production deployment with ArgoCD already installed. See
+> `infrastructure/scenarios/k8s/gitops/README.md` for the B1/B2 distinction.
+
+> **SOLO LEARNER**
 >
-> The fleet coordinator's value is the synthesis step. If it cannot cross-correlate the 2026-04-02
-> date across all three domain findings, it has not completed its job.
+> Everything runs identically with a local repo — apply.sh is wrapper-aware and honors
+> `HERMES_LAB_MODE=mock`. In mock mode, the kubectl apply inside apply.sh goes through the
+> mock-kubectl wrapper and produces expected output without a real cluster change.
 
 ---
 
-## Step 6: Evaluate the Synthesis (10 min)
+## Milestone Close Note
 
-Answer these three evaluation questions in your lab notes:
+Congratulations — you have just run the **final v1.1 lab**. Phase 9 closes the v1.1 milestone:
+"Realistic Agents & Production Workflows." The incident response chain you walked (AlertManager →
+Morgan → Track C → Telegram approval → L4 apply) is the capstone pattern for the entire v1.1 track.
 
-**Question 1:** Did the coordinator identify 2026-04-02 as the common date across all three
-specialist findings?
-
-- Track A finding: analytics-pattern queries started accumulating around 2026-04-02
-- Track B finding: EC2 m5.4xlarge launched manually on 2026-04-02
-- Track C finding: memory-hog deployed (check pod age / deployment timestamp)
-
-**Question 2:** Did the synthesis name `memory-hog` (the analytics service) as the single root
-cause — not "three separate incidents"?
-
-**Question 3:** Did Morgan recommend a single unified action (fix or rollback `memory-hog`) rather
-than three separate remediation steps (one per domain)?
-
-> **This is what fleet synthesis gives you that individual agents cannot: the common thread across
-> simultaneous alerts.**
->
-> If you ran each agent separately, you would get three domain reports:
-> - Track A: "5 slow queries — recommend index review"
-> - Track B: "Cost spike — EC2 launched 2026-04-02 not terminated"
-> - Track C: "api CrashLoopBackOff — memory-hog has no memory limit"
->
-> Each report is accurate. None of them names the root cause. A human incident commander
-> reading all three would eventually see the 2026-04-02 pattern — but at 3 AM, under alert
-> fatigue, that correlation is easy to miss.
->
-> The fleet coordinator turns three domain reports into one causal chain. That is the "wow moment"
-> of this module.
->
-> **The 5-minute alert correlation window:** Three independent simultaneous incidents within
-> 5 minutes of each other is statistically improbable. The coordinator should detect this
-> temporal clustering and prioritize finding the common cause over treating each alert as
-> independent. This is the key heuristic that distinguishes fleet synthesis from single-domain
-> escalation.
-
----
-
-## Step 7: Inspect the Delegation Trace (5 min)
-
-Review Morgan's full response. Find these structural elements:
-
-1. **Triage statement** — did Morgan identify all three domains before delegating?
-2. **Delegation sequence** — can you see the order: track-a → track-b → track-c?
-3. **Specialist findings embedded in synthesis** — does the final summary cite specific findings
-   from each specialist (e.g., "track-a found 5 slow queries matching analytics batch pattern")?
-4. **Cross-domain correlation** — where does Morgan state the 2026-04-02 connection across domains?
-5. **Unified recommendation** — single action vs. three separate actions?
-
-> **Note on sequential vs. parallel delegation**
->
-> Morgan delegates sequentially per SOUL.md behavioral rules, even though the scenario describes
-> "parallel investigation." This is intentional: sequential dispatch is the safe default because
-> earlier findings can inform later delegations.
->
-> The architectural capability (MAX_CONCURRENT_CHILDREN=3 in `config.yaml`) supports parallel
-> dispatch — but SOUL.md rules override architecture defaults. The free explore challenges you
-> to test what changes when you modify the sequencing rule directly.
->
-> In the live workshop scenario, with three human-operated agents, delegation happens in parallel
-> naturally — each person responds independently. The behavioral distinction between sequential
-> and parallel is more visible in the solo path.
-
----
-
-## Step 8: Workshop Team Variant (5 min — callout for live workshop teams)
-
-> **This step is for live workshop teams only.** Solo Udemy learners have already completed the
-> full lab in Steps 1–7. Your solo run IS the complete experience.
-
-For live workshop teams where each of the 3 participants has already built their own Module 10 agent:
-
-**Team setup:**
-
-- Person 1 (Track A): Already has `track-a` installed from Module 10. Runs `hermes -p track-a chat`.
-- Person 2 (Track B): Already has `track-b` installed from Module 10. Runs `hermes -p track-b chat`.
-- Person 3 (Track C): Already has `track-c` installed from Module 10. Runs `hermes -p track-c chat`.
-- Any one person installs Morgan (Step 2 above) and runs `hermes -p fleet chat`.
-
-The team coordinator (whoever installed Morgan) pastes the incident prompt from Step 5. Morgan
-routes to each person's installed track agent. Each person sees their agent get invoked by the
-coordinator and responds with their domain findings. Morgan synthesizes across all three.
-
-> The team variant is organic — it works because Hermes delegation routes to locally installed
-> profiles by profile name. As long as `track-a`, `track-b`, and `track-c` profiles are installed
-> (on the coordinator's machine or accessible remotely), Morgan will find them.
->
-> The evaluation questions from Step 6 apply equally to the team run: did Morgan identify
-> `2026-04-02` as the common date, name `memory-hog` as root cause, and recommend a single action?
+When you are ready to move on, the next steps are:
+- Run `/gsd:audit-uat` for cross-phase verification debt review
+- Run `/gsd:complete-milestone` to archive v1.1 and prepare for v1.2
 
 ---
 
@@ -408,219 +721,149 @@ coordinator and responds with their domain findings. Morgan synthesizes across a
 
 ---
 
-## Challenge 1 — Starter (15 min): Modify the Incident Prompt
+### Challenge 1 (Starter — 15 min): Two-Stage Approval
 
-Remove one of the three alerts from the incident prompt and re-run the fleet scenario.
+Extend Morgan's SOUL.md to support a two-stage approval flow:
+1. `/approve-draft <incident-id>` — Morgan generates the fix YAML but does NOT apply
+2. `/approve-apply <incident-id>` — Morgan re-delegates the actual apply
 
-Try the 2-alert variant (remove the FinOps alert):
-
-```
-Two alerts fired at 08:47 UTC:
-[08:47] PagerDuty: api-deployment CrashLoopBackOff (OOMKilled, 8 restarts)
-[08:51] CloudWatch: rds-cpu-high — 97.3% CPU, 5 consecutive periods
-Investigate and identify root cause.
-```
-
-Observe:
-
-- Does Morgan still delegate to track-b (FinOps), or does it skip it?
-- Does the synthesis still identify `memory-hog` and `2026-04-02` as the root cause — now with
-  only 2 domain corroborations instead of 3?
-- What changes in the synthesis confidence when only 2 domains are affected?
-
-> **Reflection:** The root cause is the same regardless of which alerts fire. The fleet
-> coordinator's synthesis quality depends on the information it receives. With 2 findings instead
-> of 3, the coordinator has less corroborating evidence — does it flag this uncertainty?
+What new behavior rule is needed in Morgan's SOUL.md? What changes in the Escalation Policy?
 
 ---
 
-## Challenge 2 — Intermediate (20 min): Modify Coordinator SOUL.md Delegation Behavior
+### Challenge 2 (Intermediate — 20 min): Different Phase 6 Scenario
 
-Edit Morgan's SOUL.md to change the sequencing rule:
+Trigger the chain against a different Phase 6 scenario:
 
 ```bash
-# Open the file in your editor
-nano ~/.hermes/profiles/fleet/SOUL.md
+kubectl apply -f infrastructure/scenarios/k8s/03-oom-killed.yaml
+kubectl rollout restart deployment/crasher -n k8s-trouble-oom
 ```
-
-Find this line:
-
-```
-Wait for specialist response before delegating the next task
-```
-
-Change it to:
-
-```
-Delegate to all specialists simultaneously with parallel context — do not wait between delegations
-```
-
-Save the file, start a new chat session, and re-run the fleet scenario with the original 3-alert prompt.
 
 Observe:
+- Does Morgan's triage correctly route to Track C for this scenario?
+- What does Track C's sre-k8s-pod-health output look like for OOMKilled vs CrashLoopBackOff?
+- Does the proposed fix differ?
 
-- Does Morgan now delegate to all three specialists before receiving any responses?
-- Does the synthesis quality change (better, worse, or same)?
-- Does Morgan still correctly identify `memory-hog` and `2026-04-02` as the root cause?
+---
 
-> **Tradeoffs: Sequential vs. parallel delegation**
->
-> Sequential (SOUL.md default):
-> - Slower to complete (each delegation waits for previous response)
-> - Later delegations can be informed by earlier findings (e.g., "track-a found analytics queries —
->   ask track-b to focus on EC2 launched 2026-04-02")
-> - Safer: no delegation loop risk from simultaneous responses
->
-> Parallel (your modified behavior):
-> - Faster to complete (all specialists run simultaneously)
-> - Earlier delegations cannot be informed by findings from parallel specialists
-> - Requires the coordinator to synthesize without context from previous delegations
->
-> Neither is universally better. Sequential is the safe default. Parallel is correct when
-> domain investigations are truly independent and speed matters more than adaptive context.
+### Challenge 3 (Intermediate — 20 min): Audit the Gateway Logs
 
-Restore the original SOUL.md when done to avoid confusion in later labs:
+Compare the gateway logs for your Path A run (Step 9) vs your Path B run (Step 11):
+
+1. What is the total latency difference from alert fire to fix confirmed?
+2. Which path has a richer audit trail?
+3. Which path is reversible with a single command?
+
+Find the governance wrapper audit lines in the log:
 
 ```bash
-cp course/agents/fleet-coordinator/SOUL.md ~/.hermes/profiles/fleet/SOUL.md
+# Filter gateway log for wrapper decisions
+journalctl --user -u hermes-gateway 2>/dev/null | grep 'mock-kubectl'
+# Or look at gateway Terminal 1 output scrollback
 ```
 
 ---
 
-## Challenge 3 — Advanced (30 min): Create a 2-Domain Incident
+### Challenge 4 (Advanced — 30 min): Parallel Delegation
 
-Write a new incident prompt that only triggers Track A and Track C (no cost component). Then
-observe whether the fleet coordinator correctly identifies the scope and skips Track B.
+Can you trigger a scenario where Morgan delegates to TWO specialists in parallel? What breaks
+with Morgan's current SOUL.md?
 
-Suggested 2-domain prompt:
-
-```
-Two alerts fired at 08:47 UTC:
-[08:47] PagerDuty: api-deployment CrashLoopBackOff (OOMKilled, 8 restarts) — service down
-[08:51] CloudWatch: rds-cpu-high — 97.3% CPU, 5 consecutive periods — slow queries
-Investigate. No cost anomalies have been reported.
-```
-
-Observe:
-
-1. **Does Morgan delegate to track-b (FinOps)?** It should NOT — no cost signal in the prompt.
-   If it does, examine Morgan's triage logic: is it defaulting to "all three" regardless of scope?
-
-2. **Does the synthesis still identify memory-hog without the cost correlation?**
-   With only 2 domain findings, the coordinator has:
-   - Track A: analytics-pattern queries (but no cost data to confirm who launched EC2)
-   - Track C: memory-hog pod with no memory limit
-   The `memory-hog` identification should still work via Track C alone — the pod is named
-   and its missing memory limit is the direct cause of Track A's query accumulation.
-
-3. **Is the synthesis weaker without Track B?**
-   The cost finding provides independent corroboration (EC2 launched 2026-04-02 to support
-   analytics job). Without it, the coordinator has less evidence. Does it flag this?
-
-> **Extension:** Add your own fourth alert type to the prompt — for example, a Slack notification
-> about a deployment. Does Morgan attempt to delegate to a non-existent track-d specialist?
-> What does it do when the delegated profile is not found?
+Hints:
+- The anti-loop rule (`NEVER spawn more than one delegation per domain per incident`) prevents
+  duplicate Track C calls
+- The sequential rule (`Wait for specialist response before delegating the next task`) prevents
+  parallel dispatch
+- Try a cross-domain incident that touches K8s AND cost simultaneously
 
 ---
 
-## Closing
+### Challenge 5 (Advanced — 30 min): K8s Agent Sandbox
 
-**What you demonstrated:**
-
-- Individual specialist agents (Track A, B, C) each find accurate domain findings but cannot
-  identify the cross-domain root cause
-- The fleet coordinator (Morgan) delegates sequentially to each specialist, waits for findings,
-  then synthesizes across all three domains
-- The synthesis identifies the single root cause (`memory-hog` analytics service, deployed
-  2026-04-02) that explains all three simultaneous alerts — something no single-domain agent
-  can do alone
-- The 5-minute alert correlation window is the key heuristic: three independent incidents within
-  5 minutes is improbable; a common cause is far more likely
-- Morgan's SOUL.md delegation rules (anti-loop, sequencing) are behavioral guardrails that prevent
-  coordinator failure modes invisible at the architecture level
-
-**What this pattern is:**
-
-This is the hierarchical multi-agent pattern. Morgan is not the smartest agent — the specialists
-have all the domain knowledge. Morgan's value is the synthesis step: combining outputs from
-multiple specialists into a unified causal explanation. This is what humans do in incident war
-rooms, and it is the hardest part to automate well.
-
-**Next:** Module 12 adds triggers to this pattern — scheduled cron checks, webhook subscriptions
-from PagerDuty, and Slack slash commands that invoke the fleet coordinator without a human
-typing the incident prompt.
+Project 3 in `exploratory/PROJECTS.mdx` walks the K8s Agent Sandbox install (alpha v0.2.1).
+Try installing the Sandbox CRDs on your KIND cluster and deploying the Track C agent inside a
+Sandbox. Observe the namespace isolation.
 
 ---
 
 ## Verification Checklist
 
-Run these commands to confirm your lab completed successfully:
-
-```bash
-# 1. Fleet coordinator profile is installed
-ls ~/.hermes/profiles/fleet/
-# Expected: SOUL.md  config.yaml   (no skills/ directory)
-
-# 2. All track agents are installed
-hermes profiles list
-# Expected output includes: fleet, track-a, track-b, track-c
-
-# 3. Fleet coordinator has no skills directory
-ls ~/.hermes/profiles/fleet/skills/ 2>&1
-# Expected: No such file or directory
-
-# 4. SOUL.md contains the delegation anti-loop rule
-grep "NEVER spawn" ~/.hermes/profiles/fleet/SOUL.md
-# Expected: NEVER spawn more than one delegation per domain per incident — avoid delegation loops
-
-# 5. Incident prompt contains the cross-domain scenario markers
-grep "CrashLoopBackOff\|08:47\|rds-cpu-high" course/infrastructure/scenarios/cross-domain.md | head -3
-# Expected: lines matching each alert from the scenario file
-
-# 6. Mock data files exist for all three tracks
-ls infrastructure/mock-data/rds/ infrastructure/mock-data/cost-explorer/ infrastructure/mock-data/kubernetes/
-# Expected: JSON files in each directory
-
-# 7. Individual track agents respond in mock mode (from Step 1 verification)
-# Re-run Step 1 verification if needed
+```
+- [ ] Morgan profile installed with `cli: [terminal, web, skills]` in config.yaml
+- [ ] Morgan's SOUL.md shows the Phase 9 NEVER rule and re-delegation behavior (5 total NEVER rules)
+- [ ] hermes gateway run --profile fleet started with HERMES_LAB_GOVERNANCE=L4 in env
+- [ ] fleet-webhook-subscribe.sh ran successfully
+- [ ] AlertManager alert fired (live) OR hand-crafted payload sent (Solo Learner)
+- [ ] Morgan triaged and delegated to Track C (observed in gateway log)
+- [ ] Track C diagnosed via sre-k8s-pod-health (observed kubectl output)
+- [ ] Morgan synthesized + posted proposal to Telegram (or gateway log for Solo Learner)
+- [ ] /approve incident-001 sent (or manual apply for Solo Learner)
+- [ ] Path A kubectl apply succeeded at L4 governance
+- [ ] GitOps repo initialized (Option A or B)
+- [ ] Track C opened PR via gh pr create (Option A) or created local branch (Option B)
+- [ ] apply.sh synced the merged patch
+- [ ] Free Explore: picked at least one challenge to investigate
 ```
 
 ---
 
-## Appendix: Scenario Reference
-
-**Root cause (for your debrief notes):**
-
-The `memory-hog` analytics service was deployed on 2026-04-02 with a memory leak. It allocates
-memory for each order batch it processes but does not release between batches. This single
-service caused:
-
-1. **Track C (direct):** Pod consuming 410Mi on node with no memory limit set. Linux OOM killer
-   targets `api-deployment` (256Mi limit, lowest priority on node). Result: CrashLoopBackOff.
-
-2. **Track A (secondary):** Analytics service makes excessive queries against OLTP production
-   instance — 3+ slow queries per batch, accumulating because memory leak prevents clean batch
-   termination. Result: 5 simultaneous slow queries, RDS CPU at 97%.
-
-3. **Track B (tertiary):** Analytics team manually launched m5.4xlarge EC2 on 2026-04-02 to
-   run analytics job at scale. Instance not terminated. Cross-AZ data transfer from RDS queries
-   also elevated. Result: 4x daily cost spike.
-
-**Deployment timeline:**
+## Appendix: Complete FLEET-01 Architecture Reference
 
 ```
-2026-04-02 06:00 UTC  memory-hog deployed to production
-2026-04-02 06:18 UTC  m5.4xlarge EC2 launched manually (analytics team)
-2026-04-02 08:30 UTC  RDS CPU starts climbing (analytics queries accumulating)
-2026-04-04 08:47 UTC  api-deployment enters CrashLoopBackOff (node memory pressure peaks)
-2026-04-04 08:51 UTC  RDS CPU alarm fires (elevated for 2 days)
-2026-04-04 08:52 UTC  FinOps alert fires (day-7 cost still elevated)
+AlertManager (monitoring namespace)
+  │ POST /webhooks/alertmanager (KubePodCrashLooping fires)
+  ▼
+Hermes Gateway (port 8644, fleet profile)
+  │ route: alertmanager → Morgan (in-process)
+  ▼
+Morgan (fleet-coordinator)
+  │ triage: K8s domain → Track C
+  │ delegate_task(target=track-c, toolsets=[terminal,web,skills])
+  ▼
+Track C (track-c-kubernetes, in-process child)
+  │ sre-k8s-pod-health diagnostic tree
+  │ kubectl get/describe/logs (via mock-kubectl L4 wrapper)
+  │ returns: root cause + fix proposal
+  ▼
+Morgan
+  │ synthesizes: unified root cause + fix command
+  │ posts proposal to Telegram: /approve incident-001
+  ▼
+Human (Telegram)
+  │ /approve incident-001
+  ▼
+Morgan
+  │ re-delegates: track-c with HERMES_LAB_GOVERNANCE=L4
+  ▼
+Track C (apply run)
+  │ kubectl apply -f memory-patch.yaml -n k8s-trouble-crashloop
+  │ mock-kubectl wrapper: L4 Track C allowlist → "apply " PASS
+  │ deployment updated
+  ▼
+Morgan
+  │ posts success to Telegram
+  ▼
+FLEET-01 complete (Path A)
+
+--- Path B branch (Steps 10-11) ---
+
+Track C (path-b run)
+  │ generates YAML overlay → ~/hermes-fleet-fixes/memory-patch.yaml
+  │ git commit + push feature branch
+  │ gh pr create (direct terminal call — no Hermes delivery method)
+  ▼
+Human (GitHub UI or local git)
+  │ reviews diff, merges PR
+  ▼
+apply.sh
+  │ kubectl apply -f ~/hermes-fleet-fixes/memory-patch.yaml -n k8s-trouble-crashloop
+  ▼
+FLEET-01 complete (Path B)
 ```
 
-**The correct fleet synthesis statement:**
-
-> "The `memory-hog` analytics service deployed 2026-04-02 has a memory leak. This single service
-> is causing: (1) `api-deployment` OOM kills due to node memory pressure (Track C), (2) excessive
-> database queries causing RDS CPU spike (Track A), and (3) cost spike from manual EC2 scale-up
-> to support the analytics workload (Track B). Recommended action: rollback or disable `memory-hog`
-> pending memory leak fix. This single action will resolve all three alerts."
+**Phase 6 assets reused:** `02-crashloop-backoff.yaml`, `sre-k8s-pod-health` SKILL.md, Track C profile
+**Phase 7 assets reused:** `mock-kubectl` wrapper, `governance-L4-track-c.yaml` allowlist
+**Phase 8 assets reused:** `prometheus-rules.yaml`, `alertmanager-config.yaml`, Telegram bot adapter
+**Phase 9 Plan 01 assets:** Morgan `config.yaml` (terminal toolset), Morgan `SOUL.md` (4 additions),
+  `fleet-webhook-subscribe.sh`, `gitops/apply.sh`, `gitops/memory-patch.yaml`
