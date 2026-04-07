@@ -1,0 +1,179 @@
+---
+id: module-05-quiz
+title: "Module 5 Quiz: Superpowers for IaC"
+sidebar_label: "Quiz"
+sidebar_position: 1
+---
+
+# Module 5 Quiz: Superpowers for IaC
+
+These questions test your understanding of the Superpowers workflow applied to Helm and Terraform. Questions focus on conceptual understanding of why each phase exists — not on memorizing syntax.
+
+---
+
+### Question 1: TDD for Helm Charts
+
+When applying TDD to Helm chart development, what serves as the "failing test" (RED phase)?
+
+- A) Running `helm install` on the cluster and watching it fail
+- B) Manually reviewing YAML files to identify missing resources
+- C) A verification script that checks rendered output for required resource kinds — and currently fails because those resources do not yet exist
+- D) Running `kubectl describe` to see which pods are missing
+
+<details>
+<summary>Answer</summary>
+
+**Correct: C) A verification script that checks rendered output for required resource kinds — and currently fails because those resources do not yet exist**
+
+TDD for Helm uses `helm lint` and `helm template` as the test harness — no external test framework needed. The "test" is a shell script that renders the chart and checks the output for specific resource kinds (`HorizontalPodAutoscaler`, `PodDisruptionBudget`, `ServiceMonitor`). The RED state is when this script fails because the templates do not yet exist. The test defines what "done" means before any code is written.
+
+Option A (`helm install` failing) is running code first, then observing failure — the opposite of TDD. Options B and D are manual checks, not executable tests. Only option C represents an automated, repeatable RED state that defines success criteria before generation.
+
+</details>
+
+---
+
+### Question 2: mock_provider Purpose
+
+What is the primary benefit of using `mock_provider "aws" {}` in Terraform tests?
+
+- A) Tests execute faster because mock responses are pre-cached by Terraform
+- B) Tests run without AWS credentials or real API calls — the full TDD cycle works entirely offline
+- C) Mock provider generates more helpful error messages than the real AWS provider
+- D) Mock provider automatically cleans up resources after each test run
+
+<details>
+<summary>Answer</summary>
+
+**Correct: B) Tests run without AWS credentials or real API calls — the full TDD cycle works entirely offline**
+
+`mock_provider "aws" {}` intercepts all provider API calls and returns synthetic responses. This enables the complete TDD cycle — write tests, generate code, run tests, iterate — without needing AWS credentials, without API rate limits, and without incurring cloud costs. This is the enabling feature that makes Terraform TDD practical in a course environment and in CI pipelines.
+
+Option A is incorrect — mock responses are not pre-cached, they are generated dynamically by the provider mock. Option C is incorrect — mock error messages mirror the same Terraform test framework output. Option D is incorrect — mock provider operates only in the plan phase and never creates real resources to clean up.
+
+</details>
+
+---
+
+### Question 3: Context-First Approach
+
+In the Superpowers workflow, why does the lab use a CLAUDE.md file instead of starter code with TODO comments?
+
+- A) CLAUDE.md is a required configuration file for Claude Code — the tool reads it automatically at session start
+- B) TODO comments confuse AI tools and cause generation errors
+- C) Starter code skeletons are harder to maintain across multiple tracks
+- D) CLAUDE.md provides operational context (system state, constraints, exact vocabulary) that produces better AI generation than syntactic hints about where to put code
+
+<details>
+<summary>Answer</summary>
+
+**Correct: D) CLAUDE.md provides operational context (system state, constraints, exact vocabulary) that produces better AI generation than syntactic hints about where to put code**
+
+The Superpowers approach treats context as the input, not code skeletons. A CLAUDE.md that describes what exists, what is missing, the exact AWS attribute names, and the hard constraints gives the AI operational knowledge rather than structural hints. The Track B lab CLAUDE.md includes `metric_name = "CPUUtilization"` and `comparison_operator = "GreaterThanThreshold"` — the exact values that prevent the most common AI Terraform generation errors. A TODO comment cannot encode this constraint.
+
+Option A is true but incomplete — CLAUDE.md is read automatically by Claude Code, but that is a mechanism, not the reason it produces better output. Options B and C describe false reasons. The real benefit is in what the context encodes: vocabulary, state, and constraints that produce first-pass output that passes the tests.
+
+</details>
+
+---
+
+### Question 4: Debugging AI-Generated IaC
+
+After AI generates a Terraform module, `terraform test` fails with an assertion error on the CloudWatch alarm. Which debugging phase applies first?
+
+- A) Phase 3 (Hypothesize) — skip straight to the most likely fix (wrong attribute name)
+- B) Phase 4 (Fix) — immediately change `cpu_utilization` to `CPUUtilization` and re-run
+- C) Phase 1 (Investigate) — read the exact error output, identify which assertion failed, trace to the specific resource attribute
+- D) Restart the AI generation session and regenerate main.tf from scratch
+
+<details>
+<summary>Answer</summary>
+
+**Correct: C) Phase 1 (Investigate) — read the exact error output, identify which assertion failed, trace to the specific resource attribute**
+
+Systematic debugging always starts with investigation. The `terraform test` output names the exact failing run block, the failing assertion condition, and the actual value that was found versus the expected value. Reading this output tells you exactly which resource, which attribute, and what the mismatch is — in seconds. Skipping straight to a hypothesis (option A) or a fix (option B) means guessing without evidence.
+
+Option D (restart generation) wastes time and often produces the same error because the context that drove the original generation is unchanged. Investigate first, trace the error to its root cause, then apply the minimal fix.
+
+</details>
+
+---
+
+### Question 5: Verification vs Assumption
+
+Which statement represents proper verification of a Helm chart, not just an assumption?
+
+- A) "I reviewed the YAML templates and they look correct — the HPA apiVersion looks right"
+- B) "`helm template | kubectl apply --dry-run=client` exits 0 and shows 5 resources configured (dry run)"
+- C) "`helm lint` passed, so the chart is production-ready"
+- D) "The AI confirmed that all resources are correctly configured"
+
+<details>
+<summary>Answer</summary>
+
+**Correct: B) "`helm template | kubectl apply --dry-run=client` exits 0 and shows 5 resources configured (dry run)"**
+
+Verification requires running a command and reading its output — the Gate Function: Identify, Run, Read, Verify, Claim. Option B shows all five steps: a specific command was identified and run, the output was read (exit 0 + resource count), the output matched the expected result, and a completion claim follows from evidence.
+
+Option A ("looks correct") skips steps 1-4 and jumps to claiming completion from visual inspection — an assumption, not verification. Option C is partial — `helm lint` validates syntax and schema but does not validate that rendered output is accepted by the cluster API (dry-run does this). Option D is not verification — AI assertions are not evidence; running the command is.
+
+</details>
+
+---
+
+### Question 6: Code Review for AI-Generated Code
+
+Why does AI-generated IaC need MORE structured code review than human-written IaC, not less?
+
+- A) AI code has more bugs per line than human-written code
+- B) AI does not understand Terraform or Helm semantics, so all generated code is incorrect
+- C) AI can produce syntactically valid but semantically wrong infrastructure — like an HPA with `minReplicas: 5` and `maxReplicas: 3` — that passes `helm lint` but fails at deploy time
+- D) Generated code is always lower quality and requires a full rewrite after generation
+
+<details>
+<summary>Answer</summary>
+
+**Correct: C) AI can produce syntactically valid but semantically wrong infrastructure — like an HPA with `minReplicas: 5` and `maxReplicas: 3` — that passes `helm lint` but fails at deploy time**
+
+AI generation excels at syntax — the code will parse, validate, and often pass basic tests. But semantic correctness (does the configuration do what you intended?) requires human review. An HPA with `minReplicas: 5` and `maxReplicas: 3` passes `helm lint` because the YAML is syntactically valid. The semantic error — that minimum replicas cannot exceed maximum replicas — only surfaces when Kubernetes rejects the resource. The 5-dimension code review framework catches this class of error.
+
+Options A and D are incorrect characterizations — AI-generated code is often high quality syntactically. Option B is too strong — AI understands these tools well, which is precisely why it produces syntactically valid output. The challenge is semantic correctness, not general incompetence.
+
+</details>
+
+---
+
+### Question 7: When to Skip Superpowers
+
+For which task would applying the full Superpowers cycle be LEAST appropriate?
+
+- A) Building a new Helm chart for a microservice that has no existing chart
+- B) Adding a CloudWatch alarm to an existing, untested Terraform module
+- C) Changing a single variable default in a Terraform module that already has a passing test suite
+- D) Debugging a failing `terraform test` in a CI pipeline that worked yesterday
+
+<details>
+<summary>Answer</summary>
+
+**Correct: C) Changing a single variable default in a Terraform module that already has a passing test suite**
+
+The Superpowers cycle is designed for substantive IaC work — new modules, new resources, complex changes. For a one-line variable default change in an already-tested module, the overhead of brainstorm, TDD, debug, and formal review exceeds the risk of the change. The existing test suite already covers the module. Run the tests, make the change, run the tests again.
+
+Options A and B are greenfield or enhancement scenarios where the full cycle adds discipline that prevents the generate-and-pray anti-pattern. Option D is a debugging scenario — it starts at Phase 4 (Debug), not the full cycle, so it is not "applying the full Superpowers cycle" either. Option C is the clearest case where Superpowers overhead exceeds the change risk.
+
+</details>
+
+---
+
+## Score Interpretation
+
+| Score | Interpretation |
+|-------|---------------|
+| 7/7 | Strong understanding of Superpowers for IaC — ready for Module 6 |
+| 5-6/7 | Good understanding — review the explanation for any you missed |
+| 3-4/7 | Re-read `reading/concepts.mdx`, focus on the TDD and Debugging sections |
+| 0-2/7 | Work through both lab tracks before proceeding — the concepts are best understood through the hands-on cycle |
+
+---
+
+**Next:** [Continue to Module 6 — AI Workflow Tools](../module-06-ai-workflow-tools/module-06-readme)

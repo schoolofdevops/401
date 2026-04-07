@@ -1,0 +1,149 @@
+---
+id: module-05-exploratory
+title: "Exploratory Projects: Superpowers for IaC"
+sidebar_label: "Exploratory"
+sidebar_position: 1
+---
+
+# Exploratory Projects: Superpowers for IaC
+
+These stretch projects go beyond the main lab tracks. They absorb content from earlier module designs as optional extensions — if you want more practice with the Superpowers cycle in different IaC domains, these projects provide the challenge.
+
+**None of these are required for the course.** Complete them only if you finished the main lab track and want additional depth.
+
+---
+
+## Project 1: ArgoCD GitOps Pipeline
+
+**Difficulty:** Advanced
+**Estimated time:** 60-90 minutes
+**Prerequisites:** Track A (Helm) lab completed, ArgoCD installed on KIND (see setup note below)
+
+### What You Will Build
+
+An ArgoCD `Application` manifest and GitOps workflow that manages the reference app Helm chart via GitOps. Instead of running `helm upgrade` directly, ArgoCD watches a Git repository and automatically synchronizes the cluster state when the chart changes.
+
+### What You Are Applying
+
+The Superpowers cycle to a GitOps configuration — not a Helm chart or Terraform module, but an ArgoCD Application manifest that references the Helm chart you hardened in Track A.
+
+**Key Superpowers phases for this project:**
+
+- **Context (CLAUDE.md):** Document the ArgoCD namespace, the Helm chart path in your Git repo, the target cluster (KIND), and the sync policy constraints (automated sync? prune? self-heal?)
+- **TDD:** Use `kubectl apply --dry-run=server` against the ArgoCD CRDs to verify the Application manifest is valid. The RED state is the manifest failing validation; the GREEN state is the dry-run succeeding.
+- **Debug:** Common ArgoCD generation errors — wrong `repoURL` format, wrong `targetRevision` (should be `HEAD` not `main` for local repos), wrong `path` to the chart directory
+- **Verify:** Use `argocd app get <app-name>` (or `kubectl get application -n argocd`) to confirm the Application resource was created and synced. Look for `Sync Status: Synced` and `Health Status: Healthy`.
+
+### Key Steps
+
+1. Write CLAUDE.md describing: Git repo URL, chart path (`reference-app/helm/reference-app`), target namespace, sync policy
+2. Write a verification script that checks: Application resource exists, target namespace exists, Helm chart path is referenced correctly
+3. Prompt AI to generate the ArgoCD `Application` manifest
+4. Apply dry-run validation with ArgoCD CRDs installed
+5. Apply the manifest: `kubectl apply -f application.yaml -n argocd`
+6. Watch sync: `kubectl get application -n argocd -w`
+7. Code review: Does the Application use automated sync? Does it have prune enabled (deletes orphaned resources)? Is self-heal enabled? What are the trade-offs?
+
+### Setup Note
+
+:::caution ArgoCD on KIND requires memory patches
+Standard ArgoCD installation requests approximately 1.3 GB total across all components, which exceeds available memory on typical laptop KIND clusters. Before installing ArgoCD, apply the memory reduction patches in `reference-app/helm/setup-argocd.sh`.
+
+```bash
+bash reference-app/helm/setup-argocd.sh
+```
+
+This script installs ArgoCD with reduced memory requests suitable for a laptop KIND cluster. Without this patch, ArgoCD pods will be evicted due to OOM.
+:::
+
+---
+
+## Project 2: CI/CD Pipeline with Superpowers
+
+**Difficulty:** Intermediate
+**Estimated time:** 60-90 minutes
+**Prerequisites:** Familiarity with GitHub Actions syntax, a GitHub account (free tier)
+
+### What You Will Build
+
+A GitHub Actions pipeline for the reference app with:
+- Matrix testing across multiple environments
+- OIDC-based AWS authentication (no long-lived credentials)
+- Separate staging and production deployment jobs
+- Manual approval gate before production
+
+### What You Are Applying
+
+The Superpowers cycle to CI/CD pipeline-as-code. GitHub Actions YAML is IaC — it is declarative infrastructure that runs on GitHub's compute, and it has the same failure modes as Helm or Terraform (wrong syntax, wrong API, wrong environment references).
+
+**Key Superpowers phases for this project:**
+
+- **Context (CLAUDE.md):** Document the pipeline requirements — which branches trigger which jobs, the matrix environments, the OIDC trust relationship, the deployment targets
+- **TDD:** Use `act` (local GitHub Actions runner) for full pipeline testing, or use YAML schema validation as a lightweight alternative for the RED/GREEN cycle. The RED state is the workflow failing schema validation or `act` execution.
+- **Debug:** Common pipeline generation errors — wrong `on:` trigger syntax, wrong `permissions:` block for OIDC, wrong environment reference for approval gates, matrix syntax errors
+- **Verify:** Trigger the pipeline on a test branch, verify each job completes, confirm the manual approval gate fires before the production job runs
+- **Code Review:** Does the pipeline have secrets in environment variables? Are all environment variables referenced with `${{ vars.VARIABLE }}` not hardcoded? Is the matrix actually testing what you think it is?
+
+### Key Steps
+
+1. Write CLAUDE.md describing: repository layout, branch strategy (feature → staging, main → prod), AWS account IDs for OIDC, Kubernetes context names for each environment
+2. Write validation script using `yamllint` and `actionlint` to check pipeline syntax — this is your RED/GREEN harness
+3. Prompt AI to generate `.github/workflows/deploy.yml`
+4. Run validation: `yamllint .github/workflows/deploy.yml && actionlint .github/workflows/deploy.yml`
+5. If using `act`: `act push --dryrun` to simulate the push trigger
+6. Code review: Audit the pipeline against the 5 dimensions, focusing on Production Readiness (no hardcoded secrets, no hardcoded environment names)
+
+### Tool Setup
+
+```bash
+# Install actionlint (GitHub Actions linter)
+brew install actionlint      # macOS
+# or: curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash
+
+# Install act (local Actions runner) — optional, for GREEN state testing
+brew install act             # macOS
+# or: curl -fsSL https://raw.githubusercontent.com/nektos/act/master/install.sh | bash
+```
+
+---
+
+## Project 3: Second Track Challenge
+
+**Difficulty:** Intermediate
+**Estimated time:** 90 minutes
+**Prerequisites:** Main lab Track A or Track B completed
+
+### What You Will Build
+
+Whichever track you did NOT complete in the main lab. If you completed Track A (Helm), attempt Track B (Terraform). If you completed Track B (Terraform), attempt Track A (Helm).
+
+### Why This Is Valuable
+
+The Superpowers cycle is tool-agnostic — it applies equally to Helm, Terraform, GitHub Actions, Ansible, and any other IaC format. But the specific TDD toolchains, the specific AI generation error patterns, and the specific verification commands are different for each tool. Completing both tracks builds intuition about which phases are universal and which are tool-specific.
+
+### Reflection Questions
+
+After completing the second track, compare the two experiences:
+
+1. **TDD toolchain:** How did `helm lint` + verification script compare to `terraform test` with `mock_provider`? Which gave more useful error messages? Which was faster to write?
+
+2. **AI generation quality:** Did CLAUDE.md produce better first-pass output for Helm or Terraform? Why do you think that was? (Hint: consider the precision of the constraints you wrote in each CLAUDE.md.)
+
+3. **Debug phase:** Were the debugging sessions similar in length? Which error category was harder to diagnose — Helm's structural/label errors or Terraform's attribute name errors?
+
+4. **Code review findings:** What did the AI get right in one track that it got wrong in the other? What does this tell you about the AI's training data for each tool?
+
+5. **Workflow transfer:** Which Superpowers phases felt equally useful in both tracks? Which felt more valuable in one domain than the other?
+
+### Key Steps
+
+Follow the same 6-phase cycle from the main lab:
+
+1. Phase 0: Write CLAUDE.md for the new track's project
+2. Phase 1: Brainstorm with AI using the new CLAUDE.md
+3. Phase 2: Write failing tests (verification script or `unit.tftest.hcl`)
+4. Phase 3: Generate implementation with AI
+5. Phase 4: Debug generation errors
+6. Phase 5: Verify and code review
+
+The lab instructions for both tracks are in the `lab/` directory. Use them as reference if needed, but attempt each phase independently first.
