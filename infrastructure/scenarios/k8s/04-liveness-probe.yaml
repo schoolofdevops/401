@@ -1,0 +1,41 @@
+# Scenario 04: Liveness Probe Failure
+# Failure mode: Liveness probe configured to check port 9999 on nginx container that listens on 80
+# -> probe fails -> kubelet kills container -> CrashLoopBackOff with "Liveness probe failed" Events
+# Apply: kubectl apply -f infrastructure/scenarios/k8s/04-liveness-probe.yaml
+# Cleanup: kubectl delete namespace k8s-trouble-liveness
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-trouble-liveness
+  labels:
+    scenario: k8s-trouble
+    failure-mode: liveness-probe-failure
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: k8s-trouble-liveness
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      containers:
+      - name: app
+        image: nginx:1.27-alpine
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9999       # WRONG — nginx listens on 80, not 9999
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          failureThreshold: 3

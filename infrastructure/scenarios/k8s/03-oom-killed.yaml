@@ -1,0 +1,45 @@
+# Scenario 03: OOMKilled
+# Failure mode: Container allocates 64MB heap against a 32Mi memory limit -> cgroup OOM kill -> exitCode 137
+# Apple Silicon note: We use python:3.12-alpine bytearray instead of busybox dd because dd is I/O-bound
+# and may not trigger cgroup OOM on arm64/macOS Docker (see RESEARCH Pitfall 4).
+# Apply: kubectl apply -f infrastructure/scenarios/k8s/03-oom-killed.yaml
+# Cleanup: kubectl delete namespace k8s-trouble-oom
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-trouble-oom
+  labels:
+    scenario: k8s-trouble
+    failure-mode: oom-killed
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-eater
+  namespace: k8s-trouble-oom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memory-eater
+  template:
+    metadata:
+      labels:
+        app: memory-eater
+    spec:
+      containers:
+      - name: memory-eater
+        image: python:3.12-alpine
+        command: ["python3", "-c"]
+        args:
+        - |
+          import time
+          # Allocate 64 MB of heap — exceeds the 32Mi cgroup limit -> OOMKilled with exitCode 137
+          b = bytearray(64 * 1024 * 1024)
+          time.sleep(3600)
+        resources:
+          requests:
+            memory: "16Mi"
+          limits:
+            memory: "32Mi"

@@ -1,0 +1,46 @@
+# Scenario 06: Service Port Mismatch (no endpoints)
+# Failure mode: Service targetPort 9090 does not match container containerPort 80
+# -> kubectl get endpoints returns <none>
+# Apply: kubectl apply -f infrastructure/scenarios/k8s/06-port-mismatch.yaml
+# Cleanup: kubectl delete namespace k8s-trouble-port
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-trouble-port
+  labels:
+    scenario: k8s-trouble
+    failure-mode: port-mismatch
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: k8s-trouble-port
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: web
+        image: nginx:1.27-alpine
+        ports:
+        - containerPort: 80   # nginx default — actually listens here
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-svc
+  namespace: k8s-trouble-port
+spec:
+  selector:
+    app: web                  # selector matches the Deployment
+  ports:
+  - port: 80
+    targetPort: 9090          # WRONG — nginx is not listening on 9090

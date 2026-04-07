@@ -1,0 +1,33 @@
+# Scenario 01: ImagePullBackOff
+# Failure mode: Pod cannot pull a nonexistent registry image; status.containerStatuses[].state.waiting.reason == "ImagePullBackOff"
+# Apply: kubectl apply -f infrastructure/scenarios/k8s/01-image-pull-backoff.yaml
+# Cleanup: kubectl delete namespace k8s-trouble-image-pull
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-trouble-image-pull
+  labels:
+    scenario: k8s-trouble
+    failure-mode: image-pull-backoff
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: k8s-trouble-image-pull
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: web
+        image: nonexistent-registry.io/fake-app:v1.0.0
+        ports:
+        - containerPort: 80
