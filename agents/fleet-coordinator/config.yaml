@@ -9,8 +9,12 @@
 # Specialists (track-a, track-b, track-c) must be installed as separate profiles.
 
 model:
-  default: "anthropic/claude-haiku-4"
-  provider: "auto"
+  default: "gemini-2.5-flash"
+  provider: "custom:google-ai-studio"
+
+custom_providers:
+  - name: google-ai-studio
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
 
 platform_toolsets:
   # Morgan needs `terminal` in her toolset because Hermes delegation intersects child toolsets

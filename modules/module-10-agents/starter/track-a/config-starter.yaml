@@ -4,9 +4,9 @@
 # Track A reference: course/agents/track-a-database/config.yaml
 
 model:
-  # [your-model] # recommended: anthropic/claude-haiku-4
-  # Other options: "google/gemini-2.5-flash" (Google AI Studio free tier)
-  default: "[your-model] # recommended: anthropic/claude-haiku-4"
+  # Recommended: "gemini-2.5-flash" (Google AI Studio free tier — no billing required)
+  # See course/agents/track-a-database/config.yaml for the complete working example with provider config.
+  default: "[your-model] # recommended: gemini-2.5-flash"
   provider: "auto"
 
 platform_toolsets:

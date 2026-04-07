@@ -7,9 +7,9 @@
 # Both modes use the same SOUL.md identity and config — only kubectl routing differs.
 
 model:
-  # [your-model] # recommended: anthropic/claude-haiku-4 (lowest cost for lab sessions)
-  # Other options: "google/gemini-2.5-flash" (Google AI Studio free tier)
-  default: "[your-model] # recommended: anthropic/claude-haiku-4"
+  # Recommended: "gemini-2.5-flash" (Google AI Studio free tier — no billing required)
+  # See course/agents/track-c-kubernetes/config.yaml for the complete working example with provider config.
+  default: "[your-model] # recommended: gemini-2.5-flash"
   provider: "auto"
 
 platform_toolsets:

@@ -41,7 +41,7 @@ export PATH="$(pwd)/infrastructure/wrappers:$PATH"
 >
 > If `which mock-psql` returns nothing, re-run the `export PATH=` line above.
 
-> **Model note:** This lab uses `anthropic/claude-haiku-4`. Expected cost: < $0.05 per full diagnostic run.
+> **Model note:** This lab defaults to `gemini-2.5-flash` via Google AI Studio (free tier, no billing required).
 > If you hit rate limits, wait 60 seconds and retry — or switch to an alternate provider per
 > `course/setup/llm-access.md`.
 

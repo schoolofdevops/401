@@ -8,8 +8,12 @@
 # Launch:  hermes -p track-b chat
 
 model:
-  default: "anthropic/claude-haiku-4"
-  provider: "auto"
+  default: "gemini-2.5-flash"
+  provider: "custom:google-ai-studio"
+
+custom_providers:
+  - name: google-ai-studio
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
 
 platform_toolsets:
   cli: [terminal, file, web, skills]

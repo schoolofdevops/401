@@ -34,10 +34,9 @@ which aws
 ```
 
 > **Token Budget Note**
-> This lab uses `anthropic/claude-haiku-4` (configured in your agent's `config.yaml`).
-> Expected cost: less than $0.05 per complete diagnostic run.
-> If you encounter rate limit errors, wait 60 seconds and retry — or switch to
-> Google AI Studio (`google/gemini-2.5-flash`) as documented in `course/setup/llm-access.md`.
+> This lab defaults to `gemini-2.5-flash` via Google AI Studio (free tier, configured in `config.yaml`).
+> If you encounter rate limit errors (free tier: 500 requests/day), wait 60 seconds and retry — or
+> switch to an alternate provider as documented in `course/setup/llm-access.md`.
 
 ---
 

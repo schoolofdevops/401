@@ -54,10 +54,9 @@ export PATH="$(pwd)/infrastructure/wrappers:$PATH"
 > Mock mode and live mode use the same SOUL.md identity — only the kubectl routing changes.
 > The remainder of this lab works in either mode; live-specific notes are clearly marked **[LIVE MODE]**.
 
-> **Token budget note:** This lab uses `anthropic/claude-haiku-4` (configured in config.yaml).
-> Expected cost: < $0.05 per complete diagnostic run. If you encounter rate limit errors,
-> wait 60 seconds and retry — or switch to Google AI Studio / HF Inference as documented
-> in `course/setup/llm-access.md`.
+> **Token budget note:** This lab defaults to `gemini-2.5-flash` via Google AI Studio (free tier,
+> configured in config.yaml). If you encounter rate limit errors, wait 60 seconds and retry — or
+> switch to an alternate provider as documented in `course/setup/llm-access.md`.
 
 ---
 
