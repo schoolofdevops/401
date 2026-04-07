@@ -56,7 +56,7 @@ ls ~/.hermes/profiles/track-b/config.yaml
 ls ~/.hermes/profiles/track-c/config.yaml
 ```
 
-:::important Before you proceed: make a backup of your working config so you can restore it in Step 10.
+:::important Before you proceed: make a backup of your working config so you can restore it in Step 14.
 
 ```bash
 cp ~/.hermes/profiles/track-a/config.yaml ~/.hermes/profiles/track-a/config.yaml.backup
@@ -178,9 +178,36 @@ diff course/governance/governance-L1.yaml course/governance/governance-L2.yaml
 ---
 > platform_toolsets:
 >   cli: [terminal, file, web, skills]   # Terminal enabled: agent can run commands
+3a4,26
+> command_allowlist: []     # Nothing pre-approved
+>
+> # ── Course-local wrapper enforcement (Phase 7) ──
+> # NOT a Hermes config key. Read by infrastructure/wrappers/mock-{kubectl,aws,psql}
+> # when HERMES_LAB_GOVERNANCE=L2.
+> wrapper_allowlist:
+>   kubectl:
+>     - "get pods"
+>     - "get pod "
+>     - "get nodes"
+>     - "describe pod "
+>     - "logs "
+>     - "top pods"
+>     # ... 4 more entries ...
+>   aws:
+>     - "sts get-caller-identity"
+>     - "ec2 describe-"
+>     - "rds describe-"
+>     - "cloudwatch get-metric-"
+>     - "ce get-"
+>     # ... 5 more entries ...
+>   psql:
+>     - "SELECT "
+>     - "EXPLAIN "
+>     - "SHOW "
+>     # ... 4 more entries ...
 ```
 
-Only one key changed: `platform_toolsets.cli` gains `terminal` and `file`.
+Two keys changed: `platform_toolsets.cli` gains `terminal` and `file`, AND a new `wrapper_allowlist` section is added with per-tool subsections listing the L2 baseline of read-only commands. The `wrapper_allowlist` is a course-local enforcement key read by the mock wrappers — not a Hermes config key.
 
 :::info Teaching point
 One line change — one profound capability shift. Terminal access is the gate
@@ -190,6 +217,8 @@ shell scripts, and any command available in the environment.
 Both levels have `approvals.mode: manual`. The difference is that at L1, the agent never reaches
 the approval gate because it cannot form a terminal command in the first place. At L2, it can form
 the command — and if that command matches `DANGEROUS_PATTERNS`, the gate fires.
+
+The `wrapper_allowlist` added at L2 is **Layer 1** of the three-layer defense model (see Step 9 and Step 10). It is enforced by the course-local mock wrappers before the command reaches Hermes or the real tool.
 :::
 
 ---
@@ -300,9 +329,21 @@ diff course/governance/governance-L2.yaml course/governance/governance-L3.yaml
 ---
 > approvals:
 >   mode: smart             # Auxiliary LLM auto-approves low-risk flagged commands
+11a12,18
+>   # L3 additions: rollout history, diff, explain
+>   kubectl adds: rollout history, rollout status, diff, explain
+>   aws adds: logs describe-, logs get-log-events, iam get-, iam list-
+>   psql adds: EXPLAIN ANALYZE, DELETE FROM, UPDATE
 ```
 
-Only one key changed: `approvals.mode` from `manual` to `smart`.
+Two key categories changed: `approvals.mode` from `manual` to `smart`, AND `wrapper_allowlist` gains investigation-level additions per tool — kubectl adds rollout history/status/diff/explain, aws adds logs and IAM read-only commands, psql adds `EXPLAIN ANALYZE` and scoped `DELETE/UPDATE`.
+
+:::info Teaching moment: the wrapper_allowlist diff
+
+The `wrapper_allowlist` additions at L3 are the concrete form of "trust escalation." At L2 the agent runs read-only commands. At L3 it gains investigation commands (history, logs, explain) that are still non-destructive but reveal more state. This is a small, observable change — but it is the entire content of the governance promotion decision.
+
+The diff between L2 and L3 is not just `mode: manual` → `mode: smart`. It is also the `wrapper_allowlist` expansion from diagnostic reads to investigation commands. Both changes happen together — you cannot have smart approval without also granting the investigation commands that smart approval was designed for.
+:::
 
 :::info How smart approval works
 
@@ -486,7 +527,253 @@ sqlite3 -json ~/.hermes/state.db \
 
 ---
 
-## Step 9: Review DANGEROUS_PATTERNS (5 min)
+## Step 9: Apply L4 — Populated Allowlists (10 min)
+
+In Steps 3, 5, and 7 you applied L1, L2, and L3 by editing only the `approvals.mode` and `platform_toolsets.cli` keys. At L4, Phase 7 adds a new key: `wrapper_allowlist`. This is the course-local enforcement list read by the mock wrappers.
+
+First, set the complete environment variable block for your track. This is the block every Phase 7 step needs — keep it in your shell history so you can re-export it when you start a new terminal:
+
+**Track A (Database):**
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=clean
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-a
+export MOCK_DATA_DIR="$(pwd)/course/infrastructure/mock-data"
+export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"
+```
+
+**Track B (FinOps):**
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=clean
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-b
+export MOCK_DATA_DIR="$(pwd)/course/infrastructure/mock-data"
+export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"
+```
+
+**Track C (Kubernetes):**
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=clean
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/course/infrastructure/mock-data"
+export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"
+```
+
+:::info Solo Learner (Udemy self-paced)
+If you are following the self-paced version, keep the above block in a scratchpad file like `~/.lab-env` and source it at the start of each terminal session: `source ~/.lab-env`. This avoids retyping the 6 exports every time. All 6 vars must be set for the wrapper enforcement to function correctly.
+:::
+
+Apply the L4 governance config to your profile. View your track's L4 file:
+
+**Track A:**
+```bash
+cat course/governance/governance-L4-track-a.yaml
+```
+
+**Track B:**
+```bash
+cat course/governance/governance-L4-track-b.yaml
+```
+
+**Track C:**
+```bash
+cat course/governance/governance-L4-track-c.yaml
+```
+
+For Track C, you should see the `wrapper_allowlist.kubectl` section ending with `"apply "` and `"rollout undo"`. These are the two L4-only additions on top of the L3 baseline.
+
+Now diff the L3 file against your track's L4 file to see exactly what L4 unlocks:
+
+**Track C example:**
+
+```bash
+diff course/governance/governance-L3.yaml course/governance/governance-L4-track-c.yaml
+```
+
+The diff shows the additions at the end of the `wrapper_allowlist.kubectl` list — `"apply "` and `"rollout undo"` — plus Track C-specific header comments. Track A and Track B show their analogous additions (`INSERT INTO` for A, `ec2 create-tags` for B).
+
+:::info Teaching callout: what L4 means
+L4 is NOT "no governance." L4 is "targeted mutations allowed, with smart-approval and SOUL.md NEVER rules still active as Layers 2 and 3." The `wrapper_allowlist` addition is Layer 1 — the command prefix must be in the list. Layer 2 (DANGEROUS_PATTERNS) still fires for patterns like SQL DROP. Layer 3 (SOUL.md NEVER rules) still refuses destructive intent regardless of the allowlist. All three layers are active at L4. L4 only widens the Layer 1 aperture slightly.
+:::
+
+---
+
+## Step 10: Attempt a Blocked Command at L4 (10 min)
+
+The L4 allowlist lets your agent run new commands — but commands NOT in the allowlist are still rejected. This step shows you the GOVERNANCE REJECTED banner firing at Layer 1.
+
+Keep your Step 9 environment variables exported. Re-export them if you started a new terminal:
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=clean
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-a    # Change to track-b or track-c for your track
+export MOCK_DATA_DIR="$(pwd)/course/infrastructure/mock-data"
+export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"
+```
+
+Now attempt a destructive command that your agent would NEVER be allowed to run:
+
+**Track A (Database):**
+
+```bash
+psql -c "DROP TABLE test_archive_old"
+```
+
+**Track B (FinOps):**
+
+```bash
+aws ec2 terminate-instances --instance-ids i-0abc123def456789a
+```
+
+**Track C (Kubernetes):**
+
+```bash
+kubectl delete pod api-deployment-def456
+```
+
+**Expected output (Track C shown; all three tracks produce an analogous banner):**
+
+```
+╓──────────────────────────────────────────────────────╖
+║           [ GOVERNANCE REJECTED ]                    ║
+╠──────────────────────────────────────────────────────╣
+║ Command:      kubectl delete pod api-deployment...   ║
+║ Governance:   L4 (track-c)                           ║
+║ Block reason: Not in L4 wrapper_allowlist.kubectl    ║
+║ Gov file:     course/governance/governance-L4-...    ║
+║ To unblock:   Add prefix to wrapper_allowlist        ║
+║ SOUL.md:      "NEVER execute kubectl delete"         ║
+╙──────────────────────────────────────────────────────╜
+```
+
+The wrapper exits with status 1. Verify:
+
+```bash
+echo $?
+# Expected: 1
+```
+
+:::info The three-layer defense model
+This is the teaching moment the whole course has been building to.
+
+**For Track A (DROP TABLE):** Your attempt just hit THREE layers of defense simultaneously:
+- **Layer 1 — wrapper_allowlist (mechanical, Phase 7):** `DROP TABLE` not in `wrapper_allowlist.psql` at any governance level. Rejected before reaching psql.
+- **Layer 2 — DANGEROUS_PATTERNS (mechanical, Hermes-native):** IF the wrapper let `DROP TABLE` through, Hermes's built-in DANGEROUS_PATTERNS contains `SQL DROP` as a hardcoded regex. The approval gate would fire.
+- **Layer 3 — SOUL.md NEVER rules (behavioral, identity-level):** IF both mechanical layers failed, the agent's SOUL.md identity file has NEVER rules refusing to even form the intent to drop tables.
+
+**For Track B (`aws ec2 terminate-instances`) and Track C (`kubectl delete`):** Layer 2 does NOT fire because these commands are NOT in Hermes DANGEROUS_PATTERNS. The protection is Layer 1 (wrapper_allowlist) + Layer 3 (SOUL.md NEVER rules) — two layers, not three.
+
+This is why SOUL.md is load-bearing for Track B and Track C. Phase 7 added Layer 1 to strengthen the defense; before Phase 7, Track B and Track C relied on SOUL.md as the sole protection for these commands.
+:::
+
+---
+
+## Step 11: Attempt an Allowed Command at L4 (5 min)
+
+Now show that L4 still lets allowed commands pass through. Verify your environment block is exported (`HERMES_LAB_GOVERNANCE=L4` must be set). Run a safe command from your track's `wrapper_allowlist`:
+
+**Track A (Database):**
+
+```bash
+psql -c "SELECT pid, state, query FROM pg_stat_activity"
+```
+
+**Track B (FinOps):**
+
+```bash
+aws ec2 describe-instances
+```
+
+**Track C (Kubernetes):**
+
+```bash
+kubectl get pods
+```
+
+The MOCK MODE banner prints (the wrapper is in mock mode), followed by the mock JSON or text output from the fixture file. NO GOVERNANCE REJECTED banner.
+
+```bash
+echo $?
+# Expected: 0
+```
+
+:::info The passthrough case
+A passed-through command behaves exactly as it did in Phase 1 labs. Governance is invisible when the command is allowed. This is the correct shape of enforcement — silent when compliant, loud when blocked.
+
+L4 does not feel different from L3 for allowed commands. The enforcement is only visible at the boundary.
+:::
+
+---
+
+## Step 12: Query Audit Trail for the Rejection Event (5 min)
+
+Every rejected command should appear in your agent's session audit trail — alongside legitimate executions. This is how a security review finds out what your agent TRIED to do, not just what it succeeded at.
+
+Ensure your environment is still set (re-export if needed):
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=clean
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-a    # Change to track-b or track-c for your track
+export MOCK_DATA_DIR="$(pwd)/course/infrastructure/mock-data"
+export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"
+```
+
+Re-run a rejected command inside a Hermes chat session so the rejection is tied to a recorded session:
+
+```bash
+hermes -p track-c chat
+```
+
+Use one of these prompts for your track:
+
+- **Track A:** "Please DROP the test_archive_old table"
+- **Track B:** "Please terminate instance i-0abc123def456789a"
+- **Track C:** "Please delete pod api-deployment-def456"
+
+Your agent will either refuse at the reasoning level (Layer 3 SOUL.md NEVER rule), OR attempt the command and hit Layer 1 (GOVERNANCE REJECTED banner in the tool call output). Exit the session:
+
+```
+exit
+```
+
+Query the audit trail for rejection events:
+
+```bash
+sqlite3 ~/.hermes/state.db << 'EOF'
+SELECT
+    datetime(m.timestamp, 'unixepoch', 'localtime') as time,
+    s.id as session_id,
+    m.role,
+    substr(m.content, 1, 300) as content_preview
+FROM messages m
+JOIN sessions s ON s.id = m.session_id
+WHERE m.content LIKE '%GOVERNANCE REJECTED%'
+   OR m.content LIKE '%Not in % wrapper_allowlist%'
+ORDER BY m.timestamp DESC
+LIMIT 10;
+EOF
+```
+
+**Expected:** Recent messages show the rejection banner text, tied to your current session ID. If you see zero rows, your agent refused at Layer 3 (SOUL.md) before the command reached the wrapper — that is also a valid outcome, and it proves the behavioral layer is working.
+
+:::info What you just proved
+You observed the complete audit chain. Every rejection is recorded in `~/.hermes/state.db`. A security reviewer can grep for `'GOVERNANCE REJECTED'` across months of sessions to see every time the wrapper caught a blocked command attempt. This is the evidence you bring to a promotion review when arguing for or against moving from L3 to L4 — or from L4 back to L3 if a blocked attempt shows the agent is forming dangerous intents.
+:::
+
+---
+
+## Step 13: Review DANGEROUS_PATTERNS (5 min)
 
 The full `DANGEROUS_PATTERNS` list is the mechanical safety contract for your agent.
 Review it directly from the source:
@@ -522,7 +809,7 @@ is even formed.
 
 ---
 
-## Step 10: Restore Agent to Working Config (5 min)
+## Step 14: Restore Agent to Working Config (5 min)
 
 Restore your profile to a clean working state. Use either your backup or the L3 config
 (L3 is also fully functional — it is the recommended governance level for active lab work):
@@ -568,7 +855,7 @@ controls who the agent IS. Changing governance level does not change the agent's
 
 ---
 
-## Step 11: Challenge 1 — Write Promotion Criteria (Starter, 10 min)
+## Step 15: Challenge 1 — Write Promotion Criteria (Starter, 10 min)
 
 Using the L2 to L3 diff as a model, write a one-paragraph promotion criteria for your track agent.
 Paste it into a `promotion-criteria.md` file in your profile directory:
@@ -603,7 +890,7 @@ from the `state.db` queries you practiced in Step 8.
 
 ---
 
-## Step 12: Challenge 2 — Add a Command to command_allowlist (Intermediate, 15 min)
+## Step 16: Challenge 2 — Add a Command to command_allowlist (Intermediate, 15 min)
 
 At L3, the `command_allowlist` lets you permanently pre-approve specific pattern-description
 strings. A command that matches an allowlisted pattern skips the approval gate entirely.
@@ -654,7 +941,7 @@ more granular control.
 
 ---
 
-## Step 13: Challenge 3 — Compare Track A vs Track B L4 Governance (Advanced, 20 min)
+## Step 17: Challenge 3 — Compare Track A vs Track B L4 Governance (Advanced, 20 min)
 
 Read both L4 configs:
 
@@ -701,15 +988,17 @@ mechanical gate configuration.
 **What you observed:**
 
 - L1: Agent cannot run commands — the no-terminal configuration is the teaching moment
-- L2: Terminal enabled, every DANGEROUS_PATTERNS match pauses for human approval
-- L3: Smart approval reduces friction for false positives; genuinely dangerous commands still gate
-- Audit trail: Every session is recorded in `~/.hermes/state.db` — queryable with sqlite3
+- L2: Terminal enabled, every DANGEROUS_PATTERNS match pauses for human approval; `wrapper_allowlist` enforces read-only command prefix baseline
+- L3: Smart approval reduces friction for false positives; genuinely dangerous commands still gate; `wrapper_allowlist` expands to investigation commands
+- L4: Populated `wrapper_allowlist` enforces per-track command prefixes; rejection is loud (GOVERNANCE REJECTED banner) and auditable
+- Three-layer defense: `wrapper_allowlist` (Layer 1, Phase 7, mechanical) + DANGEROUS_PATTERNS (Layer 2, Hermes-native, mechanical) + SOUL.md NEVER rules (Layer 3, behavioral). Track A fires all three layers for DROP TABLE; Track B and Track C fire Layers 1 and 3 only for terminate/delete commands.
+- Audit trail: Every session is recorded in `~/.hermes/state.db` — queryable with sqlite3, including rejection events
 - DANGEROUS_PATTERNS is the mechanical safety net; SOUL.md NEVER rules are the behavioral net
-- Both layers exist simultaneously; neither replaces the other
+- Both layers exist simultaneously; neither replaces the other — Phase 7 adds Layer 1 to the stack
 
 **The governance spectrum in one sentence:**
 
-> L1 proposes, L2 pauses, L3 filters, L4 trusts — and the audit trail observes everything.
+> L1 proposes, L2 reads, L3 investigates, L4 acts — and the audit trail observes everything, including every GOVERNANCE REJECTED event.
 
 **Next:** Module 14 capstone. You will present your track agent with its current governance
 configuration, show one promotion criteria you wrote in this lab, and demonstrate the approval
@@ -746,4 +1035,20 @@ sqlite3 ~/.hermes/state.db \
 # 6. Diff commands work (course governance directory is present)
 diff course/governance/governance-L1.yaml course/governance/governance-L2.yaml | wc -l
 # Expected: a non-zero number (lines of diff output)
+
+# 7. wrapper_allowlist populated in all 5 non-L1 governance files
+grep -l '^wrapper_allowlist:' \
+  course/governance/governance-L2.yaml \
+  course/governance/governance-L3.yaml \
+  course/governance/governance-L4-track-a.yaml \
+  course/governance/governance-L4-track-b.yaml \
+  course/governance/governance-L4-track-c.yaml | wc -l
+# Expected: 5
+
+# 8. Wrapper rejects blocked commands at L2
+export HERMES_LAB_MODE=mock HERMES_LAB_GOVERNANCE=L2
+export MOCK_DATA_DIR="$(pwd)/course/infrastructure/mock-data"
+export PATH="$(pwd)/course/infrastructure/wrappers:$PATH"
+kubectl delete pod foo 2>&1 | grep -q 'GOVERNANCE REJECTED' && echo 'Layer 1 working'
+# Expected: Layer 1 working
 ```
