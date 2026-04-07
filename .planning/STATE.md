@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Realistic Agents & Production Workflows
 status: Ready to execute
-stopped_at: Completed 08-02-PLAN.md (TRIG-03 GitHub webhook + TRIG-04 Telegram bot infrastructure)
-last_updated: "2026-04-07T13:45:22.365Z"
+stopped_at: Completed 08-01-PLAN.md (KIND-side AlertManager + CronJob infrastructure)
+last_updated: "2026-04-07T13:46:16.754Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-07)
 ## Current Position
 
 Phase: 8 (agent-triggers) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Plan: 2 of 3
 | Phase 07-guardrails-governance P01 | 60 | 2 tasks | 9 files |
 | Phase 07-guardrails-governance P03 | 13 | 3 tasks | 4 files |
 | Phase 08 P02 | 5 | 2 tasks | 8 files |
+| Phase 08-agent-triggers P01 | 7min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -156,6 +157,10 @@ Recent decisions affecting current work:
 - [Phase 07-03]: SOUL.md is load-bearing narrative preserved and extended for Track B/C: Phase 7 Layer 1 adds mechanical defense but SOUL.md remains the sole protection for novel commands
 - [Phase 08]: smee-client pinned at v5.0.0 via npx for TRIG-03 (no global install required)
 - [Phase 08]: Telegram long-polling confirmed as lab default (BLOCKER-01 resolved — adapter exists in gateway/platforms/telegram.py)
+- [Phase 08-agent-triggers]: AlertManager receiver URL uses host.docker.internal:8644 — works on macOS Docker Desktop natively; Linux needs extraPortMapping (added to cluster-config.yaml)
+- [Phase 08-agent-triggers]: PrometheusRule must have release: kube-prometheus label for kube-prometheus-stack ruleSelector auto-discovery
+- [Phase 08-agent-triggers]: K8s CronJob image built from python:3.12-slim + hermes-agent[messaging,cron] from GitHub source (not official 2-3GB image)
+- [Phase 08-agent-triggers]: Hermes prompt template uses {alerts} full array not array index — _render_prompt does not support {alerts[0]} notation
 
 ### Pending Todos
 
@@ -169,6 +174,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T13:45:22.359Z
-Stopped at: Completed 08-02-PLAN.md (TRIG-03 GitHub webhook + TRIG-04 Telegram bot infrastructure)
+Last session: 2026-04-07T13:46:16.748Z
+Stopped at: Completed 08-01-PLAN.md (KIND-side AlertManager + CronJob infrastructure)
 Resume file: None
