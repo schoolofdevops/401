@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Realistic Agents & Production Workflows
-status: Defining requirements
+status: Roadmap defined
 stopped_at: null
-last_updated: "2026-04-07T00:50:00.000Z"
+last_updated: "2026-04-07T01:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -19,14 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** DevOps practitioners learn to build AI agents that encode their operational expertise — context engineering is THE skill that makes agents useful.
-**Current focus:** Defining requirements for v1.1
+**Current focus:** v1.1 — Phase 5: Module Consolidation (not started)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-07 — Milestone v1.1 started
+Phase: 5 — Module Consolidation
+Plan: — (not started)
+Status: Roadmap defined, ready for phase planning
+Last activity: 2026-04-07 — v1.1 roadmap created (5 phases, 20 requirements mapped)
 
 ## Performance Metrics
 
@@ -44,7 +44,7 @@ Last activity: 2026-04-07 — Milestone v1.1 started
 
 **Recent Trend:**
 
-- Last 5 plans: none yet
+- Last 5 plans: none yet (v1.1)
 - Trend: -
 
 *Updated after each plan completion*
@@ -117,6 +117,11 @@ Recent decisions affecting current work:
 - [Phase 04-remaining-content]: Instructor guides at project root instructor/ (not inside Docusaurus) — trainer tools not accidentally published to participant site
 - [Phase 04-remaining-content]: Module 7 contrast/negation uses of prompt engineering are pedagogically intentional — zero positive uses across all content is the requirement, and it is met
 - [Phase 04-remaining-content]: Udemy uses 15 sections for 14 modules — Module 5a and 5b separate into sections 5 and 6 for self-paced pacing
+- [v1.1 Roadmap]: Phase 5 (Module Consolidation) runs first — must restructure Modules 5/6 before K8s skill work, since CONS-03 moves IaC content into Module 5 as Superpowers domain context
+- [v1.1 Roadmap]: GOV (Guardrails) placed in Phase 7 after K8s skills — allowlists reference K8s commands from K8S-01 through K8S-04, so skills must exist before governance demos work
+- [v1.1 Roadmap]: TRIG depends on Phase 6 working agents — triggers invoke agents; agents must exist and work before trigger wiring makes sense
+- [v1.1 Roadmap]: Phase 9 (Multi-Agent + Production) depends on both Phase 7 and Phase 8 — FLEET-01 end-to-end chain requires working guardrails and at least one trigger (AlertManager)
+- [v1.1 Roadmap]: PROD-01 (K8s Agent Sandbox) marked exploratory in requirements — stays in Phase 9 as exploratory content, not required lab
 
 ### Pending Todos
 
@@ -124,12 +129,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 3] Module 6 Track A/C solution file naming must be coordinated with hermes-agent/course/modules/module-10/starter/ before finalizing — check hermes-agent repo at start of Phase 3
-- [Phase 1] Mock data format must match real AWS CLI output — verify one file per service against live aws cli before delivery
-- [Phase 4] Module 11 solo fallback (fleet lab) requires three pre-built reference agents from hermes-agent repo — confirm availability before finalizing Module 11 content
+- [Phase 6] kube-troublesim version and KIND compatibility — verify kube-troublesim works on KIND v0.31 before building lab content
+- [Phase 8] Chat bot trigger (TRIG-04) requires Telegram or Slack API access — confirm which is feasible on free tier before designing the lab
+- [Phase 9] K8s Agent Sandbox CRDs (PROD-01) are alpha v0.2.1 — may change; treat as exploratory and pin to a specific release
 
 ## Session Continuity
 
-Last session: 2026-04-05T07:06:33.379Z
-Stopped at: Completed 04-remaining-content-03-PLAN.md (FINAL plan)
+Last session: 2026-04-07
+Stopped at: v1.1 roadmap created — ready to plan Phase 5
 Resume file: None

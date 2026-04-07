@@ -76,32 +76,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONS-01 | — | Pending |
-| CONS-02 | — | Pending |
-| CONS-03 | — | Pending |
-| CONS-04 | — | Pending |
-| K8S-01 | — | Pending |
-| K8S-02 | — | Pending |
-| K8S-03 | — | Pending |
-| K8S-04 | — | Pending |
-| K8S-05 | — | Pending |
-| TRIG-01 | — | Pending |
-| TRIG-02 | — | Pending |
-| TRIG-03 | — | Pending |
-| TRIG-04 | — | Pending |
-| GOV-01 | — | Pending |
-| GOV-02 | — | Pending |
-| GOV-03 | — | Pending |
-| PROD-01 | — | Pending |
-| PROD-02 | — | Pending |
-| FLEET-01 | — | Pending |
-| FLEET-02 | — | Pending |
+| CONS-01 | Phase 5 | Pending |
+| CONS-02 | Phase 5 | Pending |
+| CONS-03 | Phase 5 | Pending |
+| CONS-04 | Phase 5 | Pending |
+| K8S-01 | Phase 6 | Pending |
+| K8S-02 | Phase 6 | Pending |
+| K8S-03 | Phase 6 | Pending |
+| K8S-04 | Phase 6 | Pending |
+| K8S-05 | Phase 6 | Pending |
+| TRIG-01 | Phase 8 | Pending |
+| TRIG-02 | Phase 8 | Pending |
+| TRIG-03 | Phase 8 | Pending |
+| TRIG-04 | Phase 8 | Pending |
+| GOV-01 | Phase 7 | Pending |
+| GOV-02 | Phase 7 | Pending |
+| GOV-03 | Phase 7 | Pending |
+| PROD-01 | Phase 9 | Pending |
+| PROD-02 | Phase 9 | Pending |
+| FLEET-01 | Phase 9 | Pending |
+| FLEET-02 | Phase 9 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20
+- Mapped to phases: 20
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-07*
-*Last updated: 2026-04-07 after initial definition*
+*Last updated: 2026-04-07 after v1.1 roadmap creation — all 20 requirements mapped to phases 5-9*
