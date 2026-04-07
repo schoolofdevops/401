@@ -1,0 +1,55 @@
+Name:             memory-eater-6c7b8f9d4-p4nvs
+Namespace:        k8s-trouble-oom
+Priority:         0
+Node:             kind-worker/10.0.0.2
+Start Time:       Tue, 07 Apr 2026 09:10:01 +0000
+Labels:           app=memory-eater
+                  pod-template-hash=6c7b8f9d4
+Status:           Running
+IP:               10.0.1.22
+Controlled By:    ReplicaSet/memory-eater-6c7b8f9d4
+Containers:
+  memory-eater:
+    Container ID:  containerd://def789abc012oomkilled
+    Image:         python:3.12-alpine
+    Image ID:      docker://sha256:python312alpine4b6c1d2e8f9a0b3c7d8e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b
+    Command:
+      python3
+      -c
+    Args:
+      import time
+      b = bytearray(64 * 1024 * 1024)
+      time.sleep(3600)
+    State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       OOMKilled
+      Exit Code:    137
+      Started:      Tue, 07 Apr 2026 09:18:10 +0000
+      Finished:     Tue, 07 Apr 2026 09:18:12 +0000
+    Ready:          False
+    Restart Count:  3
+    Limits:
+      cpu:     100m
+      memory:  32Mi
+    Requests:
+      cpu:        10m
+      memory:     16Mi
+    Environment:  <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             False
+  ContainersReady   False
+  PodScheduled      True
+Events:
+  Type     Reason      Age                    From               Message
+  ----     ------      ----                   ----               -------
+  Normal   Scheduled   9m45s                  default-scheduler  Successfully assigned k8s-trouble-oom/memory-eater-6c7b8f9d4-p4nvs to kind-worker
+  Normal   Pulled      9m44s                  kubelet            Successfully pulled image "python:3.12-alpine" in 38.2s
+  Normal   Created     9m44s                  kubelet            Created container memory-eater
+  Normal   Started     9m44s                  kubelet            Started container memory-eater
+  Warning  OOMKilling  8m32s                  kubelet            Memory cgroup out of memory: Kill process 12345 (python3) score 1000 or sacrifice child
+  Warning  BackOff     2m15s (x8 over 9m42s)  kubelet            Back-off restarting failed container memory-eater in pod memory-eater-6c7b8f9d4-p4nvs_k8s-trouble-oom(...)

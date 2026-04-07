@@ -1,0 +1,45 @@
+Name:             app-8b9c4f7d6-kn3wt
+Namespace:        k8s-trouble-liveness
+Priority:         0
+Node:             kind-worker/10.0.0.2
+Start Time:       Tue, 07 Apr 2026 09:15:01 +0000
+Labels:           app=app
+                  pod-template-hash=8b9c4f7d6
+Status:           Running
+IP:               10.0.1.23
+Controlled By:    ReplicaSet/app-8b9c4f7d6
+Containers:
+  app:
+    Container ID:  containerd://ghi012jkl345liveness
+    Image:         nginx:1.27-alpine
+    Image ID:      docker://sha256:nginx127alpinef8a2b1c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f
+    Port:          80/TCP
+    State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       Error
+      Exit Code:    137
+      Started:      Tue, 07 Apr 2026 09:20:45 +0000
+      Finished:     Tue, 07 Apr 2026 09:20:45 +0000
+    Ready:          False
+    Restart Count:  4
+    Liveness:       http-get http://:9999/health delay=3s timeout=1s period=5s #success=1 #failure=3
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             False
+  ContainersReady   False
+  PodScheduled      True
+Events:
+  Type     Reason     Age                    From               Message
+  ----     ------     ----                   ----               -------
+  Normal   Scheduled  7m18s                  default-scheduler  Successfully assigned k8s-trouble-liveness/app-8b9c4f7d6-kn3wt to kind-worker
+  Normal   Pulled     7m17s                  kubelet            Successfully pulled image "nginx:1.27-alpine" in 2.891s
+  Normal   Created    7m17s                  kubelet            Created container app
+  Normal   Started    7m17s                  kubelet            Started container app
+  Warning  Unhealthy  7m2s (x9 over 7m14s)  kubelet            Liveness probe failed: Get "http://10.0.1.23:9999/health": dial tcp 10.0.1.23:9999: connect: connection refused
+  Normal   Killing    6m59s (x3 over 7m9s)  kubelet            Container app failed liveness probe, will be restarted
+  Warning  BackOff    4m5s (x8 over 7m15s)  kubelet            Back-off restarting failed container app in pod app-8b9c4f7d6-kn3wt_k8s-trouble-liveness(...)

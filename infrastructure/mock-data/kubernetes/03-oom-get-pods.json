@@ -1,0 +1,97 @@
+{
+  "apiVersion": "v1",
+  "kind": "PodList",
+  "metadata": {
+    "resourceVersion": "25301"
+  },
+  "items": [
+    {
+      "metadata": {
+        "name": "memory-eater-6c7b8f9d4-p4nvs",
+        "namespace": "k8s-trouble-oom",
+        "labels": {
+          "app": "memory-eater",
+          "pod-template-hash": "6c7b8f9d4"
+        },
+        "creationTimestamp": "2026-04-07T09:10:00Z"
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "memory-eater",
+            "image": "python:3.12-alpine",
+            "command": ["python3", "-c"],
+            "args": ["import time\nb = bytearray(64 * 1024 * 1024)\ntime.sleep(3600)\n"],
+            "resources": {
+              "requests": {
+                "memory": "16Mi",
+                "cpu": "10m"
+              },
+              "limits": {
+                "memory": "32Mi",
+                "cpu": "100m"
+              }
+            }
+          }
+        ],
+        "restartPolicy": "Always"
+      },
+      "status": {
+        "phase": "Running",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastTransitionTime": "2026-04-07T09:10:01Z"
+          },
+          {
+            "type": "Ready",
+            "status": "False",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [memory-eater]",
+            "lastTransitionTime": "2026-04-07T09:10:01Z"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "False",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [memory-eater]",
+            "lastTransitionTime": "2026-04-07T09:10:01Z"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastTransitionTime": "2026-04-07T09:10:00Z"
+          }
+        ],
+        "hostIP": "10.0.0.2",
+        "podIP": "10.0.1.22",
+        "startTime": "2026-04-07T09:10:01Z",
+        "containerStatuses": [
+          {
+            "name": "memory-eater",
+            "state": {
+              "waiting": {
+                "reason": "CrashLoopBackOff",
+                "message": "back-off 1m20s restarting failed container=memory-eater pod=memory-eater-6c7b8f9d4-p4nvs_k8s-trouble-oom"
+              }
+            },
+            "ready": false,
+            "restartCount": 3,
+            "image": "python:3.12-alpine",
+            "imageID": "docker://sha256:python312alpine4b6c1d2e8f9a0b3c7d8e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b",
+            "lastState": {
+              "terminated": {
+                "exitCode": 137,
+                "reason": "OOMKilled",
+                "startedAt": "2026-04-07T09:18:10Z",
+                "finishedAt": "2026-04-07T09:18:12Z",
+                "containerID": "containerd://def789abc012oomkilled"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

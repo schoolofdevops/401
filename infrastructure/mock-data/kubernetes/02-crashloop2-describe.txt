@@ -1,0 +1,45 @@
+Name:             crasher-5f8b4d9c7-m2xqr
+Namespace:        k8s-trouble-crashloop
+Priority:         0
+Node:             kind-worker/10.0.0.2
+Start Time:       Tue, 07 Apr 2026 09:05:01 +0000
+Labels:           app=crasher
+                  pod-template-hash=5f8b4d9c7
+Status:           Running
+IP:               10.0.1.21
+Controlled By:    ReplicaSet/crasher-5f8b4d9c7
+Containers:
+  crasher:
+    Container ID:  containerd://abc123def456crashloop
+    Image:         busybox:1.36
+    Image ID:      docker://sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
+    Command:
+      sh
+      -c
+      echo 'starting...'; echo 'fatal: missing config'; exit 1
+    State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       Error
+      Exit Code:    1
+      Started:      Tue, 07 Apr 2026 09:12:30 +0000
+      Finished:     Tue, 07 Apr 2026 09:12:30 +0000
+    Ready:          False
+    Restart Count:  5
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             False
+  ContainersReady   False
+  PodScheduled      True
+Events:
+  Type     Reason     Age                    From               Message
+  ----     ------     ----                   ----               -------
+  Normal   Scheduled  8m22s                  default-scheduler  Successfully assigned k8s-trouble-crashloop/crasher-5f8b4d9c7-m2xqr to kind-worker
+  Normal   Pulled     8m21s                  kubelet            Successfully pulled image "busybox:1.36" in 1.234s
+  Normal   Created    8m21s                  kubelet            Created container crasher
+  Normal   Started    8m21s                  kubelet            Started container crasher
+  Warning  BackOff    2m14s (x10 over 8m19s) kubelet            Back-off restarting failed container crasher in pod crasher-5f8b4d9c7-m2xqr_k8s-trouble-crashloop(...)

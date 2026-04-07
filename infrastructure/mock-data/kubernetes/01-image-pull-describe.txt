@@ -1,0 +1,38 @@
+Name:             web-7d8f9b6c5-xk9vp
+Namespace:        k8s-trouble-image-pull
+Priority:         0
+Node:             kind-worker/10.0.0.2
+Start Time:       Tue, 07 Apr 2026 09:00:01 +0000
+Labels:           app=web
+                  pod-template-hash=7d8f9b6c5
+Status:           Pending
+IP:               10.0.1.20
+Controlled By:    ReplicaSet/web-7d8f9b6c5
+Containers:
+  web:
+    Container ID:
+    Image:          nonexistent-registry.io/fake-app:v1.0.0
+    Image ID:
+    Port:           80/TCP
+    State:          Waiting
+      Reason:       ImagePullBackOff
+    Ready:          False
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             False
+  ContainersReady   False
+  PodScheduled      True
+Events:
+  Type     Reason     Age                  From               Message
+  ----     ------     ----                 ----               -------
+  Normal   Scheduled  5m12s                default-scheduler  Successfully assigned k8s-trouble-image-pull/web-7d8f9b6c5-xk9vp to kind-worker
+  Normal   Pulling    5m11s                kubelet            Pulling image "nonexistent-registry.io/fake-app:v1.0.0"
+  Warning  Failed     5m9s                 kubelet            Failed to pull image "nonexistent-registry.io/fake-app:v1.0.0": rpc error: code = Unknown desc = failed to pull and unpack image "nonexistent-registry.io/fake-app:v1.0.0:latest": failed to resolve reference "nonexistent-registry.io/fake-app:v1.0.0": failed to do request: Head "https://nonexistent-registry.io/v2/fake-app/manifests/v1.0.0": dial tcp: lookup nonexistent-registry.io: no such host
+  Warning  Failed     5m9s                 kubelet            Error: ErrImagePull
+  Warning  BackOff    4m48s (x4 over 5m8s) kubelet            Back-off pulling image "nonexistent-registry.io/fake-app:v1.0.0"
+  Warning  Failed     4m48s (x4 over 5m8s) kubelet            Error: ImagePullBackOff

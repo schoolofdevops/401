@@ -1,0 +1,103 @@
+{
+  "apiVersion": "v1",
+  "kind": "PodList",
+  "metadata": {
+    "resourceVersion": "26442"
+  },
+  "items": [
+    {
+      "metadata": {
+        "name": "app-8b9c4f7d6-kn3wt",
+        "namespace": "k8s-trouble-liveness",
+        "labels": {
+          "app": "app",
+          "pod-template-hash": "8b9c4f7d6"
+        },
+        "creationTimestamp": "2026-04-07T09:15:00Z"
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "app",
+            "image": "nginx:1.27-alpine",
+            "ports": [
+              {
+                "containerPort": 80,
+                "protocol": "TCP"
+              }
+            ],
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/health",
+                "port": 9999,
+                "scheme": "HTTP"
+              },
+              "initialDelaySeconds": 3,
+              "periodSeconds": 5,
+              "failureThreshold": 3,
+              "successThreshold": 1,
+              "timeoutSeconds": 1
+            }
+          }
+        ],
+        "restartPolicy": "Always"
+      },
+      "status": {
+        "phase": "Running",
+        "conditions": [
+          {
+            "type": "Initialized",
+            "status": "True",
+            "lastTransitionTime": "2026-04-07T09:15:01Z"
+          },
+          {
+            "type": "Ready",
+            "status": "False",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [app]",
+            "lastTransitionTime": "2026-04-07T09:15:01Z"
+          },
+          {
+            "type": "ContainersReady",
+            "status": "False",
+            "reason": "ContainersNotReady",
+            "message": "containers with unready status: [app]",
+            "lastTransitionTime": "2026-04-07T09:15:01Z"
+          },
+          {
+            "type": "PodScheduled",
+            "status": "True",
+            "lastTransitionTime": "2026-04-07T09:15:00Z"
+          }
+        ],
+        "hostIP": "10.0.0.2",
+        "podIP": "10.0.1.23",
+        "startTime": "2026-04-07T09:15:01Z",
+        "containerStatuses": [
+          {
+            "name": "app",
+            "state": {
+              "waiting": {
+                "reason": "CrashLoopBackOff",
+                "message": "back-off 40s restarting failed container=app pod=app-8b9c4f7d6-kn3wt_k8s-trouble-liveness"
+              }
+            },
+            "ready": false,
+            "restartCount": 4,
+            "image": "nginx:1.27-alpine",
+            "imageID": "docker://sha256:nginx127alpinef8a2b1c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f",
+            "lastState": {
+              "terminated": {
+                "exitCode": 137,
+                "reason": "Error",
+                "startedAt": "2026-04-07T09:20:45Z",
+                "finishedAt": "2026-04-07T09:20:45Z",
+                "containerID": "containerd://ghi012jkl345liveness"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
