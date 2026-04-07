@@ -29,7 +29,7 @@
 - [x] **Phase 5: Module Consolidation** - Restructure Modules 5 and 6 with Superpowers as centerpiece for IaC work (completed 2026-04-07)
 - [x] **Phase 6: K8s Skills & Agents** - Build real K8s diagnostic skills and rebuild Track C agents for KIND (completed 2026-04-07)
 - [x] **Phase 7: Guardrails & Governance** - Add command allowlists, per-track configs, and L1-L4 progression demo (completed 2026-04-07)
-- [ ] **Phase 8: Agent Triggers** - Implement AlertManager, CronJob, GitHub, and chat bot trigger patterns
+- [x] **Phase 8: Agent Triggers** - Implement AlertManager, CronJob, GitHub, and chat bot trigger patterns (completed 2026-04-07)
 - [ ] **Phase 9: Multi-Agent Workflows & Production** - End-to-end fleet workflows and K8s Agent Sandbox
 
 ## Phase Details
@@ -89,11 +89,11 @@ Plans:
   2. Participant applying the CronJob manifest to KIND observes the scheduled agent running on interval, completing a health check, and writing a status report — without any manual invocation
   3. Participant sending a GitHub webhook event (or using the PR review bot pattern) observes the agent receiving the event and producing a review comment or summary output
   4. Participant following the chat bot lab sends a slash command via Telegram or Slack and receives an agent response posted back to the channel — full round-trip without terminal interaction
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 08-01-PLAN.md — TRIG-01 + TRIG-02 KIND infrastructure: AlertManager helm/PrometheusRule/receiver, K8s CronJob Dockerfile + per-track manifests
 - [x] 08-02-PLAN.md — TRIG-03 + TRIG-04 external services infrastructure: GitHub webhook (smee.io setup, sample payload, prompt template), Telegram bot (config, admin allowlist, slash command spec)
-- [ ] 08-03-PLAN.md — Module 12 lab extension (8 new GUIDED steps in both LAB.mdx + LAB.md mirrors), reading reference comparison table + Phase 8 env var docs, 3 new quiz questions
+- [x] 08-03-PLAN.md — Module 12 lab extension (8 new GUIDED steps in both LAB.mdx + LAB.md mirrors), reading reference comparison table + Phase 8 env var docs, 3 new quiz questions
 
 ### Phase 9: Multi-Agent Workflows & Production
 **Goal**: Participants witness an end-to-end automated incident response chain and can deploy an agent into a K8s sandbox — moving from demo to production-ready patterns
@@ -117,7 +117,7 @@ Plans:
 | 5. Module Consolidation | v1.1 | 3/3 | Complete   | 2026-04-07 |
 | 6. K8s Skills & Agents | v1.1 | 3/3 | Complete    | 2026-04-07 |
 | 7. Guardrails & Governance | v1.1 | 3/3 | Complete    | 2026-04-07 |
-| 8. Agent Triggers | v1.1 | 2/3 | In Progress|  |
+| 8. Agent Triggers | v1.1 | 3/3 | Complete   | 2026-04-07 |
 | 9. Multi-Agent Workflows & Production | v1.1 | 0/? | Not started | - |
 
 ---

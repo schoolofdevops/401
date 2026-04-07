@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Realistic Agents & Production Workflows
-status: Ready to execute
-stopped_at: Completed 08-01-PLAN.md (KIND-side AlertManager + CronJob infrastructure)
-last_updated: "2026-04-07T13:46:16.754Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 08-03-PLAN.md (Module 12 lab extension - Steps 9-16)
+last_updated: "2026-04-07T14:00:51.136Z"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -72,6 +72,7 @@ Plan: 3 of 3
 | Phase 07-guardrails-governance P03 | 13 | 3 tasks | 4 files |
 | Phase 08 P02 | 5 | 2 tasks | 8 files |
 | Phase 08-agent-triggers P01 | 7min | 2 tasks | 8 files |
+| Phase 08-agent-triggers P03 | 10min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -161,6 +162,7 @@ Recent decisions affecting current work:
 - [Phase 08-agent-triggers]: PrometheusRule must have release: kube-prometheus label for kube-prometheus-stack ruleSelector auto-discovery
 - [Phase 08-agent-triggers]: K8s CronJob image built from python:3.12-slim + hermes-agent[messaging,cron] from GitHub source (not official 2-3GB image)
 - [Phase 08-agent-triggers]: Hermes prompt template uses {alerts} full array not array index — _render_prompt does not support {alerts[0]} notation
+- [Phase 08-agent-triggers]: Steps 9-16 inserted before FREE EXPLORE per D-21; all 4 trigger types (AlertManager, K8s CronJob, GitHub webhook, Telegram bot) now have participant-facing guided walkthroughs
 
 ### Pending Todos
 
@@ -174,6 +176,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T13:46:16.748Z
-Stopped at: Completed 08-01-PLAN.md (KIND-side AlertManager + CronJob infrastructure)
+Last session: 2026-04-07T14:00:51.132Z
+Stopped at: Completed 08-03-PLAN.md (Module 12 lab extension - Steps 9-16)
 Resume file: None
