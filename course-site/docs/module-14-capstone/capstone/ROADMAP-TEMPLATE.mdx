@@ -114,7 +114,7 @@ SKILL.md gaps identified: [list]
 
 | # | Action | Done When |
 |---|--------|-----------|
-| 1 | Schedule the first automated run: `hermes cron add "[agent-name]" --schedule "0 7 * * 1-5" --task "[morning review task]"` | Cron job added, first scheduled run completes |
+| 1 | Schedule the first automated run: `hermes cron add "0 7 * * 1-5" "[morning review task]" --name "[agent-name]" --deliver local` | Cron job added, first scheduled run completes |
 | 2 | Configure audit log output: verify agent runs are logged to `[cloudwatch log group / file / slack channel]` | Audit logs visible after first scheduled run |
 | 3 | Review the first automated run output: is the output at the same quality as manual runs? | Automated run produces comparable output to manual runs |
 | 4 | Share the output from one run with `[colleague name]` for feedback | Colleague has reviewed and provided feedback |

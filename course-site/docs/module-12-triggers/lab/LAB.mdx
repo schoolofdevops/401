@@ -91,45 +91,49 @@ Create your daily health check cron job. Run the command for your track:
 **Track A — Database Health:**
 
 ```bash
-hermes cron create \
+hermes cron create "0 8 * * *" \
+  "Run daily health check for RDS. Report only if anomalies found." \
   --name "daily-db-health" \
-  --schedule "0 8 * * *" \
   --skill "dba-rds-slow-query" \
-  --prompt "Run daily health check for RDS. Report only if anomalies found." \
   --deliver local
 ```
 
 **Track B — Cost Anomaly:**
 
 ```bash
-hermes cron create \
+hermes cron create "0 8 * * *" \
+  "Run daily cost anomaly check. Report only if spending anomalies detected." \
   --name "daily-cost-check" \
-  --schedule "0 8 * * *" \
   --skill "cost-anomaly" \
-  --prompt "Run daily cost anomaly check. Report only if spending anomalies detected." \
   --deliver local
 ```
 
 **Track C — Kubernetes Health:**
 
 ```bash
-hermes cron create \
+hermes cron create "0 8 * * *" \
+  "Run daily Kubernetes cluster health check. Report only if pods or nodes show issues." \
   --name "daily-k8s-check" \
-  --schedule "0 8 * * *" \
   --skill "kubernetes-health" \
-  --prompt "Run daily Kubernetes cluster health check. Report only if pods or nodes show issues." \
   --deliver local
 ```
 
-### What each flag does
+### What each argument does
 
-| Flag | Purpose |
-|------|---------|
+| Argument | Purpose |
+|----------|---------|
+| `schedule` (1st positional) | Cron expression defining when the job runs (e.g. `"0 8 * * *"`, `"*/5 * * * *"`, or a shorthand like `"30m"`, `"every 2h"`). |
+| `prompt` (2nd positional) | What the agent is asked to do when it fires. Must be self-contained — the cron agent has no chat history. |
 | `--name` | Human-readable job name (kebab-case). Used to reference the job in other commands. |
-| `--schedule` | Cron expression defining when the job runs. |
-| `--skill` | Skill to load before running the prompt. The agent reads the SKILL.md runbook first. |
-| `--prompt` | What the agent is asked to do when it fires. Must be self-contained — the cron agent has no chat history. |
+| `--skill` | Skill to load before running the prompt. The agent reads the SKILL.md runbook first. Repeat the flag to attach multiple skills. |
 | `--deliver local` | Output goes to your terminal. **In production, use `--deliver slack` or `--deliver telegram` to route findings to your notification system.** |
+| `--repeat N` | Optional — limits the job to N executions. Omit for indefinite scheduling. |
+
+:::note Positional argument order matters
+`schedule` must come first, `prompt` second. You can put the `--name`, `--skill`,
+and `--deliver` flags anywhere (before, between, or after the positionals) since
+they're keyword arguments.
+:::
 
 ### Verify the job was registered
 
@@ -442,19 +446,17 @@ Only the delivery target changes — the skill, prompt, and investigation logic 
 
 ```bash
 # Lab version (what you ran above):
-hermes cron create \
+hermes cron create "0 8 * * *" \
+  "Run daily health check for RDS. Report only if anomalies found." \
   --name "daily-db-health" \
-  --schedule "0 8 * * *" \
   --skill "dba-rds-slow-query" \
-  --prompt "Run daily health check for RDS. Report only if anomalies found." \
   --deliver local
 
 # Production version (Slack delivery):
-hermes cron create \
+hermes cron create "0 8 * * *" \
+  "Run daily health check for RDS. Report only if anomalies found." \
   --name "daily-db-health" \
-  --schedule "0 8 * * *" \
   --skill "dba-rds-slow-query" \
-  --prompt "Run daily health check for RDS. Report only if anomalies found." \
   --deliver slack
 ```
 
@@ -1084,11 +1086,10 @@ Create a second cron job using a skill from a different track than your primary 
 Use a fast schedule to see it fire during the lab:
 
 ```bash
-hermes cron create \
+hermes cron create "*/5 * * * *" \
+  "Quick cost anomaly scan. Report only if anomalies detected." \
   --name "cross-track-check" \
-  --schedule "*/5 * * * *" \
   --skill "cost-anomaly" \
-  --prompt "Quick cost anomaly scan. Report only if anomalies detected." \
   --deliver local
 ```
 
@@ -1154,11 +1155,10 @@ Set up both a cron schedule and a webhook subscription pointing at the same skil
 
 ```bash
 # Cron: fires every 5 min for lab speed
-hermes cron create \
+hermes cron create "*/5 * * * *" \
+  "Quick RDS health snapshot. Use [SILENT] if no anomalies." \
   --name "rapid-health" \
-  --schedule "*/5 * * * *" \
   --skill "dba-rds-slow-query" \
-  --prompt "Quick RDS health snapshot. Use [SILENT] if no anomalies." \
   --deliver local
 
 # Webhook: fires on demand
@@ -1215,7 +1215,7 @@ hermes webhook unsubscribe rds-alerts
 ```bash
 # Cron management
 hermes cron status                      # Always run at session start
-hermes cron create --name ... --schedule ... --skill ... --prompt ... --deliver local
+hermes cron create "<schedule>" "<prompt>" --name ... --skill ... --deliver local
 hermes cron list
 hermes cron trigger <name>              # Manual fire + recovery verification
 hermes cron pause <name>
