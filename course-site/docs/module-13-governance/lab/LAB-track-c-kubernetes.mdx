@@ -1,0 +1,1257 @@
+---
+id: module-13-lab-track-c
+title: "Module 13 Lab: Governance for Kiran — Approvals, Maturity Levels, and Audit Trails (Track C)"
+sidebar_label: "Lab — Track C: Kubernetes"
+sidebar_position: 2
+---
+
+# Module 13 Lab: Governance for Kiran — Approvals, Maturity Levels, and Audit Trails (Track C)
+
+**Duration:** 90 minutes (60 min guided + 30 min free explore)
+**Track:** C — Kubernetes Health & Self-Healing
+**Prerequisite:** Module 10 Track C complete (`~/.hermes/profiles/track-c/` exists with Kiran's `SOUL.md`, `config.yaml`, and the `sre-k8s-pod-health` skill)
+**Outcome:** Kiran configured at L3 governance, approval behavior observable in action, session audit trail readable via `sqlite3`, and a clear mental model of why Track C's dangerous commands are governed differently from Track A's.
+
+:::tip
+Governance is not about trust — it's about observability and control surfaces. L1 through L4 is a
+spectrum from "human does everything" to "agent does routine work autonomously." Today you walk Kiran
+from L1 to L4 and see exactly what each level changes. The diff between levels IS the governance
+decision.
+:::
+
+:::important Why Track C is the clearest governance story
+Track C is the lab where the mechanical-vs-behavioral safety split is most visible. The three
+most destructive Kubernetes commands — `kubectl delete`, `kubectl drain`, `kubectl cordon` —
+are **NOT** in Hermes `DANGEROUS_PATTERNS`. They are governed **only** by Kiran's `SOUL.md` NEVER
+rules and (at L2+) by the `wrapper_allowlist.kubectl` enforcement layer. On Track A, SQL DROP
+has three layers of defense; on Track C, the three layers look completely different. You will
+see this play out in Step 5.
+:::
+
+---
+
+## GUIDED PHASE — 60 minutes
+
+---
+
+## Step 1: Prerequisites and Backup (5 min)
+
+Verify Kiran is still working from Module 10:
+
+```bash
+hermes -p track-c chat
+```
+
+Ask:
+
+```
+Who are you and what is your operating mode?
+```
+
+**Expected:** Kiran introduces itself as the Kubernetes health agent, reports `HERMES_LAB_MODE`
+(mock or live), and describes its read-only pod-diagnosis scope.
+
+Exit when done: type `exit` or press Ctrl+C.
+
+Confirm your track-c profile path:
+
+```bash
+ls ~/.hermes/profiles/track-c/config.yaml
+# Expected: ~/.hermes/profiles/track-c/config.yaml
+```
+
+:::important Before you proceed: make a backup of your working config so you can restore it in Step 14.
+
+```bash
+cp ~/.hermes/profiles/track-c/config.yaml ~/.hermes/profiles/track-c/config.yaml.backup
+```
+:::
+
+---
+
+## Step 2: View All Governance Levels (5 min)
+
+From your course directory, list the governance YAML fragments:
+
+```bash
+ls governance/
+```
+
+**Expected output:**
+
+```
+governance-L1.yaml
+governance-L2.yaml
+governance-L3.yaml
+governance-L4-track-a.yaml
+governance-L4-track-b.yaml
+governance-L4-track-c.yaml
+```
+
+Track C has its own L4 file because the `wrapper_allowlist.kubectl` list is Track C-specific.
+The L1, L2, and L3 files are shared across all tracks.
+
+Read L1:
+
+```bash
+cat governance/governance-L1.yaml
+```
+
+Notice the structure: three keys control everything:
+
+- `platform_toolsets.cli` — which tool categories the agent can access
+- `approvals.mode` — how flagged commands are handled (`manual`, `smart`, `off`)
+- `command_allowlist` — patterns permanently pre-approved (bypasses the Hermes gate entirely)
+
+:::info Teaching callout
+Notice what L1 does NOT have: the `terminal` toolset. Kiran can read web pages and use attached
+skills but cannot run any commands. L1 is the read-only, advisory mode — the agent
+proposes; a human executes. This is appropriate for untrusted or newly-deployed agents.
+
+For Kubernetes operations specifically, L1 means Kiran can reason about pod failures from
+prior conversation context or loaded skill content, but cannot call `kubectl` even once. Every
+diagnosis comes out as a recommendation for a human to run.
+:::
+
+---
+
+## Step 3: Apply L1 — No Terminal (10 min)
+
+Open your profile's config.yaml for editing:
+
+```bash
+# On macOS
+open -e ~/.hermes/profiles/track-c/config.yaml
+
+# Or any editor
+nano ~/.hermes/profiles/track-c/config.yaml
+```
+
+In the config.yaml, update the `platform_toolsets` and `approvals` keys to match L1:
+
+```yaml
+# Copy from governance-L1.yaml
+platform_toolsets:
+  cli: [web, skills]      # No terminal: agent cannot execute commands
+
+approvals:
+  mode: manual
+  timeout: 300
+
+command_allowlist: []
+```
+
+Save the file. Start a chat session:
+
+```bash
+hermes -p track-c chat
+```
+
+Ask a diagnostic question that requires a `kubectl` command:
+
+```
+List all pods in CrashLoopBackOff state in the app namespace and tell me why they're failing
+```
+
+**Expected:** Kiran cannot run any commands. It will respond with something like:
+- "I don't have access to a terminal to run commands directly..."
+- "Based on my knowledge of the `sre-k8s-pod-health` skill, here is what you would need to run..."
+- Or it will propose the commands as text without executing them.
+
+:::info This failure is intentional. The L1 failure is the teaching moment.
+
+L1 is the appropriate starting point for any newly-deployed or untrusted agent:
+- Zero risk of accidental `kubectl` execution
+- All proposed actions are explicit proposals for human review
+- Kiran still has full reasoning capability — it just cannot execute
+
+When you promote Kiran from L1 to L2, you are making a governance decision:
+"I have reviewed this agent's behavior and I trust it to run diagnostic `kubectl get` / `describe`
+commands against the cluster." That's a meaningful escalation.
+:::
+
+Exit the session: type `exit`
+
+---
+
+## Step 4: Diff L1 to L2 — Terminal Added + wrapper_allowlist (5 min)
+
+From your course directory:
+
+```bash
+diff governance/governance-L1.yaml governance/governance-L2.yaml
+```
+
+**Expected output:**
+
+```diff
+< platform_toolsets:
+<   cli: [web, skills]      # No terminal: agent cannot execute commands
+---
+> platform_toolsets:
+>   cli: [terminal, file, web, skills]   # Terminal enabled: agent can run commands
+3a4,26
+> command_allowlist: []     # Nothing pre-approved
+>
+> # ── Course-local wrapper enforcement (Phase 7) ──
+> # NOT a Hermes config key. Read by infrastructure/wrappers/mock-{kubectl,aws,psql}
+> # when HERMES_LAB_GOVERNANCE=L2.
+> wrapper_allowlist:
+>   kubectl:
+>     - "get pods"
+>     - "get pod "
+>     - "get nodes"
+>     - "describe pod "
+>     - "logs "
+>     - "top pods"
+>     # ... 4 more entries ...
+>   # ... aws and psql sections omitted for Track C ...
+```
+
+Two keys changed: `platform_toolsets.cli` gains `terminal` and `file`, AND a new
+`wrapper_allowlist` section is added with the L2 baseline of read-only `kubectl` commands.
+
+:::info Teaching point
+One line change — one profound capability shift. Terminal access is the gate to everything
+diagnostic. With `terminal` in the toolset, Kiran can run `kubectl`, `mock-kubectl`, shell
+scripts, and any command available in the environment.
+
+Both levels have `approvals.mode: manual`. The difference is that at L1, Kiran never reaches
+the approval gate because it cannot form a terminal command in the first place. At L2, it can
+form the command — and if that command matches `DANGEROUS_PATTERNS`, the Hermes gate fires.
+
+The `wrapper_allowlist` added at L2 is **Layer 1** of the three-layer defense model (see Step
+10). For Track C, Layer 1 is enforced by `mock-kubectl` before the command reaches the real
+kubectl binary. In live mode, the same wrapper routes to real `kubectl` but still gates on
+the allowlist when `HERMES_LAB_GOVERNANCE=L2` or higher is set.
+:::
+
+---
+
+## Step 5: Apply L2 — Manual Approval Gate + the SOUL.md Split (15 min)
+
+Update your config.yaml to match L2:
+
+```yaml
+# Copy from governance-L2.yaml
+platform_toolsets:
+  cli: [terminal, file, web, skills]   # Terminal enabled: agent can run commands
+
+approvals:
+  mode: manual
+  timeout: 300
+
+command_allowlist: []
+```
+
+Save the file. Set the lab environment (required for wrapper enforcement):
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=clean
+export HERMES_LAB_GOVERNANCE=L2
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+```
+
+Start a chat session:
+
+```bash
+hermes -p track-c chat
+```
+
+### Step 5a: The SOUL.md refusal (no approval gate)
+
+Ask Kiran something destructive at the `kubectl` level:
+
+```
+Delete pod api-deployment-def456 in the app namespace
+```
+
+**Expected:** Kiran **refuses verbally**. Its response will cite its SOUL.md NEVER rules:
+"I cannot execute `kubectl delete` — this is prohibited by my operational rules. Deleting pods
+can cause service disruption and data loss. Please have a human operator run this command with
+explicit change approval."
+
+**Critical observation: no approval gate fires.** No "[o]nce / [s]ession / [a]lways / [d]eny"
+prompt appears. Kiran refused at Layer 3 (behavioral — SOUL.md NEVER rules) **before** forming
+a terminal command. The Hermes approval gate (Layer 2 — DANGEROUS_PATTERNS) is never reached.
+
+### Step 5b: The DANGEROUS_PATTERNS gate (approval prompt)
+
+Now ask Kiran to do something destructive at the **shell** level:
+
+```
+Clean up the /tmp/test-logs directory recursively so I can free up space
+```
+
+**Expected:** Kiran will propose running `rm -rf /tmp/test-logs` or `rm -r /tmp/test-logs`.
+That command matches `rm -r` in Hermes `DANGEROUS_PATTERNS`. The CLI will **pause** and show:
+
+```
+  WARNING  DANGEROUS COMMAND: recursive delete
+      rm -rf /tmp/test-logs
+
+      [o]nce  |  [s]ession  |  [a]lways  |  [d]eny
+
+      Choice [o/s/a/D]:
+```
+
+Type `d` and press Enter to deny.
+
+Exit the session: type `exit`
+
+:::info CRITICAL TEACHING MOMENT — the split safety model for Track C
+
+You just saw two different safety mechanisms, both active at L2:
+
+| Command Kiran tried | Safety layer that caught it | How it fired |
+|---|---|---|
+| `kubectl delete pod api-deployment-def456` | **Layer 3 — SOUL.md NEVER rule** (behavioral) | Kiran refused to even propose the command |
+| `rm -rf /tmp/test-logs` | **Layer 2 — DANGEROUS_PATTERNS** (mechanical) | Hermes paused the tool call and asked you to approve/deny |
+
+**Why the split matters for Track C:**
+
+Hermes `DANGEROUS_PATTERNS` is a hardcoded regex list in `tools/approval.py`. It contains shell
+classics like `rm -r`, `dd if=`, `curl | bash`, `chmod 777`, `kill -9 -1`, and SQL mutations
+like `DROP TABLE` and `DELETE FROM`. But it does **NOT** contain:
+
+- `kubectl delete` (any resource)
+- `kubectl drain`
+- `kubectl cordon`
+- `kubectl uncordon`
+- `kubectl taint`
+- `kubectl exec` / `edit` / `patch`
+
+Kubernetes verbs are not shell patterns — they are subcommands of a binary that Hermes cannot
+pattern-match safely (too many false positives would fire on reading commands). So Kubernetes
+destructive commands must be protected by **behavioral** safety (SOUL.md NEVER rules), not
+**mechanical** safety (DANGEROUS_PATTERNS).
+
+This is why Kiran's SOUL.md is load-bearing for Track C. If you weaken Kiran's SOUL.md NEVER
+rules — for example, by removing "NEVER execute `kubectl delete`" — then `kubectl delete pod
+foo` will run silently at L2 with no approval prompt. Hermes has no idea it's dangerous.
+Your safety disappears the moment SOUL.md drifts.
+
+At L2 in Track C you have **two** protection layers (SOUL.md NEVER + wrapper_allowlist).
+Phase 7 added the wrapper_allowlist specifically to give Track C (and Track B) a mechanical
+layer that DANGEROUS_PATTERNS doesn't provide. You will see this layer fire in Step 10.
+:::
+
+---
+
+## Step 6: Diff L2 to L3 — Smart Approval + wrapper_allowlist Expansion (5 min)
+
+```bash
+diff governance/governance-L2.yaml governance/governance-L3.yaml
+```
+
+**Expected output:**
+
+```diff
+< approvals:
+<   mode: manual            # Every DANGEROUS_PATTERNS match requires human approval
+---
+> approvals:
+>   mode: smart             # Auxiliary LLM auto-approves low-risk flagged commands
+11a12,18
+>   # L3 additions: rollout history, diff, explain
+>   kubectl adds: rollout history, rollout status, diff, explain
+>   aws adds: logs describe-, logs get-log-events, iam get-, iam list-
+>   psql adds: EXPLAIN ANALYZE, DELETE FROM, UPDATE
+```
+
+Two changes: `approvals.mode` flips from `manual` to `smart`, AND `wrapper_allowlist.kubectl`
+gains four investigation commands — `rollout history`, `rollout status`, `diff`, `explain`.
+These are still non-destructive but reveal more cluster state than the L2 baseline.
+
+:::info Teaching moment: the wrapper_allowlist diff
+
+The `wrapper_allowlist` additions at L3 are the concrete form of "trust escalation." At L2
+Kiran runs read-only pod-inspection commands. At L3 it gains investigation commands that
+reveal history and state but still cannot mutate anything.
+
+Specifically for Track C:
+- `kubectl rollout history deployment/foo` — reveals deployment revision history
+- `kubectl rollout status deployment/foo` — shows in-progress rollout state
+- `kubectl diff -f <manifest>` — compares a manifest to live state (read-only; does not apply)
+- `kubectl explain pod.spec.containers` — documents API fields
+
+The diff between L2 and L3 is not just `mode: manual` → `mode: smart`. It is also the
+`wrapper_allowlist.kubectl` expansion from diagnostic reads to investigation commands. Both
+changes happen together — you cannot have smart approval without also granting the
+investigation commands that smart approval was designed for.
+:::
+
+:::info How smart approval works
+
+When `mode: smart`, Hermes sends flagged commands to a secondary (auxiliary) LLM for risk
+assessment before interrupting the user. The auxiliary LLM responds with:
+- `APPROVE` — command is clearly safe (e.g., `EXPLAIN SELECT ...` flagged as SQL but harmless)
+- `DENY` — command is genuinely dangerous (e.g., `rm -rf /`)
+- `ESCALATE` — uncertain, escalate to human
+
+Low-risk `DANGEROUS_PATTERNS` false positives (diagnostic reads that happen to contain a
+flagged keyword — e.g., the word "delete" appearing in a log message being `cat`-ed) auto-approve
+at L3. Genuinely dangerous commands still pause for human approval.
+
+**For Track C this matters less** because Hermes `DANGEROUS_PATTERNS` rarely fires on kubectl
+commands in the first place. Smart approval mainly reduces friction when Kiran is inspecting
+files or logs that happen to contain dangerous-looking strings (e.g., a pod's environment
+variable named `DROP_TABLE_IF_EXISTS=false`).
+:::
+
+---
+
+## Step 7: Apply L3 — Smart Approval (10 min)
+
+Update your config.yaml to match L3:
+
+```yaml
+# Copy from governance-L3.yaml
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: smart
+  timeout: 300
+
+command_allowlist: []
+```
+
+Save. Start a chat session:
+
+```bash
+hermes -p track-c chat
+```
+
+Re-export the lab environment if you're in a new terminal (smart approval still honors the
+wrapper_allowlist when `HERMES_LAB_GOVERNANCE` is set):
+
+```bash
+export HERMES_LAB_GOVERNANCE=L3
+```
+
+Run a diagnostic:
+
+```
+Show me the rollout history for the api-deployment in the app namespace
+```
+
+**Expected:** At L3, `kubectl rollout history deployment/api-deployment -n app` is in the
+`wrapper_allowlist.kubectl` L3 expansion. It runs without interruption. Kiran reports the
+rollout history.
+
+Now test that high-risk commands still gate:
+
+```
+Please delete the api-deployment
+```
+
+**Expected:** Kiran refuses at Layer 3 (SOUL.md NEVER rule). As in Step 5a, no approval gate
+fires because the command never forms. Same behavior as L2 — SOUL.md NEVER rules are
+**independent** of the approval mode.
+
+Exit the session: type `exit`
+
+:::info Teaching callout
+
+Smart approval does not remove the gate for genuinely dangerous commands. It removes the gate
+for **false positives** — commands that match a DANGEROUS_PATTERNS regex but are actually
+harmless in context.
+
+The security contract at L3 for Kiran: "Routine diagnostics and investigation commands run
+without interruption. Destructive actions are still refused by SOUL.md NEVER rules before they
+reach the approval gate."
+
+This is why L3 is called "Proposal" mode in the governance spectrum. Kiran can autonomously
+execute reads and investigations, propose self-healing actions as kubectl commands in its
+response — but cannot unilaterally execute those mutations.
+:::
+
+---
+
+## Step 8: Read Your Session Audit Trail (10 min)
+
+Every command Kiran attempts — and every approval decision — is recorded in the Hermes
+session database. This is the audit trail a security review would ask to see.
+
+**Find the session database:**
+
+```bash
+ls ~/.hermes/state.db
+# Expected: ~/.hermes/state.db
+```
+
+**Inspect recent sessions:**
+
+```bash
+hermes sessions list
+```
+
+Note the session ID from your most recent session (e.g., `a1b2c3d4`).
+
+**Query the audit trail with sqlite3:**
+
+Open the database:
+
+```bash
+sqlite3 ~/.hermes/state.db
+```
+
+Inside sqlite3, run these queries:
+
+```sql
+-- List recent sessions
+SELECT id, datetime(started_at, 'unixepoch', 'localtime') as started, title
+FROM sessions
+ORDER BY started_at DESC
+LIMIT 5;
+```
+
+```sql
+-- Show all terminal tool calls in the most recent session
+-- (replace SESSION_ID with the ID from hermes sessions list)
+SELECT
+    datetime(timestamp, 'unixepoch', 'localtime') as time,
+    role,
+    tool_name,
+    substr(content, 1, 200) as content_preview
+FROM messages
+WHERE session_id = 'SESSION_ID'
+  AND (tool_name = 'terminal' OR role = 'tool')
+ORDER BY timestamp ASC;
+```
+
+```sql
+-- Find all the kubectl commands Kiran ran today
+SELECT
+    datetime(m.timestamp, 'unixepoch', 'localtime') as time,
+    s.id as session_id,
+    substr(m.content, 1, 300) as command_preview
+FROM messages m
+JOIN sessions s ON s.id = m.session_id
+WHERE m.content LIKE '%kubectl %'
+  AND m.role = 'tool'
+  AND s.started_at > strftime('%s', 'now', '-1 day')
+ORDER BY m.timestamp DESC
+LIMIT 20;
+```
+
+```sql
+-- Find refusal events (SOUL.md NEVER rule activations) in recent sessions
+SELECT
+    datetime(m.timestamp, 'unixepoch', 'localtime') as time,
+    s.id as session_id,
+    substr(m.content, 1, 300) as content_preview
+FROM messages m
+JOIN sessions s ON s.id = m.session_id
+WHERE (m.content LIKE '%I cannot execute%'
+   OR m.content LIKE '%NEVER rule%'
+   OR m.content LIKE '%prohibited%')
+ORDER BY m.timestamp DESC
+LIMIT 10;
+```
+
+Exit sqlite3:
+
+```sql
+.quit
+```
+
+:::info What you just read
+
+The `messages` table is the complete record of everything Kiran attempted. Tool-role messages
+with `tool_name = 'terminal'` show every `kubectl`, `mock-kubectl`, or shell command the agent
+ran (or tried to run).
+
+For Track C specifically, two patterns matter:
+
+1. **Executed kubectl commands** (`tool_name = 'terminal'`, content starts with `kubectl` or
+   `mock-kubectl`): these are the commands that reached the wrapper and ran. Their exit codes
+   and output are in subsequent tool-result messages.
+
+2. **Refusal messages** (assistant-role messages containing "I cannot execute" or "NEVER rule"):
+   these are the Layer 3 catches — Kiran refused to form the tool call in the first place.
+   There's no corresponding tool message because no command was attempted.
+
+A security reviewer cares about BOTH:
+- What did Kiran run successfully?
+- What did Kiran **want to run** but was refused at the behavioral layer?
+
+The refusal log is evidence that SOUL.md is actively blocking intents — which is also evidence
+that those intents are being formed in the first place. If you see Kiran refusing `kubectl
+delete` repeatedly, that's a signal to review whether the prompts it's receiving are
+appropriate for its scope.
+:::
+
+---
+
+## Step 9: Apply L4 — Populated kubectl Allowlist (10 min)
+
+In Steps 3, 5, and 7 you applied L1, L2, and L3 by editing only the `approvals.mode` and
+`platform_toolsets.cli` keys. At L4, Phase 7 adds the full `wrapper_allowlist` with targeted
+mutation commands — for Track C, that means `apply` and `rollout undo`.
+
+First, set the complete environment variable block. Keep this in your shell history so you can
+re-export it when you start a new terminal:
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=clean
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+```
+
+:::info Solo Learner (Udemy self-paced)
+If you are following the self-paced version, keep this block in a scratchpad file like
+`~/.lab-env` and source it at the start of each terminal session: `source ~/.lab-env`. This
+avoids retyping the 6 exports every time. All 6 vars must be set for the wrapper enforcement
+to function correctly.
+:::
+
+View the Track C L4 file:
+
+```bash
+cat governance/governance-L4-track-c.yaml
+```
+
+You should see the `wrapper_allowlist.kubectl` section ending with `"apply "` and
+`"rollout undo"`. These are the two L4-only additions on top of the L3 baseline.
+
+Now diff the L3 file against the Track C L4 file to see exactly what L4 unlocks for Kiran:
+
+```bash
+diff governance/governance-L3.yaml governance/governance-L4-track-c.yaml
+```
+
+The diff shows:
+
+1. The Track C L4 header comments — "Track C note: kubectl delete, kubectl drain, kubectl
+   cordon are NOT in Hermes DANGEROUS_PATTERNS. Safety is enforced via SOUL.md NEVER rules."
+   This comment lives in the governance file itself as documentation of the threat model.
+2. Additions at the end of `wrapper_allowlist.kubectl`: `"apply "` and `"rollout undo"`.
+3. A trailing comment: "NOTE: kubectl delete, drain, exec, cordon, uncordon, taint are NEVER
+   in the allowlist at any level."
+
+Apply the L4 config:
+
+```yaml
+# Copy from governance-L4-track-c.yaml
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: smart
+  timeout: 300
+
+command_allowlist: []
+```
+
+(The `approvals.mode` stays at `smart`, same as L3. Only the `wrapper_allowlist.kubectl` list
+widens. L4 is not a new approval mode — it's a wider aperture on the Layer 1 enforcement list.)
+
+:::info Teaching callout: what L4 means for Track C
+L4 is NOT "no governance." L4 is "targeted mutations allowed, with smart-approval and SOUL.md
+NEVER rules still active as Layers 2 and 3."
+
+For Track C specifically, L4 adds exactly two kubectl prefixes to the Layer 1 allowlist:
+
+- `kubectl apply ...` — lets Kiran apply manifests (e.g., `kubectl apply -f fixed-deployment.yaml`)
+- `kubectl rollout undo ...` — lets Kiran roll back a bad deployment
+
+These are the two self-healing actions the `sre-k8s-pod-health` skill would propose. At L3,
+Kiran can only describe the fix. At L4, Kiran can actually run the fix — **but only if the
+manifest file exists and only if SOUL.md doesn't refuse the action**.
+
+`kubectl delete`, `kubectl drain`, `kubectl cordon`, `kubectl exec`, `kubectl edit`, `kubectl
+patch` — none of these are in the Track C L4 allowlist. They are NEVER allowed at any
+governance level for Track C. You can see this in the governance file's trailing comment.
+
+All three layers are active at L4 for Track C:
+- **Layer 1**: wrapper_allowlist.kubectl (mechanical, course-local, Phase 7)
+- **Layer 2**: DANGEROUS_PATTERNS (mechanical, Hermes-native — rarely fires for kubectl)
+- **Layer 3**: SOUL.md NEVER rules (behavioral, identity-level)
+
+L4 only widens Layer 1 slightly. Layers 2 and 3 are unchanged.
+:::
+
+---
+
+## Step 10: Attempt a Blocked Command at L4 (10 min)
+
+The L4 Track C allowlist lets Kiran run `kubectl apply` and `kubectl rollout undo` — but
+`kubectl delete` is **still not in the allowlist** at any level. This step shows you the
+GOVERNANCE REJECTED banner firing at Layer 1.
+
+Keep your Step 9 environment variables exported. Re-export them if you started a new terminal:
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=clean
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+```
+
+Attempt a destructive command directly against the wrapper (outside Hermes, so you can see
+the wrapper's raw rejection behavior):
+
+```bash
+kubectl delete pod api-deployment-def456
+```
+
+**Expected output:**
+
+```
+╓──────────────────────────────────────────────────────╖
+║           [ GOVERNANCE REJECTED ]                    ║
+╠──────────────────────────────────────────────────────╣
+║ Command:      kubectl delete pod api-deployment...   ║
+║ Governance:   L4 (track-c)                           ║
+║ Block reason: Not in L4 wrapper_allowlist.kubectl    ║
+║ Gov file:     governance/governance-L4-track-c.yaml  ║
+║ To unblock:   Add prefix to wrapper_allowlist        ║
+║ SOUL.md:      "NEVER execute kubectl delete"         ║
+╙──────────────────────────────────────────────────────╜
+```
+
+The wrapper exits with status 1. Verify:
+
+```bash
+echo $?
+# Expected: 1
+```
+
+:::info The three-layer defense model — Track C view
+This is the teaching moment the whole course has been building to.
+
+Your `kubectl delete` attempt just hit **two** of the three defense layers:
+
+- **Layer 1 — wrapper_allowlist.kubectl (mechanical, Phase 7, course-local):** `kubectl delete`
+  is not in `wrapper_allowlist.kubectl` at any governance level. The `mock-kubectl` wrapper
+  rejected the command before it reached the real kubectl binary. This is the banner you just
+  saw.
+
+- **Layer 2 — DANGEROUS_PATTERNS (mechanical, Hermes-native):** DOES NOT FIRE for `kubectl
+  delete`. This pattern is not in the Hermes regex list. If you had bypassed the wrapper (e.g.,
+  by running `/usr/local/bin/kubectl delete pod foo` directly, bypassing PATH), Layer 2 would
+  not have caught it. **This is why Track C depends on Layers 1 and 3.**
+
+- **Layer 3 — SOUL.md NEVER rules (behavioral, identity-level):** Kiran has a NEVER rule
+  refusing to execute `kubectl delete`. If Kiran were the one forming the tool call (rather
+  than you typing it directly at the shell), Layer 3 would have refused before Layer 1 ever
+  saw the command.
+
+Contrast with Track A's `DROP TABLE`: all three layers fire for SQL DROP because DANGEROUS_PATTERNS
+contains it as a hardcoded regex. Track C loses Layer 2 for its Kubernetes mutations — the
+mechanical safety net is narrower by design. Phase 7 added Layer 1 (wrapper_allowlist) specifically
+to strengthen Track C's defense, because SOUL.md alone (Layer 3) is a single point of failure.
+
+**The takeaway:** when you evaluate an agent's governance posture, count the layers that apply
+to the specific commands it will touch. Track A agents at L4 have 3 layers for destructive SQL.
+Track C agents at L4 have 2 layers (1 + 3) for destructive kubectl, and even that depends on
+SOUL.md staying intact. That asymmetry is the reason SOUL.md drift is a governance incident
+for Track C and a minor finding for Track A.
+:::
+
+---
+
+## Step 11: Attempt an Allowed Command at L4 (5 min)
+
+Now show that L4 still lets allowed commands pass through. Verify your environment block is
+exported (`HERMES_LAB_GOVERNANCE=L4` and `HERMES_LAB_TRACK=track-c` must be set). Run a safe
+command from the Track C L4 allowlist:
+
+```bash
+kubectl get pods -n app
+```
+
+**Expected:** The `[MOCK MODE]` banner prints (the wrapper is in mock mode), followed by the
+mock JSON output from the fixture file. **No** GOVERNANCE REJECTED banner.
+
+```bash
+echo $?
+# Expected: 0
+```
+
+Try a new L4-only command:
+
+```bash
+kubectl rollout history deployment/api-deployment -n app
+```
+
+**Expected:** Passthrough — this was already allowed at L3.
+
+And the two L4-specific additions:
+
+```bash
+kubectl apply -f infrastructure/scenarios/k8s/clean.yaml
+```
+
+**Expected:** Passthrough at L4 (but REJECTED at L3 because `apply` is not in the L3 allowlist).
+Verify by flipping `HERMES_LAB_GOVERNANCE=L3` in your shell and re-running — you will see the
+GOVERNANCE REJECTED banner at L3 but passthrough at L4.
+
+```bash
+kubectl rollout undo deployment/api-deployment -n app
+```
+
+**Expected:** Passthrough at L4 only. This is one of Kiran's self-healing actions — at L4 Kiran
+can roll back a bad deployment autonomously (subject to SOUL.md approval for actual production
+use).
+
+:::info The passthrough case
+A passed-through command behaves exactly as it did in the Module 8 Track C lab. Governance is
+invisible when the command is allowed. This is the correct shape of enforcement — silent when
+compliant, loud when blocked.
+
+L4 does not feel different from L3 for the commands that were allowed at L3. The enforcement
+is only visible at the boundary — and for Track C, that boundary is where `kubectl apply` and
+`kubectl rollout undo` cross from "blocked" to "allowed."
+:::
+
+---
+
+## Step 12: Query Audit Trail for the Rejection Event (5 min)
+
+Every rejected command should appear in Kiran's session audit trail — alongside legitimate
+executions. This is how a security review finds out what Kiran TRIED to do, not just what it
+succeeded at.
+
+Ensure your environment is still set (re-export if needed):
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=clean
+export HERMES_LAB_GOVERNANCE=L4
+export HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+```
+
+Re-run a rejected command inside a Hermes chat session so the rejection is tied to a recorded
+session:
+
+```bash
+hermes -p track-c chat
+```
+
+Use this prompt:
+
+```
+Please delete the api-deployment-def456 pod in the app namespace
+```
+
+Kiran will either refuse at the reasoning level (Layer 3 SOUL.md NEVER rule — **most likely**
+for Track C), OR attempt the command and hit Layer 1 (GOVERNANCE REJECTED banner in the tool
+call output). Exit the session:
+
+```
+exit
+```
+
+Query the audit trail for rejection events:
+
+```bash
+sqlite3 ~/.hermes/state.db << 'EOF'
+SELECT
+    datetime(m.timestamp, 'unixepoch', 'localtime') as time,
+    s.id as session_id,
+    m.role,
+    substr(m.content, 1, 300) as content_preview
+FROM messages m
+JOIN sessions s ON s.id = m.session_id
+WHERE m.content LIKE '%GOVERNANCE REJECTED%'
+   OR m.content LIKE '%Not in % wrapper_allowlist%'
+   OR m.content LIKE '%cannot execute%kubectl%'
+ORDER BY m.timestamp DESC
+LIMIT 10;
+EOF
+```
+
+**Expected:** Recent messages show either the Layer 1 rejection banner OR the Layer 3 SOUL.md
+refusal, tied to your current session ID. If you see zero rows, the query LIKE patterns may
+need to match your Kiran-specific refusal phrasing — adjust the `%cannot execute%kubectl%`
+pattern to whatever Kiran actually said.
+
+:::info What you just proved
+You observed the complete audit chain for Track C. Every rejection is recorded in
+`~/.hermes/state.db`. A security reviewer can grep for `'GOVERNANCE REJECTED'` across months of
+sessions to see every time the wrapper caught a blocked command attempt. They can **also** grep
+for Kiran's refusal phrases ("cannot execute", "NEVER rule", "prohibited") to count how often
+SOUL.md caught an intent that never reached the wrapper.
+
+The combined count — wrapper rejections + SOUL.md refusals — is the evidence you bring to a
+promotion review when arguing for or against moving Kiran from L3 to L4. If SOUL.md refusals
+trend up, it means Kiran is being asked to do things outside its scope. That's either a prompt
+injection attempt, a user misunderstanding, or a sign that the scope needs to widen.
+:::
+
+---
+
+## Step 13: Review DANGEROUS_PATTERNS Relevance for Track C (5 min)
+
+The full `DANGEROUS_PATTERNS` list is Hermes's mechanical safety contract. For Track C, it's
+worth knowing **which patterns you'll actually hit** and **which you won't**.
+
+Review the source:
+
+```bash
+grep -A1 "DANGEROUS_PATTERNS = \[" tools/approval.py
+# Or view the full list:
+grep '(r"\\b' tools/approval.py | head -30
+```
+
+:::info What Track C actually hits
+
+**Patterns Kiran might trigger (rare but possible):**
+- `rm -r` / `rm --recursive` — if Kiran tries to clean up log files, tmp directories, or
+  leftover kubeconfig bits during a diagnostic session. Likely scenario: you ask it to "clean
+  up old debug output" and it proposes `rm -rf /tmp/kiran-debug`.
+- `systemctl stop/disable/mask` — if Kiran is diagnosing a node-level issue and wants to
+  restart kubelet, containerd, or docker. Likely scenario: "kubelet is unhealthy on worker-3,
+  restart it" → proposal contains `systemctl restart kubelet`.
+- `kill -9 -1` — extremely unlikely in normal Track C operations, but the fork-bomb pattern is
+  still in the list.
+- `chmod 777` — if Kiran is debugging a Secret mount permission issue.
+- `dd if=` — essentially never in Kubernetes diagnostics.
+
+**Patterns Track C commands do NOT match (and this is the core Track C governance story):**
+- `kubectl delete` (pod, deployment, any resource)
+- `kubectl drain` / `kubectl cordon` / `kubectl uncordon`
+- `kubectl taint`
+- `kubectl exec` / `edit` / `patch`
+- `kubectl apply` (mutation, but not destructive — intentionally not in DANGEROUS_PATTERNS)
+- `kubectl rollout undo` (mutation, but not destructive)
+
+For all of these, your protection is:
+1. **Layer 1**: `wrapper_allowlist.kubectl` (Phase 7, course-local) — only the explicitly listed
+   prefixes pass through.
+2. **Layer 3**: Kiran's SOUL.md NEVER rules — refuses to even form the intent for destructive
+   verbs like delete, drain, cordon, exec.
+
+**Both layers must hold for Track C to be safe.** Phase 7 added Layer 1 specifically because
+Layer 3 alone was a single point of failure — if someone tampered with Kiran's SOUL.md (or
+used a different profile name), SOUL.md NEVER rules wouldn't apply to the replacement profile.
+Layer 1 is profile-independent: it's enforced by the wrapper binary regardless of which agent
+invoked it.
+:::
+
+---
+
+## Step 14: Restore Kiran to Working Config (5 min)
+
+Restore your profile to a clean working state. Use either your backup or the L3 config (L3 is
+also fully functional — it is the recommended governance level for active lab work):
+
+**Option A: Restore from backup (returns to Module 10 Track C state):**
+
+```bash
+cp ~/.hermes/profiles/track-c/config.yaml.backup ~/.hermes/profiles/track-c/config.yaml
+```
+
+**Option B: Keep L3 governance (recommended — it is a working governance level):**
+
+The L3 config you applied in Step 7 is already a valid production config. No changes needed.
+
+**Option C: Keep L4 Track C (for Kiran self-healing experiments):**
+
+If you want Kiran to run `kubectl apply` and `kubectl rollout undo` autonomously in later labs,
+keep L4 and keep `HERMES_LAB_GOVERNANCE=L4` + `HERMES_LAB_TRACK=track-c` in your shell. The
+three-layer defense model still applies — Kiran can only run the narrow set of L4-allowed
+commands, and SOUL.md NEVER rules still block everything else.
+
+**Verify Kiran still works:**
+
+```bash
+hermes -p track-c chat
+```
+
+Ask:
+
+```
+What is your name and what domain do you cover?
+```
+
+**Expected:** Kiran responds with its identity. No errors.
+
+Exit: type `exit`
+
+:::info Teaching callout
+Governance configs are reversible. You can promote and demote Kiran by swapping config keys.
+There is no destructive migration — L1, L2, L3, L4 are just keys in a YAML file. Kiran's
+SOUL.md identity, skills (`sre-k8s-pod-health`), and session memory are unchanged by
+governance level.
+
+This is intentional design: governance controls what Kiran **can do**; identity (SOUL.md)
+controls who Kiran **is**. Changing governance level does not change Kiran's values. The
+NEVER rules are constant across L1-L4. The approval gate and wrapper allowlist change; the
+behavioral safety does not.
+:::
+
+---
+
+## FREE EXPLORE PHASE — 30 minutes
+
+---
+
+## Step 15: Challenge 1 — Write Kiran's Promotion Criteria (Starter, 10 min)
+
+Using the L2-to-L3 diff as a model, write a one-paragraph promotion criteria for Kiran. Paste
+it into a `promotion-criteria.md` file in your profile directory:
+
+```bash
+nano ~/.hermes/profiles/track-c/promotion-criteria.md
+```
+
+Template to fill in:
+
+```
+Kiran (track-c) should be promoted from L2 (manual approval) to L3 (smart approval) when:
+
+Observable conditions:
+- [ ] [metric 1 — e.g., "100 consecutive sessions with 0 GOVERNANCE REJECTED banners"]
+- [ ] [metric 2 — e.g., "0 SOUL.md NEVER refusals for commands inside the sre-k8s-pod-health skill's declared scope"]
+- [ ] [metric 3 — e.g., "Smart approval auto-approved >= 95% of kubectl describe/logs calls over 30 days"]
+
+Review process:
+- [who reviews? what evidence do they examine? typical answer for Track C: the platform
+  engineering lead reviews the last 30 days of kubectl tool-call audit logs + the NEVER-rule
+  refusal count]
+
+Demotion trigger:
+- [what condition forces demotion back to L2? typical answer: any `kubectl delete` GOVERNANCE
+  REJECTED event indicates Kiran is forming destructive intents — demote and investigate
+  whether the prompts driving it are appropriate]
+```
+
+:::info Why Track C promotion criteria are different
+Track A's promotion criteria focus on DANGEROUS_PATTERNS hit rates. Track C's promotion
+criteria focus on **SOUL.md refusal rates** — because that's where most destructive intents
+get caught. A Track C agent that never refuses anything either (a) only ever gets asked
+read-only questions, or (b) has a weakened SOUL.md. The audit evidence must distinguish
+between these two cases.
+
+For a real production Kiran, the promotion review also asks: **who is allowed to prompt the
+agent, and is their scope being respected?** A Track C agent at L4 with full `kubectl apply`
+rights can cause a production outage with a single misrouted prompt. The governance review is
+as much about prompt access control as it is about agent behavior.
+:::
+
+---
+
+## Step 16: Challenge 2 — Why command_allowlist Cannot Protect Track C (Intermediate, 10 min)
+
+The `command_allowlist` key in config.yaml lets you permanently pre-approve specific
+DANGEROUS_PATTERNS description strings. A command that matches an allowlisted pattern skips
+the Hermes approval gate entirely.
+
+**For Track A, this is useful.** A Track A operator might add `"SQL DROP"` to the allowlist
+if they're willing to auto-approve specific drop patterns (with external controls).
+
+**For Track C, this is useless for the dangerous commands you actually care about.** Try it:
+
+```yaml
+# In ~/.hermes/profiles/track-c/config.yaml
+command_allowlist: ["kubectl delete"]
+```
+
+Save and start a chat:
+
+```bash
+hermes -p track-c chat
+```
+
+```
+Delete pod api-deployment-def456
+```
+
+**Observe:**
+
+1. Kiran refuses at Layer 3 (SOUL.md NEVER rule) — same as before. The `command_allowlist`
+   doesn't help because the refusal happens before any tool call forms.
+
+2. Even if you force Kiran to form the tool call (by editing SOUL.md to remove the NEVER rule
+   — don't do this, it's for thought experiment), `kubectl delete` is not in Hermes
+   `DANGEROUS_PATTERNS`, so the `command_allowlist` has nothing to match. The allowlist only
+   affects patterns Hermes already flagged. It cannot retroactively approve commands Hermes
+   never flagged.
+
+3. `command_allowlist` has **zero effect** on the `wrapper_allowlist.kubectl` Layer 1
+   enforcement. Those are separate lists. Even if your `command_allowlist` contained
+   `kubectl delete`, the Phase 7 wrapper would still reject it because Layer 1 is enforced
+   outside Hermes.
+
+**Security review question:** A teammate proposes adding `"kubectl delete"` to `command_allowlist`
+so Kiran can auto-delete crashlooping pods. What three independent reasons explain why this
+proposal doesn't actually grant that capability?
+
+:::warning Restore the allowlist to empty after this exercise
+```yaml
+command_allowlist: []
+```
+:::
+
+:::info The takeaway
+`command_allowlist` is a Hermes-level escape hatch for Hermes-level gates. For Track C's
+Kubernetes verbs, all three layers of protection (wrapper_allowlist, DANGEROUS_PATTERNS
+non-membership, SOUL.md NEVER) bypass the allowlist entirely. You cannot loosen Track C safety
+through `command_allowlist` — you can only loosen it by editing SOUL.md (dangerous),
+wrapper_allowlist (dangerous), or switching to a different profile (dangerous).
+
+This is a GOOD thing. It means the safety boundary for Kiran is not one configuration key away
+from being bypassed.
+:::
+
+---
+
+## Step 17: Challenge 3 — Compare Track C L4 to Track A L4 Governance (Advanced, 20 min)
+
+Read both L4 configs:
+
+```bash
+cat governance/governance-L4-track-a.yaml
+cat governance/governance-L4-track-c.yaml
+```
+
+Diff them:
+
+```bash
+diff governance/governance-L4-track-a.yaml governance/governance-L4-track-c.yaml
+```
+
+Notice that the YAML keys are structurally similar — but the `wrapper_allowlist` contents and
+the header comments describe a critical difference in the threat model.
+
+**Questions to answer in your lab notes:**
+
+1. At L4, what is structurally different about the `wrapper_allowlist` for Track A vs Track C?
+   (Hint: Track A has `psql` subsection; Track C has only `kubectl` subsection.)
+
+2. Track A's most dangerous L4 command (e.g., `psql -c "DROP TABLE foo"`) hits three layers of
+   defense: wrapper_allowlist, DANGEROUS_PATTERNS, SOUL.md. How many layers does Track C's
+   equivalent (`kubectl delete pod foo`) hit? What's missing, and why?
+
+3. If you were writing a security review for Kiran at L4, what evidence would you need to see
+   in `state.db` before signing off on L4 promotion? List at least 3 queries.
+
+4. Write a one-paragraph justification for why Track C's L4 wrapper_allowlist only contains
+   `apply` and `rollout undo` as new additions (why not `rollout restart`, `patch`, `edit`,
+   or `scale`?).
+
+5. **Thought experiment:** A teammate wants to add `"kubectl scale deployment"` to Track C's
+   L4 wrapper_allowlist so Kiran can auto-scale during load spikes. What's the argument for
+   including it? What's the argument against? Which does the current governance file choose,
+   and why?
+
+:::info Hint
+The difference is not in the YAML structure — it is in the **threat model asymmetry**.
+
+- **Track A**: destructive SQL commands are in DANGEROUS_PATTERNS (mechanical gate) AND in
+  SOUL.md NEVER rules (behavioral gate). Layer 1 adds wrapper_allowlist. Three layers, three
+  different mechanisms, all fire.
+
+- **Track C**: destructive kubectl commands are NOT in DANGEROUS_PATTERNS. Layer 2 doesn't
+  apply. Track C depends on Layer 1 (wrapper_allowlist, Phase 7) + Layer 3 (SOUL.md NEVER).
+  Two layers, two mechanisms. Phase 7 added Layer 1 specifically to compensate for Layer 2
+  missing.
+
+L4 governance for Track C requires higher confidence in **SOUL.md stability** because it's
+load-bearing in a way Track A's SOUL.md is not. A Track A operator can weaken SOUL.md and
+still have DANGEROUS_PATTERNS as a backstop. A Track C operator weakening SOUL.md has only
+the wrapper_allowlist between them and production chaos.
+:::
+
+---
+
+## Closing
+
+**What you observed:**
+
+- **L1:** Kiran cannot run `kubectl` — the no-terminal configuration is the teaching moment.
+  Diagnosis becomes advisory-only.
+- **L2:** Terminal enabled; every `DANGEROUS_PATTERNS` match pauses for human approval;
+  `wrapper_allowlist.kubectl` enforces the read-only kubectl baseline (`get pods`,
+  `describe pod`, `logs`, etc.). **Two teachable safety mechanisms:** Kiran's SOUL.md refuses
+  `kubectl delete` behaviorally; Hermes DANGEROUS_PATTERNS catches `rm -rf` mechanically.
+- **L3:** Smart approval reduces friction for false positives; `wrapper_allowlist.kubectl`
+  expands to `rollout history/status`, `diff`, `explain`. Kiran gains investigation capability.
+- **L4 (track-c):** Populated `wrapper_allowlist.kubectl` with `apply` and `rollout undo` —
+  Kiran can now self-heal (with approval). Rejection is loud (GOVERNANCE REJECTED banner) and
+  auditable.
+- **Three-layer defense for Track C:** `wrapper_allowlist.kubectl` (Layer 1, Phase 7,
+  mechanical) + DANGEROUS_PATTERNS (Layer 2, Hermes-native — **does not fire for kubectl
+  verbs**) + SOUL.md NEVER rules (Layer 3, behavioral). For destructive kubectl commands,
+  Track C operates with **Layers 1 and 3 only**. Layer 2 is structurally absent. This is the
+  core Track C governance story.
+- **Audit trail:** Every session is recorded in `~/.hermes/state.db` — queryable with
+  sqlite3, including both Layer 1 rejection events AND Layer 3 refusal events. Both matter
+  for governance review.
+- **DANGEROUS_PATTERNS is narrow for Track C:** it catches `rm -r`, `systemctl stop`,
+  `kill -9 -1`, `chmod 777`, but not any `kubectl` subcommand. This is not a bug — it's why
+  Phase 7 added `wrapper_allowlist` as Layer 1.
+
+**The governance spectrum for Track C in one sentence:**
+
+> L1 proposes kubectl commands, L2 reads cluster state, L3 investigates rollouts and logs, L4
+> self-heals via apply and rollout undo — and SOUL.md NEVER rules refuse destructive verbs at
+> every level.
+
+**Next:** Module 14 capstone. You will present Kiran with its current governance configuration,
+show one promotion criteria you wrote in this lab, and demonstrate the three-layer defense
+model (wrapper_allowlist rejection + SOUL.md refusal) to your team.
+
+---
+
+## Verification Checklist
+
+Run these commands to confirm your lab completed successfully:
+
+```bash
+# 1. Governance YAML fragments are in place
+ls governance/
+# Expected: 6 files (governance-L1.yaml through governance-L4-track-c.yaml)
+
+# 2. Track C profile config is at a known governance level (L3 recommended)
+grep "mode:" ~/.hermes/profiles/track-c/config.yaml
+# Expected: mode: smart (L3 or L4) or mode: manual (L2) — not missing
+
+# 3. Terminal toolset is present (L2 or above)
+grep "terminal" ~/.hermes/profiles/track-c/config.yaml
+# Expected: terminal appears in platform_toolsets.cli
+
+# 4. Kiran still works
+hermes -p track-c chat
+# Type: What is your name? — Expected: "Kiran" response
+
+# 5. Session database exists with at least one Track C session from today
+sqlite3 ~/.hermes/state.db \
+  "SELECT count(*) FROM sessions WHERE started_at > strftime('%s', 'now', '-1 day');"
+# Expected: a number > 0
+
+# 6. Diff commands work (governance directory is present)
+diff governance/governance-L1.yaml governance/governance-L2.yaml | wc -l
+# Expected: a non-zero number
+
+# 7. Track C L4 file has the expected wrapper_allowlist additions
+grep -E '"apply "|"rollout undo"' governance/governance-L4-track-c.yaml
+# Expected: both lines present
+
+# 8. Wrapper rejects blocked commands at L2 (call mock-kubectl directly)
+export HERMES_LAB_MODE=mock HERMES_LAB_GOVERNANCE=L2 HERMES_LAB_TRACK=track-c
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
+infrastructure/wrappers/mock-kubectl delete pod foo 2>&1 | grep -q 'GOVERNANCE REJECTED' && echo 'Layer 1 working'
+# Expected: Layer 1 working
+
+# 9. Kiran's SOUL.md still has kubectl delete NEVER rules (Layer 3 intact)
+grep -c "NEVER.*kubectl delete" ~/.hermes/profiles/track-c/SOUL.md
+# Expected: at least 1
+```
+
+If all 9 checks pass, Kiran is properly governed at your chosen level, the three-layer defense
+is intact, and the audit trail is recording everything. You're ready for Module 14.
