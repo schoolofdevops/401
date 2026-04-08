@@ -29,7 +29,7 @@ The Superpowers workflow trains you to produce working IaC from structured conte
 - Terraform 1.7+ (CRITICAL — `mock_provider` requires it)
 - Claude Code (or Crush) configured and ready
 - No AWS account or credentials needed for the main lab flow
-
+- Install Superpowers using the [instructions here](https://github.com/obra/superpowers)
 ---
 
 :::danger Terraform Version Requirement
@@ -101,6 +101,17 @@ A Terraform module that provisions:
    comparison_operator = "GreaterThanThreshold", namespace = "AWS/EC2")
 - SNS subscription uses protocol = "email" (not SMS — SNS email is free)
 - monitoring = false on the instance (basic monitoring — detailed costs money)
+
+## How to Build this project (Non Negotiable)
+You must use superpowers to build this using following steps/features
+
+  * brainstorming - Activates before writing code. Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Saves design document.
+  * using-git-worktrees - Activates after design approval. Creates isolated workspace on new branch, runs project setup, verifies clean test baseline.
+  * writing-plans - Activates with approved design. Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps.
+  * subagent-driven-development or executing-plans - Activates with plan. Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality), or executes in batches with human checkpoints.
+  * test-driven-development - Activates during implementation. Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit. Deletes code written before tests.
+  * requesting-code-review - Activates between tasks. Reviews against plan, reports issues by severity. Critical issues block progress.
+  * finishing-a-development-branch - Activates when tasks complete. Verifies tests, presents options (merge/PR/keep/discard), cleans up worktree.
 ```
 
 Expected result: CLAUDE.md created. Notice that the Architecture section uses the EXACT AWS attribute names and values. This is the key difference between good context and generic context — you are encoding operational knowledge, not a vague description.
@@ -109,7 +120,25 @@ Expected result: CLAUDE.md created. Notice that the Architecture section uses th
 The specific attribute names in the Architecture section (`GreaterThanThreshold` not `greater-than`, `CPUUtilization` not `cpu_utilization`, `evaluation_periods = 2` not just "2 periods") are the exact values that prevent the most common AI generation errors for Terraform. You are pre-correcting the AI's common mistakes by encoding the correct vocabulary.
 :::
 
+
+## Superpoers Starting Prompt 
+
+Use this prompt 
+
+```
+I want you to read Claude.md and start building the project. I want you to use superpowers and use that to
+the maximum of its capabilities, and start building this Terraform module for me.
+```
+
+
+
 ---
+
+
+
+# Optional Prompts 
+
+The following prompts are optional, just to demonstrate how you would build this similar to useing super powers. 
 
 ## Phase 1: Brainstorm (15 min)
 
