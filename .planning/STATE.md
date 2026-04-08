@@ -187,7 +187,7 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 260407-vyg | Fix Hermes profile install instructions across all agent configs and lab files | 2026-04-07 | 9c24d6c | [260407-vyg-fix-hermes-profile-install-instructions-](./quick/260407-vyg-fix-hermes-profile-install-instructions-/) |
 | 260408-sem | Create Track C-specific labs for Modules 7 & 8; fix Module 10 Track C Step 2 to preserve Module 8 profile | 2026-04-08 | 7a61b4c | [260408-sem-fix-module-10-track-c-lab-step-2-to-not-](./quick/260408-sem-fix-module-10-track-c-lab-step-2-to-not-/) |
-| 260408-tbd | Create Module 13 Track C governance lab (1257 lines) with kubectl-first examples and SOUL.md-NEVER teaching emphasis | 2026-04-08 | (pending) | [260408-tbd-create-module-13-track-c-governance-lab-](./quick/260408-tbd-create-module-13-track-c-governance-lab-/) |
+| 260408-tbd | Create Module 13 Track C governance lab (1257 lines) with kubectl-first examples and SOUL.md-NEVER teaching emphasis | 2026-04-08 | 6b1d59c | [260408-tbd-create-module-13-track-c-governance-lab-](./quick/260408-tbd-create-module-13-track-c-governance-lab-/) |
 
 ## Session Continuity
 
