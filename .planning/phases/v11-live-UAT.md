@@ -1,10 +1,13 @@
 ---
-status: complete
+status: shipped
 phase: v1.1-milestone
 source: [06-01-SUMMARY.md, 06-02-SUMMARY.md, 06-03-SUMMARY.md, 07-01-SUMMARY.md, 07-02-SUMMARY.md, 07-03-SUMMARY.md, 08-01-SUMMARY.md, 08-02-SUMMARY.md, 09-01-SUMMARY.md, 09-02-SUMMARY.md]
 started: 2026-04-07T17:00:00Z
-updated: 2026-04-08T02:15:00Z
+updated: 2026-04-08T02:30:00Z
 scope: Module 7 onwards — live KIND cluster, real Hermes agents
+decision: Module 12 (triggers) and Module 13 (governance) not live-tested. Infrastructure
+  and governance wrapper verified solid via Tests 7/12/13. Residual risk is minor CLI
+  syntax quirks only. Sufficient for course delivery.
 ---
 
 ## Current Test
