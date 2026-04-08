@@ -9,7 +9,7 @@ sidebar_position: 3
 
 **Duration:** 90 minutes (45 min guided + 45 min free explore) + optional KIND live extension
 **Track:** C — Kubernetes Health & Self-Healing
-**Prerequisite:** Hermes installed, HERMES_LAB_MODE understood (from Module 8)
+**Prerequisite:** Module 8 complete (you built the `track-c` profile with your SOUL.md, config.yaml, and a Module 7 skill) — or install the reference profile via the Step 2 fallback
 **Outcome:** A running Kiran agent that diagnoses pod OOM events against both clean and messy mock scenarios; optionally against a live KIND cluster
 
 :::tip
@@ -94,18 +94,32 @@ ls $MOCK_DATA_DIR/kubernetes/
 
 ---
 
-## Step 2: Install the Reference Agent (5 min)
+## Step 2: Upgrade Your Module 8 Agent with the Full Reference Skill (5 min)
 
-Copy the complete Track C reference agent into your Hermes profiles directory.
+In Module 8 you built your `track-c` agent: you authored its SOUL.md identity, wired
+config.yaml to your LLM provider, and attached your Module 7 skill. Module 10 keeps
+that agent intact and only adds the full reference `sre-k8s-pod-health` skill alongside
+your existing work. This skill covers all six pod failure modes — ImagePullBackOff,
+CrashLoopBackOff, OOMKilled, Liveness probe failure, missing Secret/ConfigMap, and
+Service port mismatch — and is a superset of what the Module 7 skill likely contains.
+Your SOUL.md identity and config.yaml model settings are untouched.
 
 ```bash
-hermes profile create track-c
-cp agents/track-c-kubernetes/config.yaml ~/.hermes/profiles/track-c/
-cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/
+# Verify your Module 8 track-c profile exists
+if [ ! -f ~/.hermes/profiles/track-c/SOUL.md ] || [ ! -f ~/.hermes/profiles/track-c/config.yaml ]; then
+  echo "Module 8 track-c profile not found — see the 'Skipped Module 8?' fallback below."
+else
+  echo "Module 8 profile found — preserving your SOUL.md and config.yaml."
+fi
+```
+
+```bash
+# Upgrade the attached skill to the full reference (covers all 6 failure modes)
+mkdir -p ~/.hermes/profiles/track-c/skills/
 cp -r agents/track-c-kubernetes/skills/sre-k8s-pod-health ~/.hermes/profiles/track-c/skills/
 ```
 
-Add your Anthropic API key to the profile's environment file:
+If you didn't already add your Anthropic key in Module 8, do it now:
 
 ```bash
 # Get your Anthropic API key via Claude Code:
@@ -119,15 +133,36 @@ echo "ANTHROPIC_API_KEY=$ANTHROPIC_TOKEN" >> ~/.hermes/profiles/track-c/.env
 ```
 
 ```bash
-# Verify the profile structure
+# Verify the profile still has SOUL.md and config.yaml from Module 8
 ls ~/.hermes/profiles/track-c/
-# Expected: SOUL.md  config.yaml  skills/
+# Expected: SOUL.md  config.yaml  skills/  (and possibly .env)
 
+# Verify the reference skill is now installed
 ls ~/.hermes/profiles/track-c/skills/
-# Expected: sre-k8s-pod-health/
+# Expected: sre-k8s-pod-health/  (and your Module 7 skill directory, if any)
 ```
 
-This installs Kiran — the Kubernetes Health Agent — with its identity, safety config, and attached skill.
+This upgrades your Module 8 agent with the full six-failure-mode Kubernetes diagnostic
+skill. Your SOUL.md identity and config.yaml model settings from Module 8 are preserved.
+
+:::note Skipped Module 8? Install the full reference profile
+
+If you do not have a Module 8 `track-c` profile, install the complete reference agent
+instead — SOUL.md, config.yaml, and the reference skill — so you can follow the rest
+of this lab:
+
+```bash
+hermes profile create track-c
+cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/
+cp agents/track-c-kubernetes/config.yaml ~/.hermes/profiles/track-c/
+cp -r agents/track-c-kubernetes/skills/sre-k8s-pod-health ~/.hermes/profiles/track-c/skills/
+```
+
+Then add your Anthropic API key with the `claude setup-token` block above.
+
+Note: this path gives you the reference Kiran identity, not the agent you authored in
+Module 8. The rest of the lab works identically in either case.
+:::
 
 ---
 

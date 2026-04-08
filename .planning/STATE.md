@@ -186,9 +186,10 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260407-vyg | Fix Hermes profile install instructions across all agent configs and lab files | 2026-04-07 | 9c24d6c | [260407-vyg-fix-hermes-profile-install-instructions-](./quick/260407-vyg-fix-hermes-profile-install-instructions-/) |
+| 260408-sem | Create Track C-specific labs for Modules 7 & 8; fix Module 10 Track C Step 2 to preserve Module 8 profile | 2026-04-08 | (pending) | [260408-sem-fix-module-10-track-c-lab-step-2-to-not-](./quick/260408-sem-fix-module-10-track-c-lab-step-2-to-not-/) |
 
 ## Session Continuity
 
-Last session: 2026-04-07T16:06:42.057Z
-Stopped at: Completed 09-02-PLAN.md — Module 11 lab replacement + PROD-02 reference + Sandbox + quiz
+Last session: 2026-04-08T14:57:09.585Z
+Stopped at: Completed quick task 260408-sem — Track C-specific labs for Modules 7 & 8
 Resume file: None
