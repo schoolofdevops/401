@@ -17,6 +17,27 @@
 - Your track starter file open: `course/modules/module-07-skills/starter/<your-track>/SKILL.md`
 - RUBRIC.md open in a second window: `course/skills/RUBRIC.md`
 
+> **Track C (Kubernetes) — additional setup**
+>
+> Phase 6 ships 6 baked broken-pod scenarios and a `mock-kubectl` wrapper you should exercise as you author your skill. From the course root, export the full block before Step 4:
+>
+> ```bash
+> export HERMES_LAB_MODE=mock
+> export HERMES_LAB_SCENARIO=image-pull       # or crashloop2 | oom | liveness | missing-secret | port-mismatch
+> export HERMES_LAB_TRACK=track-c               # Phase 7 wrapper governance
+> export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
+> export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+>
+> # Verify the wrapper is on PATH
+> which mock-kubectl
+> # Expected: <course-dir>/infrastructure/wrappers/mock-kubectl
+> ```
+>
+> **Your reference material as a Track C participant:**
+> - 6 broken pod manifests at `infrastructure/scenarios/k8s/0[1-6]-*.yaml` (apply with `kubectl apply -f` for live mode, or just read them for the failure-mode patterns)
+> - 13 captured mock JSON/text files at `infrastructure/mock-data/kubernetes/0[1-6]-*.{json,txt}` — these are the exact outputs your skill's Phase 1 will receive in mock mode
+> - The production reference skill at `course/modules/module-07-skills/solution/track-c-kubernetes/SKILL.md` (287 lines, all 6 failure modes — your skill in 60 minutes will be smaller, that's fine)
+
 ---
 
 ## File Structure
@@ -138,6 +159,42 @@ aws rds describe-db-instances \
   --output json
 # Mock mode: reads from course/infrastructure/mock-data/rds/
 ```
+
+**Track C (Kubernetes) example Step 1:**
+
+```bash
+# Pod inventory — broad scan with field-level details
+mock-kubectl get pods -n $NAMESPACE -o json
+# Mock mode: reads from course/infrastructure/mock-data/kubernetes/{HERMES_LAB_SCENARIO}-get-pods.json
+# Live mode: hits your real KIND cluster
+
+# Pod-specific deep-dive — events, container state, restart count
+mock-kubectl describe pod $POD_NAME -n $NAMESPACE
+# Mock mode: reads from course/infrastructure/mock-data/kubernetes/{HERMES_LAB_SCENARIO}-describe.txt
+```
+
+**Expected output (image-pull scenario, partial):**
+
+```json
+{
+  "items": [{
+    "status": {
+      "containerStatuses": [{
+        "state": {"waiting": {"reason": "ImagePullBackOff", "message": "Back-off pulling image..."}},
+        "ready": false,
+        "restartCount": 0
+      }]
+    },
+    "spec": {
+      "containers": [{"image": "nonexistent-registry.io/fake-app:v1.0.0"}]
+    }
+  }]
+}
+```
+
+The exact JSON path your Phase 2 decision tree should reference is `status.containerStatuses[].state.waiting.reason` — that's the field that distinguishes ImagePullBackOff from CrashLoopBackOff from CreateContainerConfigError. Always cite the path, never invent it.
+
+**To exercise other scenarios:** swap `HERMES_LAB_SCENARIO=image-pull` for `crashloop2`, `oom`, `liveness`, `missing-secret`, or `port-mismatch` in your shell. Each produces different mock JSON shapes with different `state.waiting.reason` / `lastState.terminated.reason` values that your skill needs to handle.
 
 **Common mistake:** Including reasoning ("if CPU is high, do X") in Phase 1. Phase 1 is data collection only. Save reasoning for Phase 2.
 
