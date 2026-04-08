@@ -190,7 +190,7 @@ None yet.
 | 260408-tbd | Create Module 13 Track C governance lab (1257 lines) with kubectl-first examples and SOUL.md-NEVER teaching emphasis | 2026-04-08 | 6b1d59c | [260408-tbd-create-module-13-track-c-governance-lab-](./quick/260408-tbd-create-module-13-track-c-governance-lab-/) |
 | 260408-ueh | Fix mock-kubectl/aws/psql wrappers not being invoked via PATH — add kubectl/aws/psql symlinks, fix live-mode passthrough to avoid infinite loop, update lab instructions across Modules 7/8/10/13 | 2026-04-08 | 00df613 | [260408-ueh-fix-mock-kubectl-wrapper-not-being-invok](./quick/260408-ueh-fix-mock-kubectl-wrapper-not-being-invok/) |
 | 260408-v6c | Fix Hermes bash -lic PATH rewrite by adding kubectl/aws/psql aliases in ~/.bash_profile; add cross-platform (Mac/Linux/WSL2/Git Bash) setup docs; update Track C labs 7/8/10/13 to export HERMES_LAB_WRAPPERS | 2026-04-08 | f67787b | [260408-v6c-fix-hermes-tool-path-by-adding-kubectl-a](./quick/260408-v6c-fix-hermes-tool-path-by-adding-kubectl-a/) |
-| 260408-x42 | Fix Module 12 `hermes cron create` flag-form syntax bug (schedule/prompt are positional, not flags) — rewrote 6 lab invocations + starter yaml + Module 14 ROADMAP template | 2026-04-08 | (pending) | [260408-x42-fix-module-12-hermes-cron-create-flag-sy](./quick/260408-x42-fix-module-12-hermes-cron-create-flag-sy/) |
+| 260408-x42 | Fix Module 12 `hermes cron create` flag-form syntax bug (schedule/prompt are positional, not flags) — rewrote 6 lab invocations + starter yaml + Module 14 ROADMAP template | 2026-04-08 | 6f6f1ee | [260408-x42-fix-module-12-hermes-cron-create-flag-sy](./quick/260408-x42-fix-module-12-hermes-cron-create-flag-sy/) |
 
 ## Session Continuity
 
