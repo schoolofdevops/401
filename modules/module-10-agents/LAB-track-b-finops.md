@@ -34,9 +34,8 @@ which aws
 ```
 
 > **Token Budget Note**
-> This lab defaults to `gemini-2.5-flash` via Google AI Studio (free tier, configured in `config.yaml`).
-> If you encounter rate limit errors (free tier: 500 requests/day), wait 60 seconds and retry — or
-> switch to an alternate provider as documented in `course/setup/llm-access.md`.
+> This lab defaults to `anthropic/claude-haiku-4-5` via Anthropic (configured in config.yaml).
+> If you encounter API errors, verify your `ANTHROPIC_API_KEY` is set in `~/.hermes/profiles/track-b/.env`.
 
 ---
 
@@ -51,11 +50,17 @@ cp agents/track-b-finops/SOUL.md ~/.hermes/profiles/track-b/
 cp -r agents/track-b-finops/skills/devops-deployment-safety-check ~/.hermes/profiles/track-b/skills/
 ```
 
-Add your Google AI Studio API key to the profile's environment file:
+Add your Anthropic API key to the profile's environment file:
 
 ```bash
-# Get your free API key from aistudio.google.com → Get API key → Create API key
-echo 'OPENAI_API_KEY=YOUR_GOOGLE_AI_STUDIO_KEY' >> ~/.hermes/profiles/track-b/.env
+# Get your Anthropic API key via Claude Code:
+claude setup-token
+
+# Export it as an environment variable:
+export ANTHROPIC_TOKEN=<your-token>
+
+# Add to the track-b profile:
+echo "ANTHROPIC_API_KEY=$ANTHROPIC_TOKEN" >> ~/.hermes/profiles/track-b/.env
 ```
 
 Verify the profile structure:

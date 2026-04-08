@@ -54,9 +54,8 @@ export PATH="$(pwd)/infrastructure/wrappers:$PATH"
 > Mock mode and live mode use the same SOUL.md identity — only the kubectl routing changes.
 > The remainder of this lab works in either mode; live-specific notes are clearly marked **[LIVE MODE]**.
 
-> **Token budget note:** This lab defaults to `gemini-2.5-flash` via Google AI Studio (free tier,
-> configured in config.yaml). If you encounter rate limit errors, wait 60 seconds and retry — or
-> switch to an alternate provider as documented in `course/setup/llm-access.md`.
+> **Token budget note:** This lab defaults to `anthropic/claude-haiku-4-5` via Anthropic (configured in config.yaml).
+> If you encounter API errors, verify your `ANTHROPIC_API_KEY` is set in `~/.hermes/profiles/track-c/.env`.
 
 ---
 
@@ -94,11 +93,17 @@ cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/
 cp -r agents/track-c-kubernetes/skills/sre-k8s-pod-health ~/.hermes/profiles/track-c/skills/
 ```
 
-Add your Google AI Studio API key to the profile's environment file:
+Add your Anthropic API key to the profile's environment file:
 
 ```bash
-# Get your free API key from aistudio.google.com → Get API key → Create API key
-echo 'OPENAI_API_KEY=YOUR_GOOGLE_AI_STUDIO_KEY' >> ~/.hermes/profiles/track-c/.env
+# Get your Anthropic API key via Claude Code:
+claude setup-token
+
+# Export it as an environment variable:
+export ANTHROPIC_TOKEN=<your-token>
+
+# Add to the track-c profile:
+echo "ANTHROPIC_API_KEY=$ANTHROPIC_TOKEN" >> ~/.hermes/profiles/track-c/.env
 ```
 
 ```bash

@@ -105,12 +105,17 @@ cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/
 cp -r agents/track-c-kubernetes/skills/sre-k8s-pod-health ~/.hermes/profiles/track-c/skills/
 ```
 
-Add your Google AI Studio API key to the profile's environment file:
+Add your Anthropic API key to the profile's environment file:
 
 ```bash
-# Get your free API key from aistudio.google.com → Get API key → Create API key
-# The key starts with AIza...
-echo 'OPENAI_API_KEY=YOUR_GOOGLE_AI_STUDIO_KEY' >> ~/.hermes/profiles/track-c/.env
+# Get your Anthropic API key via Claude Code:
+claude setup-token
+
+# Export it as an environment variable:
+export ANTHROPIC_TOKEN=<your-token>
+
+# Add to the track-c profile:
+echo "ANTHROPIC_API_KEY=$ANTHROPIC_TOKEN" >> ~/.hermes/profiles/track-c/.env
 ```
 
 ```bash

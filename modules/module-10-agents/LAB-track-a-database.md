@@ -41,9 +41,8 @@ export PATH="$(pwd)/infrastructure/wrappers:$PATH"
 >
 > If `which mock-psql` returns nothing, re-run the `export PATH=` line above.
 
-> **Model note:** This lab defaults to `gemini-2.5-flash` via Google AI Studio (free tier, no billing required).
-> If you hit rate limits, wait 60 seconds and retry — or switch to an alternate provider per
-> `course/setup/llm-access.md`.
+> **Model note:** This lab defaults to `anthropic/claude-haiku-4-5` via Anthropic (configured in config.yaml).
+> If you encounter API errors, verify your `ANTHROPIC_API_KEY` is set in `~/.hermes/profiles/track-a/.env`.
 
 ---
 
@@ -58,11 +57,17 @@ cp agents/track-a-database/SOUL.md ~/.hermes/profiles/track-a/
 cp -r agents/track-a-database/skills/dba-rds-slow-query ~/.hermes/profiles/track-a/skills/
 ```
 
-Add your Google AI Studio API key to the profile's environment file:
+Add your Anthropic API key to the profile's environment file:
 
 ```bash
-# Get your free API key from aistudio.google.com → Get API key → Create API key
-echo 'OPENAI_API_KEY=YOUR_GOOGLE_AI_STUDIO_KEY' >> ~/.hermes/profiles/track-a/.env
+# Get your Anthropic API key via Claude Code:
+claude setup-token
+
+# Export it as an environment variable:
+export ANTHROPIC_TOKEN=<your-token>
+
+# Add to the track-a profile:
+echo "ANTHROPIC_API_KEY=$ANTHROPIC_TOKEN" >> ~/.hermes/profiles/track-a/.env
 ```
 
 Verify the installation:
