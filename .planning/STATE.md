@@ -189,7 +189,7 @@ None yet.
 | 260408-sem | Create Track C-specific labs for Modules 7 & 8; fix Module 10 Track C Step 2 to preserve Module 8 profile | 2026-04-08 | 7a61b4c | [260408-sem-fix-module-10-track-c-lab-step-2-to-not-](./quick/260408-sem-fix-module-10-track-c-lab-step-2-to-not-/) |
 | 260408-tbd | Create Module 13 Track C governance lab (1257 lines) with kubectl-first examples and SOUL.md-NEVER teaching emphasis | 2026-04-08 | 6b1d59c | [260408-tbd-create-module-13-track-c-governance-lab-](./quick/260408-tbd-create-module-13-track-c-governance-lab-/) |
 | 260408-ueh | Fix mock-kubectl/aws/psql wrappers not being invoked via PATH — add kubectl/aws/psql symlinks, fix live-mode passthrough to avoid infinite loop, update lab instructions across Modules 7/8/10/13 | 2026-04-08 | 00df613 | [260408-ueh-fix-mock-kubectl-wrapper-not-being-invok](./quick/260408-ueh-fix-mock-kubectl-wrapper-not-being-invok/) |
-| 260408-v6c | Fix Hermes bash -lic PATH rewrite by adding kubectl/aws/psql aliases in ~/.bash_profile; add cross-platform (Mac/Linux/WSL2/Git Bash) setup docs; update Track C labs 7/8/10/13 to export HERMES_LAB_WRAPPERS | 2026-04-08 | (pending) | [260408-v6c-fix-hermes-tool-path-by-adding-kubectl-a](./quick/260408-v6c-fix-hermes-tool-path-by-adding-kubectl-a/) |
+| 260408-v6c | Fix Hermes bash -lic PATH rewrite by adding kubectl/aws/psql aliases in ~/.bash_profile; add cross-platform (Mac/Linux/WSL2/Git Bash) setup docs; update Track C labs 7/8/10/13 to export HERMES_LAB_WRAPPERS | 2026-04-08 | f67787b | [260408-v6c-fix-hermes-tool-path-by-adding-kubectl-a](./quick/260408-v6c-fix-hermes-tool-path-by-adding-kubectl-a/) |
 
 ## Session Continuity
 
