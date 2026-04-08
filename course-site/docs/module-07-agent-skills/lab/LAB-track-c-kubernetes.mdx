@@ -38,9 +38,10 @@ export HERMES_LAB_TRACK=track-c
 export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
 export PATH="$(pwd)/infrastructure/wrappers:$PATH"
 
-# Verify the wrapper is on PATH
-which mock-kubectl
-# Expected: <course-dir>/infrastructure/wrappers/mock-kubectl
+# Verify the kubectl wrapper is on PATH (it's a symlink to mock-kubectl
+# that intercepts `kubectl` calls and routes to mock fixtures when HERMES_LAB_MODE=mock)
+which kubectl
+# Expected: <course-dir>/infrastructure/wrappers/kubectl
 
 # Spot-check the mock data
 ls $MOCK_DATA_DIR/kubernetes/ | head -5

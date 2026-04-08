@@ -17,7 +17,23 @@ LAB_MODE="${HERMES_LAB_MODE:-live}"
 SCENARIO="${HERMES_LAB_SCENARIO:-clean}"
 
 if [[ "$LAB_MODE" != "mock" ]]; then
-  exec "$(command -v psql)" "$@"
+  # Find real psql by searching PATH, excluding our own directory,
+  # so the symlink `psql -> mock-psql` doesn't create an infinite loop.
+  WRAPPER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  REAL_BIN=""
+  IFS=':' read -ra _PATH_PARTS <<< "$PATH"
+  for _dir in "${_PATH_PARTS[@]}"; do
+    [[ "$_dir" == "$WRAPPER_DIR" ]] && continue
+    if [[ -x "$_dir/psql" ]]; then
+      REAL_BIN="$_dir/psql"
+      break
+    fi
+  done
+  if [[ -z "$REAL_BIN" ]]; then
+    printf 'ERROR: real psql not found in PATH (excluding wrapper dir)\n' >&2
+    exit 127
+  fi
+  exec "$REAL_BIN" "$@"
 fi
 
 # ── QUERY EXTRACTION (moved before governance check) ────────────────────

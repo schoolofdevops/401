@@ -293,10 +293,12 @@ The Hermes process inherits environment variables **from the shell that launches
 # Confirm what mode you're in (check ALL the lab env vars)
 echo "MODE=$HERMES_LAB_MODE  SCENARIO=$HERMES_LAB_SCENARIO  TRACK=$HERMES_LAB_TRACK"
 
-# Confirm the wrapper is in front of real kubectl/aws/psql (mock mode only)
+# Confirm the kubectl/aws/psql wrappers are in PATH (symlinks to mock-*)
 which kubectl
-# Mock mode expected:  <course-dir>/infrastructure/wrappers/kubectl
-# Live mode expected:  /usr/local/bin/kubectl  (or similar real binary)
+# Expected: <course-dir>/infrastructure/wrappers/kubectl
+# Note: the wrapper path is correct in BOTH mock and live mode — the wrapper
+# internally execs the real binary when HERMES_LAB_MODE=live.
+# If you see /usr/local/bin/kubectl, your PATH export did not take effect.
 
 # If anything's wrong, re-run the export block from Prerequisites BEFORE launching
 ```

@@ -43,11 +43,13 @@ export PATH="$(pwd)/infrastructure/wrappers:$PATH"
 
 :::note Verify mock wrappers are on PATH
 ```bash
-which mock-psql
-# Expected: <course-dir>/infrastructure/wrappers/mock-psql
+# The psql wrapper is a symlink to mock-psql that intercepts `psql` calls
+# and routes to mock fixtures when HERMES_LAB_MODE=mock.
+which psql
+# Expected: <course-dir>/infrastructure/wrappers/psql
 ```
 
-If `which mock-psql` returns nothing, re-run the `export PATH=` line above.
+If `which psql` returns a system path like `/usr/local/bin/psql`, re-run the `export PATH=` line above.
 :::
 
 :::note Model note

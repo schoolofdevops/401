@@ -81,10 +81,12 @@ Alternate provider setup is documented in `course/setup/llm-access.md`.
 Confirm the environment is ready before installing the agent.
 
 ```bash
-# Confirm mock data wrapper is in PATH
+# Confirm the kubectl wrapper is in PATH (symlink to mock-kubectl)
 which kubectl
-# Expected: .../infrastructure/wrappers/kubectl (mock mode)
-# [LIVE MODE]: Expected: /usr/local/bin/kubectl or similar
+# Expected: .../infrastructure/wrappers/kubectl
+# Note: the wrapper path is correct in BOTH mock and live mode — the wrapper
+# internally execs real kubectl when HERMES_LAB_MODE=live. If you see
+# /usr/local/bin/kubectl, your PATH export did not take effect.
 
 # Confirm mock data directory is set
 ls $MOCK_DATA_DIR/kubernetes/

@@ -285,10 +285,12 @@ session.
 echo "MODE=$HERMES_LAB_MODE  SCENARIO=$HERMES_LAB_SCENARIO  TRACK=$HERMES_LAB_TRACK"
 # Expected: MODE=mock  SCENARIO=clean  TRACK=track-c
 
-# Confirm the wrapper is in front of real kubectl (mock mode)
+# Confirm the kubectl wrapper is in PATH (symlink to mock-kubectl)
 which kubectl
-# Mock mode expected: <course-dir>/infrastructure/wrappers/kubectl
-# Live mode expected: /usr/local/bin/kubectl  (or similar real binary)
+# Expected: <course-dir>/infrastructure/wrappers/kubectl
+# Note: the wrapper path is correct in BOTH mock and live mode — the wrapper
+# internally execs the real kubectl binary when HERMES_LAB_MODE=live.
+# If you see /usr/local/bin/kubectl, your PATH export did not take effect.
 
 # If anything's wrong, re-run the export block from Prerequisites BEFORE launching
 ```
