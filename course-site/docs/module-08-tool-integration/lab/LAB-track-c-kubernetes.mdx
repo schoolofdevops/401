@@ -99,7 +99,7 @@ and the skills from the `skills/` subdirectory.
 | `modules/module-07-skills/my-track-c-skill.md` | `~/.hermes/profiles/track-c/skills/<your-skill>/SKILL.md` |
 
 ---
-
+We'll take them apart and see if they're diagonal or not. Okay. We'll take them apart and see if we've got the same Jayga. So, so, so, so, and and and and and okay. Okay. So. 
 ## Step 1: Examine the Reference Agent Directory (3 min)
 
 **Concept:** Before you build, look at a finished example. The `agents/track-c-kubernetes/`
@@ -382,6 +382,11 @@ hermes -p track-c chat
 ```bash
 hermes -p track-c skills list
 # Expected: your skill name appears with source: local
+```
+
+You could also customize/disable the skills using 
+```
+hermes -p track-c skills config
 ```
 
 :::note Asking the agent to list skills may return empty

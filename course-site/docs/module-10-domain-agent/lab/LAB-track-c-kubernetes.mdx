@@ -25,17 +25,16 @@ Run these commands before starting the lab:
 ```bash
 # Verify KIND cluster is running
 kind get clusters
-# Expected: hermes-lab (or similar)
-
-# If hermes-lab is NOT listed, create the cluster:
-kind create cluster --name hermes-lab
-
-# Re-export kubeconfig (required after every restart — kubeconfig changes on KIND restart)
-kind export kubeconfig --name hermes-lab
 
 # Verify kubectl connects
 kubectl get nodes
 # Expected: <node-name>   Ready   control-plane   ...
+
+# Verify kubectl pods
+kubectl get pods -A 
+# Expected: list of all pods in the cluster
+
+
 ```
 
 Skip this box if you are using mock mode only (the default path for this lab).
@@ -51,6 +50,8 @@ hermes --version
 
 # Set lab mode (default: mock — works for all participants)
 export HERMES_LAB_MODE=mock
+#Recommended: enable the following if you have a working cluster
+#export HERMES_LAB_MODE=live
 export HERMES_LAB_SCENARIO=clean
 export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
 export PATH="$(pwd)/infrastructure/wrappers:$PATH"
@@ -65,7 +66,7 @@ The remainder of this lab works in either mode; live-specific notes are clearly 
 
 :::note Token budget note
 This lab defaults to `anthropic/claude-haiku-4-5` via Anthropic (configured in config.yaml).
-If you encounter API errors, verify your `ANTHROPIC_API_KEY` is set in `~/.hermes/profiles/track-c/.env`.
+If you encounter API errors, verify your `ANTHROPIC_TOKEN` is set in `~/.hermes/profiles/track-c/.env`.
 Alternate provider setup is documented in `course/setup/llm-access.md`.
 :::
 
@@ -128,8 +129,6 @@ claude setup-token
 # Export it as an environment variable:
 export ANTHROPIC_TOKEN=<your-token>
 
-# Add to the track-c profile:
-echo "ANTHROPIC_API_KEY=$ANTHROPIC_TOKEN" >> ~/.hermes/profiles/track-c/.env
 ```
 
 ```bash
