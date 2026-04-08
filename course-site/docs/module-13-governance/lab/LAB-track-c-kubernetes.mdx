@@ -246,13 +246,27 @@ command_allowlist: []
 
 Save the file. Set the lab environment (required for wrapper enforcement):
 
+:::important Prerequisite: one-time `~/.bash_profile` alias setup
+If you haven't already, follow [Setup → Step 5: Lab Wrapper Aliases](../../setup.mdx#step-5-lab-wrapper-aliases-one-time-setup).
+This is REQUIRED for Module 13 — the governance enforcement tests in Steps 5,
+10, and 12 all rely on Hermes's subshell routing `kubectl` through the mock
+wrapper (which reads the `wrapper_allowlist` from the governance YAML). Without
+the alias block, `kubectl delete` will hit your real cluster instead of the
+wrapper's `GOVERNANCE REJECTED` banner.
+:::
+
 ```bash
+# Required: the ~/.bash_profile alias block uses this to define the aliases
+export HERMES_LAB_WRAPPERS="$(pwd)/infrastructure/wrappers"
+
 export HERMES_LAB_MODE=mock
 export HERMES_LAB_SCENARIO=clean
 export HERMES_LAB_GOVERNANCE=L2
 export HERMES_LAB_TRACK=track-c
 export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
-export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+
+# Optional — only for commands you run DIRECTLY in this outer shell
+export PATH="$HERMES_LAB_WRAPPERS:$PATH"
 ```
 
 Start a chat session:
@@ -598,12 +612,13 @@ First, set the complete environment variable block. Keep this in your shell hist
 re-export it when you start a new terminal:
 
 ```bash
+export HERMES_LAB_WRAPPERS="$(pwd)/infrastructure/wrappers"
 export HERMES_LAB_MODE=mock
 export HERMES_LAB_SCENARIO=clean
 export HERMES_LAB_GOVERNANCE=L4
 export HERMES_LAB_TRACK=track-c
 export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
-export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+export PATH="$HERMES_LAB_WRAPPERS:$PATH"
 ```
 
 :::info Solo Learner (Udemy self-paced)
@@ -690,12 +705,13 @@ GOVERNANCE REJECTED banner firing at Layer 1.
 Keep your Step 9 environment variables exported. Re-export them if you started a new terminal:
 
 ```bash
+export HERMES_LAB_WRAPPERS="$(pwd)/infrastructure/wrappers"
 export HERMES_LAB_MODE=mock
 export HERMES_LAB_SCENARIO=clean
 export HERMES_LAB_GOVERNANCE=L4
 export HERMES_LAB_TRACK=track-c
 export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
-export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+export PATH="$HERMES_LAB_WRAPPERS:$PATH"
 ```
 
 Attempt a destructive command directly against the wrapper (outside Hermes, so you can see
@@ -826,12 +842,13 @@ succeeded at.
 Ensure your environment is still set (re-export if needed):
 
 ```bash
+export HERMES_LAB_WRAPPERS="$(pwd)/infrastructure/wrappers"
 export HERMES_LAB_MODE=mock
 export HERMES_LAB_SCENARIO=clean
 export HERMES_LAB_GOVERNANCE=L4
 export HERMES_LAB_TRACK=track-c
 export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
-export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+export PATH="$HERMES_LAB_WRAPPERS:$PATH"
 ```
 
 Re-run a rejected command inside a Hermes chat session so the rejection is tied to a recorded
@@ -1242,11 +1259,11 @@ diff governance/governance-L1.yaml governance/governance-L2.yaml | wc -l
 grep -E '"apply "|"rollout undo"' governance/governance-L4-track-c.yaml
 # Expected: both lines present
 
-# 8. Wrapper rejects blocked commands at L2 (via kubectl PATH interception)
+# 8. Wrapper rejects blocked commands at L2 (direct mock-kubectl call — portable
+#    across macOS/Linux/Windows Git Bash regardless of git symlink handling)
 export HERMES_LAB_MODE=mock HERMES_LAB_GOVERNANCE=L2 HERMES_LAB_TRACK=track-c
 export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
-export PATH="$(pwd)/infrastructure/wrappers:$PATH"
-kubectl delete pod foo 2>&1 | grep -q 'GOVERNANCE REJECTED' && echo 'Layer 1 working'
+./infrastructure/wrappers/mock-kubectl delete pod foo 2>&1 | grep -q 'GOVERNANCE REJECTED' && echo 'Layer 1 working'
 # Expected: Layer 1 working
 
 # 9. Kiran's SOUL.md still has kubectl delete NEVER rules (Layer 3 intact)

@@ -31,17 +31,31 @@ contamination is a Tier 1 rubric failure.
 six broken-pod scenarios and a `mock-kubectl` wrapper that returns deterministic
 JSON/text for each one.
 
+:::important Prerequisite: one-time `~/.bash_profile` alias setup
+If you haven't already, follow [Setup → Step 5: Lab Wrapper Aliases](../../setup.mdx#step-5-lab-wrapper-aliases-one-time-setup)
+to add the one-time alias block to your `~/.bash_profile`. This is what lets
+Hermes's `bash -lic` subshell intercept `kubectl` calls and route them through
+the mock wrapper. Without it, `kubectl` inside the agent will hit your real
+KIND cluster (or fail) instead of the mock fixtures, even with the env vars
+below set correctly.
+:::
+
 ```bash
+# Required: tells the ~/.bash_profile alias block where the wrappers live
+export HERMES_LAB_WRAPPERS="$(pwd)/infrastructure/wrappers"
+
 export HERMES_LAB_MODE=mock
 export HERMES_LAB_SCENARIO=image-pull       # or: crashloop2 | oom | liveness | missing-secret | port-mismatch
 export HERMES_LAB_TRACK=track-c
 export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
-export PATH="$(pwd)/infrastructure/wrappers:$PATH"
 
-# Verify the kubectl wrapper is on PATH (it's a symlink to mock-kubectl
-# that intercepts `kubectl` calls and routes to mock fixtures when HERMES_LAB_MODE=mock)
-which kubectl
-# Expected: <course-dir>/infrastructure/wrappers/kubectl
+# Optional — only helps for commands you run DIRECTLY in your outer shell
+# (not commands Hermes runs internally; those are routed via the ~/.bash_profile aliases).
+export PATH="$HERMES_LAB_WRAPPERS:$PATH"
+
+# Verify the wrapper script exists at the expected location
+ls "$HERMES_LAB_WRAPPERS/mock-kubectl"
+# Expected: <course-dir>/infrastructure/wrappers/mock-kubectl
 
 # Spot-check the mock data
 ls $MOCK_DATA_DIR/kubernetes/ | head -5

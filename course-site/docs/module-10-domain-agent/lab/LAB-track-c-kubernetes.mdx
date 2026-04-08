@@ -44,9 +44,21 @@ Skip this box if you are using mock mode only (the default path for this lab).
 
 ## Prerequisites
 
+:::important Prerequisite: one-time `~/.bash_profile` alias setup
+If you haven't already, follow [Setup → Step 5: Lab Wrapper Aliases](../../setup.mdx#step-5-lab-wrapper-aliases-one-time-setup)
+to add the one-time alias block to your `~/.bash_profile`. Hermes spawns
+`bash -lic` for tool execution, which rebuilds `PATH` during login-shell
+startup. The alias block ensures `kubectl` calls inside Hermes's subshell are
+routed through the mock wrapper — without it, mock mode will silently hit
+your real cluster.
+:::
+
 ```bash
 # Verify Hermes is installed
 hermes --version
+
+# Required: tells the ~/.bash_profile alias block where the wrappers live
+export HERMES_LAB_WRAPPERS="$(pwd)/infrastructure/wrappers"
 
 # Set lab mode (default: mock — works for all participants)
 export HERMES_LAB_MODE=mock
@@ -54,7 +66,10 @@ export HERMES_LAB_MODE=mock
 #export HERMES_LAB_MODE=live
 export HERMES_LAB_SCENARIO=clean
 export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
-export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+
+# Optional: helps if you also want to run kubectl DIRECTLY in this outer shell.
+# Inside Hermes, the ~/.bash_profile aliases handle routing regardless of PATH.
+export PATH="$HERMES_LAB_WRAPPERS:$PATH"
 ```
 
 :::note Optional live KIND path
