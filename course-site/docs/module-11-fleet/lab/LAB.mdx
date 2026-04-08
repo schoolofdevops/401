@@ -103,7 +103,7 @@ kubectl get pods -n monitoring
 # Expected: prometheus-*, alertmanager-* pods all Running
 
 # PrometheusRule loaded (Phase 8 rule fires on crashloop2)
-kubectl get prometheusrule -n monitoring -l release=kube-prometheus
+kubectl get prometheusrule -n monitoring -l release=monitoring
 ```
 
 :::info SOLO LEARNER
@@ -190,7 +190,7 @@ cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/
 cp -r agents/track-c-kubernetes/skills/sre-k8s-pod-health ~/.hermes/profiles/track-c/skills/
 # Add API key if not already done in Module 10
 echo 'OPENAI_API_KEY=YOUR_GOOGLE_AI_STUDIO_KEY' >> ~/.hermes/profiles/track-c/.env
-hermes profiles list
+hermes profile list
 # Expected: fleet, track-a, track-b, track-c (plus any other Module 10 profiles)
 ```
 
