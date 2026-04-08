@@ -159,6 +159,15 @@ ls ~/.hermes/profiles/track-c/skills/
 # Expected: sre-k8s-pod-health/
 ```
 
+Confirm Hermes has picked it up as an installed skill:
+
+```bash
+hermes -p track-c skills list
+# Expected: sre-k8s-pod-health  source: local
+```
+
+The `source: local` column confirms this is your profile skill, not a builtin.
+
 :::tip Kiran ships with a Kubernetes skill
 
 Kiran's attached skill is `sre-k8s-pod-health` — a Kubernetes diagnostic skill
@@ -171,13 +180,8 @@ work together with this skill's two-phase procedure: Phase 1 [SCRIPTS ZONE]
 gathers pod state via four kubectl commands, Phase 2 [AGENTS ZONE] applies six
 named decision branches to identify the specific failure mode.
 
-To verify the skill is installed, use the CLI (reliable):
-```bash
-hermes -p track-c skills list
-# Expected: sre-k8s-pod-health appears with source: local
-```
 Note: asking the agent "List your available skills" in chat may return empty — this is a known LLM
-behavior, not a missing skill.
+behavior, not a missing skill. The CLI command above is the reliable check.
 :::
 
 ---
