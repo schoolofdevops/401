@@ -16,13 +16,65 @@
 # Verify Hermes is installed
 hermes --version
 
-# Set lab mode
-export HERMES_LAB_MODE=mock
-
 # Confirm your Module 7 skill exists
 ls course/modules/module-07-skills/my-<track>-skill.md
 # If you saved your skill elsewhere, note the path — you will need it in Step 6
 ```
+
+### Choose Your Lab Mode: Mock or Live
+
+Your agent needs something to run commands against. You have two options and can switch between them at any time by changing one environment variable:
+
+| Mode | `HERMES_LAB_MODE` | What `kubectl`/`aws`/`psql` does | Use when |
+|---|---|---|---|
+| Mock (default) | `mock` | Returns pre-baked JSON fixtures from `infrastructure/mock-data/` — the real binaries are never called | You don't have a KIND cluster / AWS account / database, or you want deterministic scenario data |
+| Live | `live` (or unset) | Passes through to the real `kubectl`/`aws`/`psql` binary — hits your actual cluster / account / DB | You have real infrastructure set up and want to see the agent exercise it end-to-end |
+
+The mock mode uses course-shipped wrappers at `infrastructure/wrappers/mock-kubectl`, `mock-aws`, and `mock-psql`. They intercept `kubectl`/`aws`/`psql` commands when `HERMES_LAB_MODE=mock` is set, and print a `[ MOCK MODE ]` banner to stderr so you can always tell which mode is active. See the Module 8 Reference section 4 for the wrapper implementation.
+
+**Mock mode setup (default — no extra infrastructure needed):**
+
+```bash
+export HERMES_LAB_MODE=mock
+export HERMES_LAB_SCENARIO=clean          # or: crashloop2, oom, image-pull, liveness, missing-secret, port-mismatch
+export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
+export PATH="$(pwd)/infrastructure/wrappers:$PATH"
+
+# Verify the wrapper is in front of real kubectl
+which kubectl
+# Expected: <course-dir>/infrastructure/wrappers/kubectl  (or similar)
+# (If you see /usr/local/bin/kubectl, your PATH export is missing)
+```
+
+**Live mode setup (real KIND cluster — Track C focus):**
+
+```bash
+# 1. Make sure KIND is running with the course cluster config
+kind get clusters
+# Expected: lab (or create one: kind create cluster --name lab --config infrastructure/kind/cluster-config.yaml)
+
+# 2. Verify kubectl connects to it
+kubectl cluster-info --context kind-lab
+
+# 3. Deploy the reference app if you want real pods to query (optional)
+helm install reference-app reference-app/helm/ --namespace app --create-namespace
+kubectl get pods -n app
+
+# 4. Switch Hermes to live mode — just change the env var
+export HERMES_LAB_MODE=live                # or: unset HERMES_LAB_MODE
+
+# You can still keep the wrappers in PATH — the wrapper scripts auto-exec the real
+# kubectl binary when HERMES_LAB_MODE != "mock". The [ MOCK MODE ] banner will not print.
+```
+
+**Switching back and forth is safe.** The wrapper scripts are thin routers — they check `HERMES_LAB_MODE` on every invocation, so you can flip between mock and live inside the same Hermes chat session without restarting the agent. Just toggle the env var in another terminal and the agent's next command will use the new mode.
+
+> **Spot the difference.** When your agent asks about pods, you can tell which mode it's actually using from the output:
+>
+> - Mock mode: returns fixtures like `api-deployment-def456`, `webapp-deployment-abc123` (deterministic, always the same)
+> - Live mode: returns whatever pods are actually running in your cluster (e.g., `reference-app-api-gateway-<hash>`)
+>
+> Also check stderr — mock mode prints a visible `[ MOCK MODE ]` banner before every command; live mode prints nothing.
 
 ---
 
@@ -124,7 +176,7 @@ grep -c '\[' ~/.hermes/profiles/<your-track>/SOUL.md
 
 ## Step 4: Configure config.yaml (10 min)
 
-Your config.yaml controls: which model the agent uses, which tools it has access to,
+Your config.yaml controls: which model the agent uses (the **Brain**), which tools it has access to,
 and how it handles potentially dangerous commands.
 
 **Open the starter file:**
@@ -133,9 +185,52 @@ and how it handles potentially dangerous commands.
 cp course/modules/module-08-tools/starter/config-starter.yaml /tmp/my-config.yaml
 ```
 
-**Fill in every TODO.** Keep these values for the lab:
+### Step 4a: Pick Your LLM Provider
 
-- `model.default`: `"anthropic/claude-haiku-4"` (lowest cost — do not change for labs)
+You have two options. Pick the one that matches the API key you already have (or can get in 2 minutes).
+
+**Option A — Anthropic Claude Haiku 4** (default; requires existing Anthropic key or Claude subscription):
+
+```yaml
+model:
+  default: "anthropic/claude-haiku-4"
+  provider: "auto"
+```
+
+API key goes in `~/.hermes/profiles/<your-track>/.env`:
+
+```bash
+echo 'ANTHROPIC_API_KEY=sk-ant-...' > ~/.hermes/profiles/<your-track>/.env
+```
+
+**Option B — Google Gemini 2.5 Flash** (recommended if you don't have an Anthropic key — free, no credit card, 500 req/day):
+
+```yaml
+model:
+  default: "gemini-2.5-flash"
+  provider: "custom:google-ai-studio"
+
+custom_providers:
+  - name: google-ai-studio
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
+```
+
+API key goes in `~/.hermes/profiles/<your-track>/.env`:
+
+```bash
+echo 'OPENAI_API_KEY=<your-gemini-api-key>' > ~/.hermes/profiles/<your-track>/.env
+```
+
+> **The OPENAI_API_KEY naming quirk is intentional.**
+>
+> Google AI Studio exposes an OpenAI-compatible endpoint at `generativelanguage.googleapis.com/v1beta/openai`. Hermes routes custom providers through its OpenAI client library, which reads the key from the `OPENAI_API_KEY` env var — even though the value is actually a Gemini API key. Do NOT rename the variable to `GEMINI_API_KEY` or `GOOGLE_API_KEY` — the Hermes custom provider will not find it.
+>
+> To get a Gemini API key: visit [aistudio.google.com](https://aistudio.google.com), click Get API Key → Create API Key, copy the key (starts with `AIza...`). Full walkthrough in `course/setup/llm-access.md` § Provider 1.
+
+### Step 4b: Fill in the rest of config.yaml
+
+Keep these values for the lab:
+
 - `platform_toolsets.cli`: `[terminal, file, web, skills]` (L2 Advisory)
 - `approvals.mode`: `manual` (every dangerous command requires your approval)
 - `approvals.timeout`: `300` (5 minutes — required for multi-step lab flows)
@@ -145,6 +240,14 @@ cp course/modules/module-08-tools/starter/config-starter.yaml /tmp/my-config.yam
 ```bash
 cp /tmp/my-config.yaml ~/.hermes/profiles/<your-track>/config.yaml
 ```
+
+**Verify your provider config loaded:**
+
+```bash
+hermes -p <your-track> chat
+```
+
+Ask: `What model are you running on?` — the agent should identify its backing model (claude-haiku-4 or gemini-2.5-flash). If you see `"API key missing"` errors, re-check that `.env` file lives at `~/.hermes/profiles/<your-track>/.env` and contains the right variable name for your option.
 
 ---
 

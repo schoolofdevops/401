@@ -452,3 +452,112 @@ Before connecting your agent to a real environment:
 - [ ] For Track B/C: SOUL.md NEVER rules for `aws ec2 terminate-instances` and `kubectl delete` are present and specific — these are not in DANGEROUS_PATTERNS
 - [ ] Agent has been tested in mock mode before running against live infrastructure
 - [ ] You can name the highest-blast-radius command the agent could run and confirm what governs it (SOUL.md rule, DANGEROUS_PATTERNS, or mechanical toolset restriction)
+
+---
+
+## 11. `wrapper_allowlist` — Course Governance Enforcement
+
+You will see a `wrapper_allowlist:` key in the `course/agents/track-*/config.yaml` files and in the `governance/governance-L*.yaml` reference files. **This is not a native Hermes feature.** It is a course-local enforcement layer added on top of Hermes to solve a specific problem: Hermes's native `command_allowlist` only bypasses the approval gate for commands that are already in `DANGEROUS_PATTERNS` — and `kubectl delete`, `kubectl drain`, `kubectl cordon`, `aws ec2 terminate-instances`, etc. are NOT in that list.
+
+### What problem does it solve?
+
+Track B (FinOps) and Track C (Kubernetes) have destructive commands that Hermes's mechanical approval gate will never fire on. Without the wrapper layer, the only thing stopping a Track C agent from running `kubectl delete pod --all` is a behavioral NEVER rule in its SOUL.md. Behavioral rules are load-bearing but not mechanical — an LLM can misread or misprioritize them under pressure. The course introduces a second mechanical layer.
+
+### How is it implemented?
+
+The `infrastructure/wrappers/` directory contains three executable bash scripts:
+
+```
+infrastructure/wrappers/
+├── mock-kubectl       ← intercepts `kubectl` when this directory is first in PATH
+├── mock-aws           ← intercepts `aws`
+└── mock-psql          ← intercepts `psql`
+```
+
+When you `export PATH="$(pwd)/infrastructure/wrappers:$PATH"` at the start of a lab session, any call to `kubectl`/`aws`/`psql` from the Hermes agent (or your own terminal) resolves to the wrapper script FIRST, not the real binary.
+
+The wrapper runs two checks before forwarding the command:
+
+1. **Mode routing.** Reads `HERMES_LAB_MODE`:
+   - `mock` (default in labs) → serve pre-baked JSON from `infrastructure/mock-data/` and never touch the real binary
+   - `live` → pass through to the real `kubectl`/`aws`/`psql` via `exec "$(command -v kubectl)" "$@"`
+
+2. **Governance pre-flight** (added in Phase 7). Reads `HERMES_LAB_GOVERNANCE` and `HERMES_LAB_TRACK`, then:
+   - Resolves the active governance yaml file (e.g., `governance/governance-L2.yaml` or `governance/governance-L4-track-c.yaml`)
+   - Parses its `wrapper_allowlist.<tool>:` subsection using a bash+awk YAML reader (no external dependencies)
+   - Checks the incoming command prefix against the allowlist entries
+   - **Allowed:** continues to mode routing step 1
+   - **Not allowed:** prints a loud `╓ GOVERNANCE REJECTED ╖` banner to stderr and exits with code 1 — the real binary is never invoked
+
+Here is a minimal example wrapper_allowlist:
+
+```yaml
+# In agents/track-c-kubernetes/config.yaml
+model:
+  default: "gemini-2.5-flash"
+  provider: "custom:google-ai-studio"
+
+platform_toolsets:
+  cli: [terminal, file, web, skills]
+
+approvals:
+  mode: manual
+  timeout: 300
+
+# Hermes-native bypass (empty — course does not use this mechanism)
+command_allowlist: []
+
+# ── Course wrapper enforcement (Phase 7 — NOT a native Hermes feature) ──
+# Read by infrastructure/wrappers/mock-kubectl when HERMES_LAB_GOVERNANCE is set.
+# The wrapper matches the "${1} ${2}" prefix of the incoming command against these entries.
+# Track C uses only the kubectl subsection. Track A uses psql. Track B uses aws.
+wrapper_allowlist:
+  kubectl:
+    - "get pods"
+    - "get pod "
+    - "get nodes"
+    - "get endpoints"
+    - "describe pod "
+    - "describe node "
+    - "logs "
+    - "top pods"
+    - "top nodes"
+```
+
+A Track C agent running under this config can freely execute `kubectl get pods` and `kubectl describe pod my-app`, but `kubectl delete pod my-app` exits immediately with the rejection banner — regardless of what the agent's SOUL.md NEVER rules say or don't say. The mechanical layer is independent of the behavioral layer.
+
+### Three-layer defense model
+
+The wrapper_allowlist is one of three independent safety layers. They fire in order for every command:
+
+| Layer | Mechanism | Fires when | Owns |
+|---|---|---|---|
+| 1. `wrapper_allowlist` | Course bash wrapper intercepts kubectl/aws/psql | Every command via the wrapper, always | Covers all kubectl/aws/psql commands — including the ones Hermes doesn't know are dangerous |
+| 2. `DANGEROUS_PATTERNS` (Hermes native) | `tools/approval.py` regex match on the command string | Only when the command matches a built-in pattern (SQL DROP, rm -rf, etc.) | Covers generic dangerous patterns across shells |
+| 3. SOUL.md `NEVER` rules | Agent refuses behaviorally based on identity prompts | LLM decision at reasoning time | Domain-specific prohibitions the agent enforces in reasoning |
+
+Track A (database) is the only track where all three layers fire on `DROP TABLE users`. Track B/C destructive commands only get Layers 1 and 3 because they are absent from `DANGEROUS_PATTERNS` — which is exactly why the course adds Layer 1 via the wrapper.
+
+### Where do the wrappers come from?
+
+- **Phase 1** shipped the initial `mock-kubectl`, `mock-aws`, `mock-psql` — basic mode routing (mock vs live) with pre-baked JSON fixtures.
+- **Phase 6** extended `mock-kubectl` with 6 new broken-pod scenarios (ImagePullBackOff, CrashLoopBackOff, OOMKilled, liveness probe, missing secret, port mismatch) for K8s diagnostic skills labs.
+- **Phase 7** added the `wrapper_allowlist` pre-flight check to all three wrappers, along with the `HERMES_LAB_GOVERNANCE` and `HERMES_LAB_TRACK` env vars and the `GOVERNANCE REJECTED` banner.
+
+The wrapper code lives in the course repo at `infrastructure/wrappers/` — not in Hermes itself. You can `cat` them to read the exact bash implementation. When you distribute your completed agent profile outside the course, the wrappers don't come with it; consumers of your profile who want the same governance enforcement would need to copy them separately or adopt the same PATH trick.
+
+### Env vars the wrappers read
+
+| Env Var | Values | Purpose |
+|---|---|---|
+| `HERMES_LAB_MODE` | `mock` \| `live` | Mode routing (serve fixtures or pass through to real binary) |
+| `HERMES_LAB_SCENARIO` | `clean`, `messy`, `crashloop2`, `oom`, `image-pull`, `liveness`, `missing-secret`, `port-mismatch` | Which mock fixture set to serve in mock mode |
+| `HERMES_LAB_GOVERNANCE` | `L1` \| `L2` \| `L3` \| `L4` | Which governance yaml's wrapper_allowlist is active |
+| `HERMES_LAB_TRACK` | `track-a` \| `track-b` \| `track-c` | Required at L4 to disambiguate the 3 track-specific L4 files |
+| `MOCK_DATA_DIR` | path | Location of pre-baked JSON fixtures |
+
+Every course lab that uses the wrapper layer shows the complete `export` block for these variables at the top of every major step. If your agent's commands are being unexpectedly allowed or rejected, the first thing to check is whether all the env vars are set in the shell that launched Hermes.
+
+### Module 13 is the deep-dive
+
+This section is a summary. Module 13 (Governance and Safety) walks through the complete L1 → L4 progression with hands-on governance level switching, PR-gated allowlist additions, and the audit trail of rejected commands. If you want to understand why the three-layer defense model is necessary rather than just how it's wired, that's the module to read.

@@ -2,11 +2,33 @@
 # This file goes at: ~/.hermes/profiles/<your-track>/config.yaml
 # Fill in every TODO. See course/agents/track-a-database/config.yaml for a completed example.
 
+# ── Provider Configuration ──
+# Two supported options. Uncomment ONE of the two "model:" blocks below.
+#
+# Option A (default, zero setup if you already have ANTHROPIC_API_KEY or a Claude subscription):
+#   Anthropic Claude Haiku 4 — lowest-cost paid Anthropic model, works with your existing key.
+#
+# Option B (free tier, recommended if you don't have an Anthropic key):
+#   Gemini 2.5 Flash via Google AI Studio — 500 req/day free, no credit card.
+#   REQUIRES: an API key from https://aistudio.google.com stored in the profile's .env file:
+#     echo 'OPENAI_API_KEY=<your-gemini-api-key>' > ~/.hermes/profiles/<your-track>/.env
+#   The OPENAI_API_KEY name is intentional — Google AI Studio exposes an OpenAI-compatible
+#   endpoint, so Hermes reads the key from the OPENAI_API_KEY env var even though it's a
+#   Gemini key. See course/setup/llm-access.md for the API key creation walkthrough.
+
+# Option A — Anthropic (uncomment to use)
 model:
-  # TODO: Set the default model. For labs, use "anthropic/claude-haiku-4" (lowest cost).
-  # Other options: "google/gemini-2.5-flash" (Google AI Studio free tier)
   default: "anthropic/claude-haiku-4"
   provider: "auto"
+
+# Option B — Google Gemini (uncomment to use; comment out Option A above)
+# model:
+#   default: "gemini-2.5-flash"
+#   provider: "custom:google-ai-studio"
+#
+# custom_providers:
+#   - name: google-ai-studio
+#     base_url: https://generativelanguage.googleapis.com/v1beta/openai
 
 platform_toolsets:
   # TODO: Choose which toolsets your agent has access to.
