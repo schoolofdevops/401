@@ -199,12 +199,12 @@ cp course/modules/module-08-tools/starter/config-starter.yaml /tmp/my-config.yam
 
 You have two options. Pick the one that matches the API key you already have (or can get in 2 minutes).
 
-**Option A — Anthropic Claude Haiku 4** (default; requires existing Anthropic key or Claude subscription):
+**Option A — Anthropic Claude Haiku 4.5** (default; requires existing Anthropic key or Claude subscription):
 
 ```yaml
 model:
-  default: "anthropic/claude-haiku-4"
-  provider: "auto"
+  default: "anthropic/claude-haiku-4-5"
+  provider: "Anthropic"
 ```
 
 API key goes in `~/.hermes/profiles/<your-track>/.env`:
@@ -213,7 +213,7 @@ API key goes in `~/.hermes/profiles/<your-track>/.env`:
 echo 'ANTHROPIC_API_KEY=sk-ant-...' > ~/.hermes/profiles/<your-track>/.env
 ```
 
-**Option B — Google Gemini 2.5 Flash** (recommended if you don't have an Anthropic key — free, no credit card, 500 req/day):
+**Option B — Google Gemini 2.5 Flash** (free, no credit card, 500 req/day):
 
 ```yaml
 model:
@@ -257,7 +257,7 @@ cp /tmp/my-config.yaml ~/.hermes/profiles/<your-track>/config.yaml
 hermes -p <your-track> chat
 ```
 
-Ask: `What model are you running on?` — the agent should identify its backing model (claude-haiku-4 or gemini-2.5-flash). If you see `"API key missing"` errors, re-check that `.env` file lives at `~/.hermes/profiles/<your-track>/.env` and contains the right variable name for your option.
+Ask: `What model are you running on?` — the agent should identify its backing model (claude-haiku-4-5 or gemini-2.5-flash). If you see `"API key missing"` errors, re-check that `.env` file lives at `~/.hermes/profiles/<your-track>/.env` and contains the right variable name for your option.
 
 ---
 
