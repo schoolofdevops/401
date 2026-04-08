@@ -76,11 +76,10 @@ coordinate specialist diagnosis and remediation.
    HERMES_LAB_GOVERNANCE=L4 in the instructions so the specialist runs the apply
    under the L4 wrapper_allowlist enforcement (Phase 7 wrapper).'
 
-hermes webhook subscribe alertmanager \
-  --profile fleet \
-  --events "alertmanager-alert" \
+hermes -p fleet webhook subscribe alertmanager \
   --prompt "${PROMPT}" \
-  --deliver telegram
+  --deliver telegram \
+  --secret "INSECURE_NO_AUTH"
 
 echo ""
 echo "[fleet-webhook-subscribe.sh] Subscribed. AlertManager -> Morgan is now wired."

@@ -454,20 +454,19 @@ Pick one of the four options below. All four work for all lab exercises.
 
 **For:** Participants with an active Claude Pro or Claude Team subscription.
 
-Hermes borrows the OAuth token that Claude Code stores after login — no separate API key needed.
+Hermes auto-detects Claude Code credentials — no separate login needed.
 
 ```bash
 # Ensure Claude Code is authenticated
 claude auth status
 # If not logged in: claude auth login
 
-# Connect Hermes
-hermes login --provider claude-code
-
-# Verify
+# Hermes auto-detects Claude Code auth — just verify:
 hermes run "say: OK"
 # Expected: OK
 ```
+
+If it doesn't auto-detect, run `hermes setup` to configure the provider interactively.
 
 #### Option B: Google AI Studio (Free)
 
@@ -477,8 +476,21 @@ hermes run "say: OK"
 2. Click "Get API key" → "Create API key", copy the key (starts with `AIza…`)
 
 ```bash
-hermes login --provider google-ai-studio --api-key YOUR_API_KEY
-hermes config set model gemini-2.5-flash
+# Add your API key to the Hermes environment file
+echo 'OPENAI_API_KEY=YOUR_API_KEY' >> ~/.hermes/.env
+
+# Configure Hermes to use Google AI Studio
+cat >> ~/.hermes/config.yaml << 'EOF'
+
+model:
+  default: gemini-2.5-flash
+  provider: custom:google-ai-studio
+
+custom_providers:
+  - name: google-ai-studio
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
+EOF
+
 hermes run "say: OK"
 # Expected: OK
 ```
@@ -491,10 +503,9 @@ hermes run "say: OK"
 2. Go to Settings → Access Tokens → New token, select Read scope, name it `hermes-lab`
 
 ```bash
-hermes login --provider huggingface --api-key YOUR_HF_TOKEN
-hermes config set model meta-llama/Llama-3.1-8B-Instruct
-hermes run "say: OK"
-# Expected: OK
+# Run interactive setup to configure HuggingFace
+hermes setup
+# When prompted, select HuggingFace and enter your token
 ```
 
 > Response latency on the free HF tier is 2–5 seconds per request. This is normal.
@@ -507,8 +518,11 @@ hermes run "say: OK"
 2. Go to Keys → Create Key, copy the key
 
 ```bash
-hermes login --provider openrouter --api-key YOUR_OPENROUTER_KEY
-hermes config set model anthropic/claude-haiku-4-5
+# Add your API key and run interactive setup
+echo 'OPENROUTER_API_KEY=YOUR_OPENROUTER_KEY' >> ~/.hermes/.env
+hermes setup
+# When prompted, select OpenRouter
+
 hermes run "say: OK"
 # Expected: OK
 ```

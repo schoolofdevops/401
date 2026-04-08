@@ -69,6 +69,14 @@ cp agents/track-a-database/SOUL.md ~/.hermes/profiles/track-a/
 cp -r agents/track-a-database/skills/dba-rds-slow-query ~/.hermes/profiles/track-a/skills/
 ```
 
+Add your Google AI Studio API key to the profile's environment file:
+
+```bash
+# Get your free API key from aistudio.google.com → Get API key → Create API key
+# The key starts with AIza...
+echo 'OPENAI_API_KEY=YOUR_GOOGLE_AI_STUDIO_KEY' >> ~/.hermes/profiles/track-a/.env
+```
+
 Verify the installation:
 
 ```bash

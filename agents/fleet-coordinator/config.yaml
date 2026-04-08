@@ -10,11 +10,20 @@
 
 model:
   default: "gemini-2.5-flash"
-  provider: "custom:google-ai-studio"
+  provider: "openai"
+  base_url: "https://generativelanguage.googleapis.com/v1beta/openai"
 
-custom_providers:
-  - name: google-ai-studio
-    base_url: https://generativelanguage.googleapis.com/v1beta/openai
+# Platform config — required for gateway webhook + Telegram delivery
+# Set TELEGRAM_BOT_TOKEN in ~/.hermes/profiles/fleet/.env (do NOT hardcode here)
+# Then copy fleet profile config: cp agents/fleet-coordinator/config.yaml ~/.hermes/profiles/fleet/
+# And add to ~/.hermes/profiles/fleet/config.yaml:
+#   platforms:
+#     webhook:
+#       enabled: true
+#       extra: {host: "0.0.0.0", port: 8644}
+#     telegram:
+#       enabled: true
+#       extra: {token: "${TELEGRAM_BOT_TOKEN}"}
 
 platform_toolsets:
   # Morgan needs `terminal` in her toolset because Hermes delegation intersects child toolsets

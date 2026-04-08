@@ -128,6 +128,40 @@ cp agents/fleet-coordinator/config.yaml ~/.hermes/profiles/fleet/
 cp agents/fleet-coordinator/SOUL.md ~/.hermes/profiles/fleet/
 ```
 
+Add your Google AI Studio API key to the fleet profile environment file:
+
+```bash
+# Get your free API key from aistudio.google.com → Get API key → Create API key
+echo 'OPENAI_API_KEY=YOUR_GOOGLE_AI_STUDIO_KEY' >> ~/.hermes/profiles/fleet/.env
+```
+
+Then add the platform configuration (webhook + Telegram) to the fleet profile. This is required for the gateway to enable webhook ingestion and Telegram delivery under the fleet profile:
+
+```bash
+# Store Telegram bot token securely in the profile .env file
+# (Get your token from @BotFather on Telegram)
+echo 'TELEGRAM_BOT_TOKEN=YOUR_TELEGRAM_BOT_TOKEN' >> ~/.hermes/profiles/fleet/.env
+
+# Append platform config to fleet profile
+cat >> ~/.hermes/profiles/fleet/config.yaml << 'EOF'
+
+platforms:
+  webhook:
+    enabled: true
+    extra:
+      host: "0.0.0.0"
+      port: 8644
+  telegram:
+    enabled: true
+    extra:
+      token: "${TELEGRAM_BOT_TOKEN}"
+EOF
+```
+
+:::tip Solo Learner — no Telegram bot?
+Set `--deliver log` instead of `--deliver telegram` in Step 4's `fleet-webhook-subscribe.sh`. Morgan's output goes to the gateway log instead. You can still observe the full TRIAGE → DELEGATE → SYNTHESIZE chain in `~/.hermes/logs/gateway.log`.
+:::
+
 Inspect the critical toolset change from Phase 9 Plan 01:
 
 ```bash
@@ -154,6 +188,8 @@ hermes profile create track-c
 cp agents/track-c-kubernetes/config.yaml ~/.hermes/profiles/track-c/
 cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/
 cp -r agents/track-c-kubernetes/skills/sre-k8s-pod-health ~/.hermes/profiles/track-c/skills/
+# Add API key if not already done in Module 10
+echo 'OPENAI_API_KEY=YOUR_GOOGLE_AI_STUDIO_KEY' >> ~/.hermes/profiles/track-c/.env
 hermes profiles list
 # Expected: fleet, track-a, track-b, track-c (plus any other Module 10 profiles)
 ```
@@ -271,8 +307,8 @@ Open **Terminal 1** (stays running throughout the lab):
 # (already done in Step 1 — confirm HERMES_LAB_GOVERNANCE is in scope)
 echo "GOVERNANCE=$HERMES_LAB_GOVERNANCE"   # must print L4
 
-# Start the gateway with the fleet profile
-hermes gateway run --profile fleet
+# Start the gateway (the fleet profile is bound per-subscription, not at gateway start)
+hermes gateway run
 ```
 
 The gateway should start on port 8644 and show both webhook and telegram platforms active.
@@ -310,7 +346,7 @@ Expected: `HERMES_LAB_MODE=live`, `HERMES_LAB_GOVERNANCE=L4`, `HERMES_LAB_TRACK=
 
 :::info SOLO LEARNER
 
-Run `hermes gateway run --profile fleet` the same way in mock mode. You still see webhook
+Run `hermes gateway run` the same way in mock mode. You still see webhook
 subscriptions succeed. Instead of waiting for AlertManager to fire, proceed to Step 5 where
 you hand-craft the webhook test payload.
 
@@ -857,7 +893,7 @@ Sandbox. Observe the namespace isolation.
 ```
 - [ ] Morgan profile installed with `cli: [terminal, web, skills]` in config.yaml
 - [ ] Morgan's SOUL.md shows the Phase 9 NEVER rule and re-delegation behavior (5 total NEVER rules)
-- [ ] hermes gateway run --profile fleet started with HERMES_LAB_GOVERNANCE=L4 in env
+- [ ] hermes gateway run started with HERMES_LAB_GOVERNANCE=L4 in env
 - [ ] fleet-webhook-subscribe.sh ran successfully
 - [ ] AlertManager alert fired (live) OR hand-crafted payload sent (Solo Learner)
 - [ ] Morgan triaged and delegated to Track C (observed in gateway log)

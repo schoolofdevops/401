@@ -51,6 +51,13 @@ cp agents/track-b-finops/SOUL.md ~/.hermes/profiles/track-b/
 cp -r agents/track-b-finops/skills/devops-deployment-safety-check ~/.hermes/profiles/track-b/skills/
 ```
 
+Add your Google AI Studio API key to the profile's environment file:
+
+```bash
+# Get your free API key from aistudio.google.com → Get API key → Create API key
+echo 'OPENAI_API_KEY=YOUR_GOOGLE_AI_STUDIO_KEY' >> ~/.hermes/profiles/track-b/.env
+```
+
 Verify the profile structure:
 
 ```bash

@@ -92,10 +92,19 @@ hermes profile create track-c
 cp agents/track-c-kubernetes/config.yaml ~/.hermes/profiles/track-c/
 cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/
 cp -r agents/track-c-kubernetes/skills/sre-k8s-pod-health ~/.hermes/profiles/track-c/skills/
+```
 
+Add your Google AI Studio API key to the profile's environment file:
+
+```bash
+# Get your free API key from aistudio.google.com → Get API key → Create API key
+echo 'OPENAI_API_KEY=YOUR_GOOGLE_AI_STUDIO_KEY' >> ~/.hermes/profiles/track-c/.env
+```
+
+```bash
 # Verify the profile structure
 ls ~/.hermes/profiles/track-c/
-# Expected: SOUL.md  config.yaml  skills/
+# Expected: SOUL.md  config.yaml  skills/  .env
 
 ls ~/.hermes/profiles/track-c/skills/
 # Expected: sre-k8s-pod-health/
