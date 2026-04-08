@@ -266,6 +266,41 @@ Ask: `What model are you running on?` — the agent should identify its backing 
 **This step is intentional.** Run your agent before attaching any skill. The goal is to
 see that the profile IS the identity, even without skills.
 
+### Step 5a: Confirm your env vars before launching
+
+The Hermes process inherits environment variables **from the shell that launches it** — and only at launch time. Once `hermes chat` is running, env var changes you make in the same terminal do NOT propagate into the agent's process. This matters because the lab is designed around `HERMES_LAB_MODE`, `HERMES_LAB_SCENARIO`, and (later) `HERMES_LAB_GOVERNANCE` — get them wrong before you launch and your agent will run in the wrong mode for the entire session.
+
+**Verify your active mode and exports BEFORE running `hermes chat`:**
+
+```bash
+# Confirm what mode you're in (check ALL the lab env vars)
+echo "MODE=$HERMES_LAB_MODE  SCENARIO=$HERMES_LAB_SCENARIO  TRACK=$HERMES_LAB_TRACK"
+
+# Confirm the wrapper is in front of real kubectl/aws/psql (mock mode only)
+which kubectl
+# Mock mode expected:  <course-dir>/infrastructure/wrappers/kubectl
+# Live mode expected:  /usr/local/bin/kubectl  (or similar real binary)
+
+# If anything's wrong, re-run the export block from Prerequisites BEFORE launching
+```
+
+:::tip Switching mock ↔ live after `hermes chat` is already running
+
+**Two safe patterns work; one common pattern silently fails:**
+
+| You did this | Result |
+|---|---|
+| Changed `HERMES_LAB_MODE` in the **same terminal** that's running `hermes chat`, then sent another prompt | ❌ Silent failure — agent's process still has the OLD value because env vars don't reach a child process retroactively |
+| Exited `hermes chat` (`exit` or Ctrl+C), re-exported the new value, relaunched `hermes -p <track> chat` | ✓ Works — the new shell-level value is inherited at launch |
+| Changed `HERMES_LAB_MODE` in a **different terminal** (without restarting Hermes) | ✓ Works for the wrappers — `mock-kubectl`/`mock-aws`/`mock-psql` are tiny bash scripts that re-read `HERMES_LAB_MODE` on EVERY invocation, not at agent startup. So the next command the agent runs will pick up the new value. The Hermes process itself still has the old value, but for the wrappers, that's irrelevant. |
+
+**Why the third pattern works:** the wrapper scripts run as **separate child processes** of `hermes` for each command. Each child gets a fresh `os.environ` snapshot from the parent shell at exec time. If you `export HERMES_LAB_MODE=live` in the original shell while Hermes is still running, the wrapper child processes inherit the new value on their next invocation — even though Hermes itself still thinks `HERMES_LAB_MODE=mock`. The wrapper layer is what actually decides mock vs live, not Hermes, so this works.
+
+**Why the first pattern doesn't:** the same terminal running `hermes chat` is blocked on the chat REPL. You can't run shell commands in it until you exit. If you open a new tab and `export HERMES_LAB_MODE=live` there, that's a DIFFERENT shell — the original shell (parent of `hermes`) never saw the change.
+:::
+
+### Step 5b: Launch the agent
+
 ```bash
 hermes -p <your-track> chat
 ```
@@ -282,7 +317,18 @@ It should NOT say "I am Hermes Agent" — it should use the name and role you wr
 **If the identity is wrong:** Check that `~/.hermes/profiles/<your-track>/SOUL.md` exists
 and that your SOUL.md starts with a strong first-person statement ("You are [Name]...").
 
-Exit the chat session: type `exit` or Ctrl+C.
+**To verify the active mode from inside the chat:** ask the agent to run a quick diagnostic command:
+
+```
+Run `kubectl get pods -n app` and tell me what you see. Also report whether the [ MOCK MODE ] banner appeared.
+```
+
+- **Mock mode confirmed:** agent reports the `[ MOCK MODE ]` banner and returns deterministic fixture pod names like `webapp-deployment-abc123`
+- **Live mode confirmed:** no banner; agent returns whatever pods are actually in your cluster (e.g., `reference-app-api-gateway-<hash>` if you deployed the reference app)
+
+If you see the wrong mode, exit the chat (`exit` or Ctrl+C), fix your env vars in the shell, then relaunch.
+
+Exit the chat session when done: type `exit` or Ctrl+C.
 
 ---
 
