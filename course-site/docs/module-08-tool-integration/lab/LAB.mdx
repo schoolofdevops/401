@@ -319,14 +319,17 @@ ls ~/.hermes/profiles/<your-track>/skills/$SKILL_NAME/
 hermes -p <your-track> chat
 ```
 
-**Ask your agent to list its skills:**
+**Verify the skill is installed (CLI — reliable):**
 
-```
-List your available skills.
+```bash
+hermes -p <your-track> skills list
+# Expected: your skill name appears with source: local
 ```
 
-Expected: The agent lists your skill by its name (from `name:` in the YAML frontmatter).
-If the skill does not appear, verify the directory structure from Step 6.
+> **Note:** Asking the agent "List your available skills" in chat may return empty — this is
+> a known LLM behavior and does NOT mean the skill is missing. Use the CLI command above
+> to reliably confirm the skill is installed. If it does not appear, verify the directory
+> structure from Step 6.
 
 **Test the skill activates on a trigger:**
 Send a prompt that matches one of your "When to Use" trigger conditions:

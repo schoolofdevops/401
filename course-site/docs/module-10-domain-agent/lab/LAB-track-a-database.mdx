@@ -136,13 +136,15 @@ Start a new session and inspect the skill:
 hermes -p track-a chat
 ```
 
-Ask the agent:
+Verify the skill is installed via CLI:
 
-```
-List your available skills.
+```bash
+hermes -p track-a skills list
+# Expected: dba-rds-slow-query appears with source: local
 ```
 
-**Expected:** The agent lists `dba-rds-slow-query` — the RDS slow query investigation runbook.
+> **Note:** Asking the agent "List your available skills" in chat may return empty — this is
+> a known LLM behavior, not a missing skill. Use the CLI command above instead.
 
 In a separate terminal, inspect the skill directly:
 

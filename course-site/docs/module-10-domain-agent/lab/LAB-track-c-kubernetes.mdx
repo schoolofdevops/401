@@ -171,8 +171,13 @@ work together with this skill's two-phase procedure: Phase 1 [SCRIPTS ZONE]
 gathers pod state via four kubectl commands, Phase 2 [AGENTS ZONE] applies six
 named decision branches to identify the specific failure mode.
 
-To verify the skill is loaded: start a chat session and ask "List your available skills."
-Kiran should report `sre-k8s-pod-health`.
+To verify the skill is installed, use the CLI (reliable):
+```bash
+hermes -p track-c skills list
+# Expected: sre-k8s-pod-health appears with source: local
+```
+Note: asking the agent "List your available skills" in chat may return empty — this is a known LLM
+behavior, not a missing skill.
 :::
 
 ---
