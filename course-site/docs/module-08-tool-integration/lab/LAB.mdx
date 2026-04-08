@@ -58,16 +58,12 @@ which kubectl
 **Live mode setup (real KIND cluster — Track C focus):**
 
 ```bash
-# 1. Make sure KIND is running with the course cluster config
-kind get clusters
-# Expected: lab (or create one: kind create cluster --name lab --config infrastructure/kind/cluster-config.yaml)
 
-# 2. Verify kubectl connects to it
-kubectl cluster-info --context kind-lab
+Validate you have a working cluster 
 
-# 3. Deploy the reference app if you want real pods to query (optional)
-helm install reference-app reference-app/helm/ --namespace app --create-namespace
-kubectl get pods -n app
+kubectl get nodes 
+
+kubectl get pods -A
 
 # 4. Switch Hermes to live mode — just change the env var
 export HERMES_LAB_MODE=live                # or: unset HERMES_LAB_MODE
@@ -155,25 +151,39 @@ makes the file system layout transparent. You see exactly what Hermes will read.
 
 ---
 
-## Step 3: Write Your SOUL.md (15 min)
+## Step 3: Examine and Install Your SOUL.md (15 min)
 
 Your SOUL.md is your agent's identity. Hermes reads it at startup and uses it as the
 agent's entire identity — replacing the generic "Hermes Agent" default persona.
 
-**Open the starter file:**
+**Read the reference SOUL.md for your track:**
 
 ```bash
-cp course/modules/module-08-tools/starter/SOUL-starter.md /tmp/my-SOUL.md
+cat agents/track-a-database/SOUL.md    # Track A
+cat agents/track-b-finops/SOUL.md      # Track B
+cat agents/track-c-kubernetes/SOUL.md  # Track C
 ```
 
-**Fill in the [placeholders].** Use `course/agents/SOUL-TEMPLATE.md` for guidance on
-each section. Use your track's reference profile SOUL.md as a completed example.
+Read through each section as you go:
 
-**When done, install it:**
+- **Identity** — A first-person statement that gives the agent its name, domain, and operating scope. This is what the agent says when you ask "Who are you?"
+- **Behavior Rules** — Explicit if/then rules that govern how the agent responds in different situations. The first rule always checks `HERMES_LAB_MODE` so the agent knows whether it is talking to mock fixtures or live infrastructure.
+- **Escalation Policy** — Conditions under which the agent stops acting autonomously and hands off to a human. For infrastructure agents this is where you encode your team's blast-radius limits.
+
+**Copy the reference SOUL.md directly to your profile:**
 
 ```bash
-cp /tmp/my-SOUL.md ~/.hermes/profiles/<your-track>/SOUL.md
+# Track A:
+cp agents/track-a-database/SOUL.md ~/.hermes/profiles/track-a/SOUL.md
+# Track B:
+cp agents/track-b-finops/SOUL.md ~/.hermes/profiles/track-b/SOUL.md
+# Track C:
+cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/SOUL.md
 ```
+
+The reference SOUL.md files are production-ready — no placeholders to fill in.
+If you want to understand the full blank template format that these were authored from,
+see `course/agents/SOUL-TEMPLATE.md` as background reading.
 
 **Quality gate:**
 
