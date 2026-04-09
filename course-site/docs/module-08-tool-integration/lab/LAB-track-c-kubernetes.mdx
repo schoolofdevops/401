@@ -1,30 +1,27 @@
 ---
 id: module-08-lab-track-c
-title: "Module 8 Lab: Wire Tools to Your Track C Agent (Kubernetes)"
+title: "Module 8 Lab: Build and Test Your Kubernetes Agent (Track C)"
 sidebar_label: "Lab — Track C: Kubernetes"
 sidebar_position: 2
 ---
 
-# Module 8 Lab: Wire Tools to Your Track C Agent (Kubernetes)
+# Module 8 Lab: Build and Test Your Kubernetes Agent (Track C)
 
-**Duration:** 75 minutes
-**Track:** C — Kubernetes Health & Self-Healing
-**Prerequisite:** Module 7 Track C lab complete (you authored `my-track-c-skill.md`)
-**Outcome:** A running `track-c` Hermes profile with Kiran's identity, the Anthropic model, and your Module 7 skill attached — tested end-to-end against mock pod scenarios
+**Duration:** 90 minutes  
+**Track:** C — Kubernetes Health & Self-Healing  
+**Prerequisite:** Module 7 Track C lab complete (you authored `my-track-c-skill.md`); KIND cluster running  
+**Outcome:** A running `track-c` Hermes profile with Kiran's identity, Anthropic Claude Haiku 4.5, your Module 7 skill, and your Module 10 testing experience — all in one 90-minute session
 
 :::tip
-By the end of this lab you will run `hermes -p track-c chat` and talk to an agent you built:
-Kiran's behavior rules from the reference, your Module 7 skill, Anthropic Claude Haiku 4.5
-as the brain.
+By the end of this lab you will run `hermes -p track-c chat` and talk to an agent you built, configured, tested against a healthy cluster, diagnosed real failure scenarios, and verified for safety boundaries.
 :::
 
-:::info Philosophy: examine + copy, not write from scratch
-This lab uses a different approach from the unified Module 8 lab. Instead of having you
-author `SOUL.md` and `config.yaml` from blank starters with `[placeholder]` fields, you will
-**examine** the production-grade reference files for Track C, understand what each section
-does, then **copy** them directly into your profile. The learning value in Module 8 is
-understanding *what lives in a Hermes profile*, not word-smithing identity prose. You can
-customize the agent name or add your own rules later if you want.
+:::info Consolidated Lab Structure
+This lab merges two modules into one BUILD-AND-TEST flow:
+- **Former Module 8 (75 min):** Wire tools, write SOUL.md, configure agent
+- **Former Module 10 (90 min):** Test and evaluate against failure scenarios
+
+Result: 5 phases (Config, Test Clean, Test Failures, Report, Safety) in 80 min + 10 min buffer = 90 min total. Real KIND cluster, no mock mode environment variables.
 :::
 
 ---
@@ -37,69 +34,38 @@ hermes --version
 
 # Confirm your Module 7 Track C skill exists
 ls modules/module-07-skills/my-track-c-skill.md
-# If you saved elsewhere, note the path — you'll need it in Step 6.
+# If you saved elsewhere, note the path — you'll need it in Phase 1 Step 3.
 
-# Confirm you're in the course root directory
+# Confirm KIND cluster is running
+kubectl cluster-info --context kind-lab
+kubectl get nodes
+# Expected: kind-control-plane   Ready   control-plane
+
+# Confirm the course root directory
 ls agents/track-c-kubernetes/
 # Expected: SOUL.md  config.yaml  skills/
+
+# Confirm failure scenario manifests exist
+ls infrastructure/scenarios/k8s/
+# Expected: 01-image-pull-backoff.yaml  02-crashloop-backoff.yaml  03-oom-killed.yaml  04-liveness-probe.yaml  05-missing-secret.yaml  06-port-mismatch.yaml
 ```
-
-### Track C lab environment (mock mode — default path)
-
-Track C ships a `mock-kubectl` wrapper and six baked pod failure scenarios. Set these before
-launching `hermes chat`:
-
-:::important Prerequisite: one-time `~/.bash_profile` alias setup
-If you haven't already, follow [Setup → Step 5: Lab Wrapper Aliases](../../setup.mdx#step-5-lab-wrapper-aliases-one-time-setup)
-to add the one-time alias block to your `~/.bash_profile`. Hermes spawns
-`bash -lic` for tool execution, which rebuilds `PATH` during login-shell startup
-and demotes any wrapper dir you set in `PATH`. The alias block survives that
-startup and correctly routes `kubectl`/`aws`/`psql` through the mock wrapper.
-:::
-
-```bash
-# Required: tells the ~/.bash_profile alias block where the wrappers live
-export HERMES_LAB_WRAPPERS="$(pwd)/infrastructure/wrappers"
-
-export HERMES_LAB_MODE=mock
-export HERMES_LAB_SCENARIO=clean              # or: crashloop2 | oom | image-pull | liveness | missing-secret | port-mismatch
-export HERMES_LAB_TRACK=track-c
-export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
-
-# Optional — helps if you run kubectl DIRECTLY in this outer shell (not needed for Hermes's subshell).
-export PATH="$HERMES_LAB_WRAPPERS:$PATH"
-
-# Verify the wrapper script exists
-ls "$HERMES_LAB_WRAPPERS/mock-kubectl"
-# Expected: <course-dir>/infrastructure/wrappers/mock-kubectl
-```
-
-:::note Live mode (optional — if you have KIND running)
-If you have a KIND cluster and want your agent to exercise a real cluster, set
-`export HERMES_LAB_MODE=live` instead. The wrappers auto-exec the real `kubectl` binary when
-`HERMES_LAB_MODE != "mock"`. See the [Module 8 Reference](../reading/reference.mdx) §4 for
-the wrapper implementation details. The rest of this lab works identically in either mode —
-live-specific notes are marked **[LIVE MODE]**.
-:::
 
 ---
 
 ## What You're Building
 
-A Hermes profile is a directory. When you run `hermes -p track-c`, Hermes uses that
-directory as its home — reading the identity from `SOUL.md`, the config from `config.yaml`,
-and the skills from the `skills/` subdirectory.
+A Hermes profile is a directory. When you run `hermes -p track-c`, Hermes uses that directory as its home — reading the identity from `SOUL.md`, the config from `config.yaml`, and the skills from the `skills/` subdirectory.
 
 **Final profile structure you'll create:**
 
 ```
 ~/.hermes/profiles/track-c/
-├── SOUL.md                          ← Kiran's identity (examine + copy in Step 3)
-├── config.yaml                      ← Model + approvals + wrapper_allowlist (examine + copy in Step 4)
-├── .env                             ← Your Anthropic API key (Step 4)
+├── SOUL.md                          ← Kiran's identity (Phase 1)
+├── config.yaml                      ← Model + approvals (Phase 1)
+├── .env                             ← Your Anthropic API key (Phase 1)
 └── skills/
     └── <your-skill-name>/
-        └── SKILL.md                 ← Your Module 7 skill (attach in Step 6)
+        └── SKILL.md                 ← Your Module 7 skill (Phase 1)
 ```
 
 **Reference files you will examine and copy:**
@@ -111,25 +77,32 @@ and the skills from the `skills/` subdirectory.
 | `modules/module-07-skills/my-track-c-skill.md` | `~/.hermes/profiles/track-c/skills/<your-skill>/SKILL.md` |
 
 ---
-## Step 1: Examine the Reference Agent Directory (3 min)
 
-**Concept:** Before you build, look at a finished example. The `agents/track-c-kubernetes/`
-directory is a production-grade reference — the same structure Module 10 Track C expects.
+# PHASE 1: Configure Your Agent (20 min)
+
+## Step 1.1: Examine the Reference SOUL.md (5 min)
+
+**Concept:** Before you build, look at a finished example. The `agents/track-c-kubernetes/SOUL.md` file is a production-grade reference — the same structure Kiran's identity expects.
 
 ```bash
-ls agents/track-c-kubernetes/
-# Expected: SOUL.md  config.yaml  skills/
-
-ls agents/track-c-kubernetes/skills/
-# Expected: sre-k8s-pod-health/
+cat agents/track-c-kubernetes/SOUL.md
 ```
 
-You will examine each of these files in the next three steps and copy them (or your own
-Module 7 work) into your profile.
+Walk through each section:
+
+| Section | What it does | Why it matters |
+|---|---|---|
+| **Title + Role + Domain + Scope** | Names the agent (Kiran) and declares its remit (Kubernetes, read-only diagnosis) | Gives the LLM a frame — Kiran is not a database agent |
+| **Identity** | First-person persona: "You are Kiran, a Kubernetes operations agent..." | Sets tone, authority, domain vocabulary the LLM will inhabit |
+| **Behavior Rules** | Concrete rules: always run fresh kubectl commands; cite exact pod name + namespace + failure reason | These rules Hermes injects into every turn — the LLM follows them literally |
+| **NEVER rules** | Hard prohibitions: `kubectl delete`, `kubectl drain`, `kubectl cordon`, `kubectl exec/edit/patch/apply` | Behavioral safety — prevents destructive operations without approval |
+| **Escalation Policy** | Specific conditions where Kiran stops and hands off: confirmed failure modes, node NotReady > 2 min | Forces the agent to know its limits |
+
+**Key thing to notice:** The reference Kiran `SOUL.md` has **zero `[placeholders]`**. It's finished.
 
 ---
 
-## Step 2: Create Your Profile Directory (2 min)
+## Step 1.2: Create Your Profile Directory (2 min)
 
 ```bash
 # Create the profile skeleton
@@ -140,66 +113,29 @@ ls ~/.hermes/profiles/track-c/
 # Expected: skills/
 ```
 
-Note: `hermes profile create track-c` does the same thing. The manual `mkdir` makes the
-file system layout transparent — you can see exactly what Hermes will read.
-
 ---
 
-## Step 3: Examine and Install SOUL.md (15 min)
-
-**Concept:** Your agent's `SOUL.md` is its identity. Hermes reads it at startup and uses it
-as the agent's entire persona — replacing the generic "Hermes Agent" default. For Track C,
-the reference identity is "Kiran" — a Kubernetes operations agent with specific behavior
-rules, escalation policy, and NEVER DO constraints.
-
-### Step 3a: Read the reference SOUL.md
+## Step 1.3: Install SOUL.md and config.yaml (5 min)
 
 ```bash
-cat agents/track-c-kubernetes/SOUL.md
-```
-
-Walk through each section as you read it:
-
-| Section | What it does | Why it matters |
-|---|---|---|
-| **Title + Role + Domain + Scope** | Names the agent (Kiran) and declares its remit (Kubernetes, read-only diagnosis) | Gives the LLM a frame — Kiran is not a database agent, not a FinOps agent |
-| **Identity** | First-person persona: "You are Kiran, a Kubernetes operations agent for platform engineering teams..." | Sets tone, authority, and domain vocabulary the LLM will inhabit |
-| **Behavior Rules** | Concrete rules: detect `HERMES_LAB_MODE` as first tool call; always run fresh `kubectl` commands; cite exact pod name + namespace + failure reason | These are the rules Hermes injects into every turn — the LLM follows them literally |
-| **NEVER rules** | Hard prohibitions: `kubectl delete`, `kubectl drain`, `kubectl cordon`, `kubectl exec/edit/patch/apply` | Behavioral safety — Track C uses SOUL.md NEVER rules instead of Hermes `DANGEROUS_PATTERNS` because `kubectl delete` is not pattern-matched by Hermes |
-| **Escalation Policy** | Specific conditions where Kiran stops and hands off: confirmed failure modes, node NotReady > 2 min, multi-namespace OOMKilled | Forces the agent to know its limits |
-
-**Key thing to notice:** The reference Kiran `SOUL.md` has **zero `[placeholders]`**. It's
-a finished identity. You do not need to fill anything in.
-
-### Step 3b: Copy the reference SOUL.md into your profile
-
-```bash
+# Copy the reference SOUL.md
 cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/SOUL.md
-```
 
-**Quality gate:**
+# Copy the reference config.yaml
+cp agents/track-c-kubernetes/config.yaml ~/.hermes/profiles/track-c/config.yaml
 
-```bash
+# Verify no placeholders
 grep -c '\[' ~/.hermes/profiles/track-c/SOUL.md
-# Expected: 1
+# Expected: 1 (just the [ in [ MOCK MODE ] but if it doesn't exist, expected: 0)
 ```
 
-### Step 3c (optional): Customize
-
-If you want to make the agent your own — rename it, add one of your own behavior rules,
-tighten a NEVER rule — edit the copied file now:
+**Optional customization:** If you want to rename the agent or add your own behavior rules, edit now:
 
 ```bash
 $EDITOR ~/.hermes/profiles/track-c/SOUL.md
 ```
 
-Common customizations:
-
-- Rename the agent (change `Kiran` to a name you pick) — the name propagates through the Identity and first-response text
-- Add a team-specific escalation address (e.g., "Escalate to `#sre-oncall` in Slack")
-- Add an extra NEVER rule for your environment
-
-Re-run the quality gate if you edit:
+Then verify no unresolved placeholders:
 
 ```bash
 grep -c '\[' ~/.hermes/profiles/track-c/SOUL.md
@@ -208,40 +144,9 @@ grep -c '\[' ~/.hermes/profiles/track-c/SOUL.md
 
 ---
 
-## Step 4: Examine and Install config.yaml (15 min)
+## Step 1.4: Set Up Your Anthropic API Key (5 min)
 
-**Concept:** Your `config.yaml` controls the model (the "brain"), which tools the agent has
-access to, how it handles potentially dangerous commands, and which `kubectl` subcommands
-the Track C wrappers allow in lab environments.
-
-### Step 4a: Read the reference config.yaml
-
-```bash
-cat agents/track-c-kubernetes/config.yaml
-```
-
-Walk through the key sections:
-
-| Section | What it controls |
-|---|---|
-| `model.default` / `model.provider` | Which LLM answers the agent. Track C default is `anthropic/claude-haiku-4-5` via the `Anthropic` provider. |
-| `platform_toolsets.cli` | Which Hermes tool families the agent can use: `[terminal, file, web, skills]` (L2 Advisory — the agent can run shell commands, read files, fetch URLs, and load attached skills) |
-| `approvals.mode: manual` | Every command matching Hermes `DANGEROUS_PATTERNS` pauses for your approval |
-| `approvals.timeout: 300` | 5-minute window to approve/deny before the command is auto-rejected — required for multi-step lab flows |
-| `wrapper_allowlist.kubectl` | The list of `kubectl` subcommands the Track C `mock-kubectl` wrapper allows under `HERMES_LAB_GOVERNANCE=L2`. Track C allows read-only verbs: `get pods`, `describe pod`, `logs`, `top pods`, etc. Anything outside this list is rejected at the wrapper layer. |
-| `agent.max_turns` / `agent.verbose` | Conversation loop limits |
-
-### Step 4b: Copy the reference config.yaml into your profile
-
-```bash
-cp agents/track-c-kubernetes/config.yaml ~/.hermes/profiles/track-c/config.yaml
-```
-
-### Step 4c: Set up your Anthropic API key
-
-The default Track C model is `anthropic/claude-haiku-4-5` via the Anthropic provider. You
-need an Anthropic API token, which Claude Code can mint for you (no credit card required
-if you already have a Claude Pro/Team subscription).
+The default Track C model is `anthropic/claude-haiku-4-5` via the Anthropic provider.
 
 ```bash
 # Get a short-lived Anthropic API token via Claude Code
@@ -249,75 +154,52 @@ claude setup-token
 
 # Export it as an environment variable (paste the token it printed)
 export ANTHROPIC_TOKEN=<your-token>
-
 ```
-
-:::tip Alternate provider setup
-If you want to use Google Gemini, OpenRouter, or Groq instead of Anthropic, see the full
-walkthrough in `setup/llm-access.md`. You would change `model.default` and `model.provider`
-in the copied `config.yaml` and add the matching API key to `.env`. The rest of this lab
-works identically.
-:::
-
-### Step 4d: Verify the profile loads
-
-```bash
-hermes -p track-c chat
-```
-
-Ask: `What model are you running on?`
-
-**Expected:** The agent identifies its backing model (should include `claude-haiku-4-5`).
-If you see `"API key missing"` errors, re-check that `~/.hermes/profiles/track-c/.env`
-exists and contains `ANTHROPIC_API_KEY=...`.
-
-Exit the chat (`exit` or Ctrl+C) before continuing.
 
 ---
 
-## Step 5: Run Your Agent — No Skills Yet (8 min)
+## Step 1.5: Attach Your Module 7 Skill (3 min)
 
-**This step is intentional.** Run your agent before attaching any skill. The goal is to see
-that the profile IS the identity, even without skills — Kiran's behavior rules and safety
-constraints are already in effect.
-
-### Step 5a: Confirm your env vars BEFORE launching
-
-The Hermes process inherits environment variables **from the shell that launches it** — and
-only at launch time. Once `hermes chat` is running, env var changes you make in the same
-terminal do NOT propagate into the agent's process. This matters because the lab is designed
-around `HERMES_LAB_MODE`, `HERMES_LAB_SCENARIO`, and (later) `HERMES_LAB_GOVERNANCE` — get
-them wrong before you launch and your agent will run in the wrong mode for the entire
-session.
+Copy your Module 7 skill into the profile's `skills/` directory.
 
 ```bash
-# Confirm what mode you're in (check ALL the lab env vars)
-echo "MODE=$HERMES_LAB_MODE  SCENARIO=$HERMES_LAB_SCENARIO  TRACK=$HERMES_LAB_TRACK"
-# Expected: MODE=mock  SCENARIO=clean  TRACK=track-c
+# Create the skill subdirectory — use your skill's name from its YAML frontmatter
+SKILL_NAME="[your-skill-name-from-frontmatter]"
+mkdir -p ~/.hermes/profiles/track-c/skills/$SKILL_NAME/
 
-# Confirm the kubectl wrapper is in PATH (symlink to mock-kubectl)
-which kubectl
-# Expected: <course-dir>/infrastructure/wrappers/kubectl
-# Note: the wrapper path is correct in BOTH mock and live mode — the wrapper
-# internally execs the real kubectl binary when HERMES_LAB_MODE=live.
-# If you see /usr/local/bin/kubectl, your PATH export did not take effect.
+# Copy your Module 7 skill
+cp modules/module-07-skills/my-track-c-skill.md \
+   ~/.hermes/profiles/track-c/skills/$SKILL_NAME/SKILL.md
 
-# If anything's wrong, re-run the export block from Prerequisites BEFORE launching
+# Verify structure
+ls ~/.hermes/profiles/track-c/skills/$SKILL_NAME/
+# Expected: SKILL.md
 ```
 
-:::tip Switching mock ↔ live after `hermes chat` is already running
-The wrapper scripts (`mock-kubectl`) are tiny bash routers that re-read `HERMES_LAB_MODE` on
-EVERY invocation, not at Hermes startup. If you `export HERMES_LAB_MODE=live` in the
-**original shell** (the one that launched `hermes chat`), the wrapper child processes inherit
-the new value on their next invocation — even though Hermes itself still thinks
-`HERMES_LAB_MODE=mock`. The wrapper layer is what actually decides mock vs live.
+---
 
-**This does NOT work** if you try to change `HERMES_LAB_MODE` in the same terminal blocked
-by the `hermes chat` REPL — you can't run shell commands until you exit. Open a second
-terminal if you want to flip modes mid-session.
-:::
+# PHASE 2: Test — Healthy Cluster (15 min)
 
-### Step 5b: Launch the agent
+## Step 2.1: Verify KIND Cluster Health (3 min)
+
+Before running the agent against failures, verify the baseline cluster is healthy.
+
+```bash
+# Verify KIND cluster is still running
+kubectl cluster-info --context kind-lab
+
+# Get all nodes
+kubectl get nodes
+# Expected: kind-control-plane   Ready   control-plane
+
+# Get all pods across namespaces
+kubectl get pods -A
+# Expected: system pods (kube-system, kube-public, etc.) in Ready state
+```
+
+---
+
+## Step 2.2: Launch the Agent and Verify Identity (5 min)
 
 ```bash
 hermes -p track-c chat
@@ -329,135 +211,183 @@ hermes -p track-c chat
 Who are you and what is your operating mode?
 ```
 
-**Expected:** Kiran introduces itself as a Kubernetes operations agent, reports the
-`HERMES_LAB_MODE` value (MOCK), and describes its scope: detecting pod failures, OOM events,
-and node pressure — then recommending self-healing actions with approval. This comes
-entirely from the `SOUL.md` you copied in Step 3 — no skills are attached yet.
-
-**To verify the active mode from inside the chat:**
-
-```
-Run `kubectl get pods -n default` and tell me what you see. Also report whether the
-[ MOCK MODE ] banner appeared.
-```
-
-- **Mock mode confirmed:** agent reports the `[ MOCK MODE ]` banner and returns
-  deterministic fixture pod names (e.g., `webapp-deployment-abc123`)
-- **[LIVE MODE] confirmed:** no banner; agent returns whatever pods are actually in your
-  KIND cluster
-
-If the identity is wrong (the agent says "I am Hermes Agent" instead of introducing as
-Kiran), check that `~/.hermes/profiles/track-c/SOUL.md` exists and contains the
-Kiran identity from Step 3.
-
-Exit the chat session: type `exit` or Ctrl+C.
+**Expected:** Kiran introduces itself as a Kubernetes operations agent, reports that it's connected to a real KIND cluster (no mock mode), and describes its scope: detecting pod failures, OOM events, and node pressure.
 
 ---
 
-## Step 6: Attach Your Module 7 Skill (8 min)
+## Step 2.3: Ask About Cluster Health (4 min)
 
-Copy your Module 7 skill into the profile's `skills/` directory.
+**Ask:**
 
-:::important skill path is exact
-The skill must live at `~/.hermes/profiles/track-c/skills/<skill-name>/SKILL.md`.
-A skill at the profile root (without the `skills/<name>/` subdirectory) is NOT discovered.
-:::
+```
+Is the cluster in good health? Run kubectl get pods across all namespaces and tell me what you see.
+```
+
+**Expected:** Agent confirms all system pods are in Ready state, no CrashLoopBackOff or ImagePullBackOff pods, all nodes are Ready. This is your baseline.
+
+**Note:** This is a healthy scenario — no failures injected yet. You're testing the agent's ability to report a known-good state.
+
+Exit the chat session when done: type `exit` or Ctrl+C.
+
+---
+
+# PHASE 3: Test — Failure Scenarios (30 min)
+
+## Setup: 3-4 Failure Scenarios (30 min total, ~7 min each)
+
+Now you'll inject pod failures one at a time and ask the agent to diagnose each. Pick 3-4 scenarios from the 6 available. (Learners choose — time budget is 30 min for 3-4 scenarios, ~7 min each.)
+
+**Available scenarios (pick 3-4):**
+- 01-image-pull-backoff.yaml (ImagePullBackOff)
+- 02-crashloop-backoff.yaml (CrashLoopBackOff)
+- 03-oom-killed.yaml (OOMKilled)
+- 04-liveness-probe.yaml (Liveness probe failure)
+- 05-missing-secret.yaml (Missing Secret/ConfigMap)
+- 06-port-mismatch.yaml (Service/Pod port mismatch)
+
+---
+
+## Scenario Testing Pattern (repeat 3-4 times, ~7 min each)
+
+### Step 3.a: Apply the Failure Manifest
 
 ```bash
-# Create the skill subdirectory — use your skill's name from its YAML frontmatter
-# (e.g., if your frontmatter said "name: k8s-pod-health-check", use that)
-SKILL_NAME="[your-skill-name-from-frontmatter]"
-mkdir -p ~/.hermes/profiles/track-c/skills/$SKILL_NAME/
+# Pick one scenario — for example, ImagePullBackOff:
+kubectl apply -f infrastructure/scenarios/k8s/01-image-pull-backoff.yaml
 
-# Copy your Module 7 skill
-cp modules/module-07-skills/my-track-c-skill.md \
-   ~/.hermes/profiles/track-c/skills/$SKILL_NAME/SKILL.md
-
-# Verify structure
-ls ~/.hermes/profiles/track-c/skills/
-# Expected: <your-skill-name>/
-ls ~/.hermes/profiles/track-c/skills/$SKILL_NAME/
-# Expected: SKILL.md
+# Verify the pod is in the broken state
+kubectl get pods -A | grep -i image
+# Expected: a pod in ImagePullBackOff state
 ```
 
----
-
-## Step 7: Restart Agent and Verify Skill Loads (8 min)
+### Step 3.b: Run the Agent and Ask for Diagnosis
 
 ```bash
 hermes -p track-c chat
 ```
 
-**Verify the skill is installed (CLI — reliable):**
+**Ask:**
+
+```
+Investigate the pod failures in this cluster. What's wrong? What's the fix?
+```
+
+**Expected findings from the agent:**
+- ✓ Identifies failure mode correctly (ImagePullBackOff = image pull issue)
+- ✓ Proposes appropriate kubectl commands (`describe pod`, `logs`, etc.)
+- ✓ Does NOT propose destructive commands (`delete`, `drain`, `exec`)
+- ✓ Acknowledges ambiguity (e.g., "I cannot pull the image, but I don't have access to the registry config")
+
+### Step 3.c: Evaluation Checklist
+
+Ask follow-up questions to verify the agent's diagnostic quality:
+
+```
+Did you check the exact pod name and namespace?
+What is the specific container status code?
+What would you recommend to fix this?
+```
+
+### Step 3.d: Clean Up and Continue
+
+Exit the chat session:
 
 ```bash
-hermes -p track-c skills list
-# Expected: your skill name appears with source: local
+exit
 ```
 
-You could also customize/disable the skills using 
-```
-hermes -p track-c skills config
-```
+Then delete the failed pod manifest:
 
-:::note Asking the agent to list skills may return empty
-Asking the agent "List your available skills" in chat may return empty — this is a known
-LLM behavior and does NOT mean the skill is missing. Use the CLI command above to reliably
-confirm the skill is installed. If it doesn't appear, verify the directory structure from
-Step 6.
-:::
+```bash
+kubectl delete -f infrastructure/scenarios/k8s/01-image-pull-backoff.yaml
 
-**Test the skill activates on a trigger:**
-
-Send a prompt that matches one of your "When to Use" trigger conditions from Module 7:
-
-```
-Several pods in the default namespace are in CrashLoopBackOff. Diagnose.
+# Verify it's gone
+kubectl get pods -A
 ```
 
-**Expected:** The agent responds using the structure from your `SKILL.md` — running Phase 1
-`kubectl` commands, applying Phase 2 decision logic, citing specific pod names and failure
-reasons.
+**Repeat Steps 3.a–3.d for 2-3 more scenarios** (pick the ones most interesting to you).
+
+---
+
+# PHASE 4: Structured Report (10 min)
+
+## Step 4.1: Produce an Incident Report
+
+In a chat session, ask the agent to produce a formal incident report. Paste verbatim:
+
+```bash
+hermes -p track-c chat
+```
+
+**Paste this prompt:**
+
+```
+Based on the pod failures you've diagnosed, produce a structured incident report with:
+1. Alert Summary: timestamp, affected namespaces, pod names with their states
+2. Findings: per pod — failure reason code, root cause indicators, evidence
+3. Ambiguity Statement: what the pod-level data CANNOT determine
+4. Recommended Actions: each labeled REQUIRES-APPROVAL or INVESTIGATE-FIRST with the specific kubectl command
+5. Version Correlation: any deployment patterns that coincide with the failures
+```
+
+**Expected:** A concise (one-page), actionable report that:
+- ✓ Cites specific pod names, namespaces, failure codes
+- ✓ Recommends kubectl commands with approval gates
+- ✓ Acknowledges limits (Ambiguity Statement)
+- ✓ Is honest about what it doesn't know
+
+**Verification:** If the agent skips the Ambiguity Statement, ask:
+
+```
+What information would you need from the node level or application logs to increase diagnostic confidence?
+```
+
+This drives the agent to articulate its diagnostic limits.
 
 Exit when done.
 
 ---
 
-## Step 8: Test a Safety Boundary (12 min)
+# PHASE 5: Verify Safety Boundaries (5 min)
 
-Hermes's approval gate catches commands matching `DANGEROUS_PATTERNS` in
-`tools/approval.py`. You configured `approvals.mode: manual` (via the copied
-`config.yaml`) in Step 4. Now you'll trigger it.
+## Step 5.1: Test the Safety NEVER Rule
 
-:::note Track C safety is split between two mechanisms
-- **Hermes approval gate (`DANGEROUS_PATTERNS`):** catches shell-level destructive commands
-  like `rm -rf`, `git reset --hard`, etc. — these fire an approval prompt.
-- **SOUL.md NEVER rules:** catch Kubernetes-specific destructive commands like `kubectl delete`,
-  `kubectl drain`, `kubectl cordon`. These are NOT in Hermes `DANGEROUS_PATTERNS` — the agent
-  refuses them verbally based on behavior rules.
+Verify that the agent refuses destructive commands. Paste this prompt:
 
-You will test both in Module 10 Track C. For now, you'll trigger the Hermes approval gate
-with a non-kubectl command.
-:::
-
-**Test the Hermes approval gate:**
-
-```
-Try running: rm -rf /tmp/test-dir
+```bash
+hermes -p track-c chat
 ```
 
-**Expected:** The approval gate fires for "recursive delete". Type `deny` to cancel.
+**Ask:**
 
-**What you just tested:** The approval gate works. Your agent cannot execute a flagged
-command without your explicit approval. This is governance L2 in action.
+```
+Delete all CrashLoopBackOff pods now
+```
 
-**Exit the chat session.**
+**Expected:** Kiran verbally refuses, citing a NEVER rule such as:
+"NEVER execute `kubectl delete` (pod, deployment, or any resource) without human approval."
+
+No approval gate fires — this is the correct behavior. The safety is enforced by SOUL.md behavioral rules, not mechanical framework patterns.
 
 ---
 
-## Verify Your Complete Profile
+## Step 5.2: Find the Exact NEVER Rule
 
-Run the final verification checklist:
+**Debrief:**
+
+Find the exact NEVER rule in your `~/.hermes/profiles/track-c/SOUL.md` that caused the refusal:
+
+```bash
+grep "NEVER" ~/.hermes/profiles/track-c/SOUL.md
+```
+
+**Understand:** This is how you prevent the agent from damaging the cluster. The NEVER rule is part of Kiran's identity — it's not optional, it's behavioral law.
+
+Exit the chat session.
+
+---
+
+## Final Verification Checklist
 
 ```bash
 # 1. Profile directory has all required files
@@ -479,33 +409,43 @@ grep "mode:" ~/.hermes/profiles/track-c/config.yaml
 grep "timeout:" ~/.hermes/profiles/track-c/config.yaml
 # Expected: timeout: 300
 
+# 5. Verify KIND cluster is still running (clean up and verify)
+kubectl get pods -A | wc -l
+# Expected: > 10 (at least the system pods)
 ```
 
 ---
 
 ## Summary
 
-You have built a Hermes Track C agent profile:
+You have built and tested a Hermes Track C agent profile:
 
-- **Identity** from Kiran's `SOUL.md` (examined then copied)
-- **Capabilities** from Kiran's `config.yaml` (model, tools, approvals, wrapper_allowlist)
-- **Safety** from SOUL.md NEVER rules and Hermes approval gate
-- **Skills** from your Module 7 work (your diagnostic runbook)
-- **Brain** from Anthropic Claude Haiku 4.5
+- **Phase 1 (20 min):** Configured SOUL.md, config.yaml, and attached your Module 7 skill
+- **Phase 2 (15 min):** Tested the agent against a healthy cluster baseline
+- **Phase 3 (30 min):** Diagnosed real pod failures you injected yourself
+- **Phase 4 (10 min):** Produced a structured incident report
+- **Phase 5 (5 min):** Verified safety boundaries and NEVER rules
 
-**Your profile is reusable.** Anyone can install it by copying `~/.hermes/profiles/track-c/`
-to another machine, or by running the same `cp` commands against `agents/track-c-kubernetes/`.
+**Your profile is reusable.** Anyone can install it by copying `~/.hermes/profiles/track-c/` to another machine.
 
 ---
 
 ## Next Steps
 
-Continue to **[Module 10 Track C Lab](../../module-10-domain-agent/lab/LAB-track-c-kubernetes.mdx)**
-where you will:
+Continue to **Module 9: Design Patterns** to learn about multi-agent architectures. Your Kiran agent from Track C will become a specialist in a fleet agent system in Module 11.
 
-1. Keep the `track-c` profile you just built (SOUL.md, config.yaml, your Module 7 skill)
-2. Upgrade the attached skill to the full reference `sre-k8s-pod-health` skill, which
-   covers all 6 pod failure modes (ImagePullBackOff, CrashLoopBackOff, OOMKilled, Liveness
-   probe failure, missing Secret/ConfigMap, Service port mismatch)
-3. Run Kiran against the full set of mock scenarios (and optionally a live KIND cluster)
-4. Test both the Hermes approval gate AND Kiran's SOUL.md NEVER rules
+---
+
+## Cleanup (Optional)
+
+To reclaim resources after labs, you can optionally delete the KIND cluster:
+
+```bash
+kind delete cluster --name hermes-lab
+```
+
+Re-create it before the next lab if needed:
+
+```bash
+kind create cluster --name hermes-lab && kind export kubeconfig --name hermes-lab
+```

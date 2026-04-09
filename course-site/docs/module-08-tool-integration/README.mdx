@@ -1,17 +1,19 @@
 ---
 id: module-08-readme
-title: "Module 8: Wiring Tools to Agents"
+title: "Module 8: Configure, Wire, and Test Your Kubernetes Agent"
 sidebar_label: "Overview"
 sidebar_position: 0
 ---
 
-# Module 8: Wiring Tools to Agents
+# Module 8: Configure, Wire, and Test Your Kubernetes Agent
 
-**Duration:** 60 minutes
+**Duration:** 90 minutes  
 **Day:** Day 3, Session 2
 
-:::info Lab Location
-The hands-on lab for this module lives in the **Hermes repository**. Read the [Concepts](./reading/concepts.mdx) page first to understand the three tool integration patterns and why safety boundaries are non-negotiable. Then open the Hermes lab guide to wire your agent.
+:::info Consolidated Lab Structure
+This module combines the former Module 8 (tool wiring, 75 min) and Module 10 Track C (testing, 90 min) into a single **BUILD-AND-TEST** lab (90 min). The 5-phase flow — Configure (20 min) → Test Clean (15 min) → Test Failures (30 min) → Report (10 min) → Safety (5 min) — lets you configure your agent and immediately evaluate it against real failure scenarios on a KIND cluster.
+
+**Why consolidated:** Eliminate repeated environment setup, create an immediate feedback loop (config → test → evaluate in one session), reduce cognitive burden by using real Kubernetes instead of mock mode environment variables.
 :::
 
 ## What This Module Is About
@@ -33,9 +35,10 @@ By the end of this module, you will be able to:
 
 ## Prerequisites
 
-- Module 7 completed (you have a working SKILL.md)
+- Module 7 Track C completed (you have a working SKILL.md)
 - Hermes installed and running
-- Basic understanding of shell commands and REST APIs
+- KIND cluster running and accessible via `kubectl cluster-info --context kind-lab`
+- Anthropic API token (obtain via `claude setup-token` in Claude Code)
 
 ## Module Contents
 
@@ -43,7 +46,7 @@ By the end of this module, you will be able to:
 |---------|---------|------|
 | Reading | [Concepts: Tool Types, MCP, and Safety](./reading/concepts.mdx) | 15 min |
 | Reading | [Reference: Tool Configuration and Safety Setup](./reading/reference.mdx) | 10 min |
-| Lab | Configure Tools and Safety Boundaries (Hermes repo) | 25 min |
+| Lab | **[Track C: Build and Test Your Kubernetes Agent](./lab/LAB-track-c-kubernetes.mdx)** (5 phases: Config, Test Clean, Test Failures, Report, Safety) | 90 min |
 | Quiz | [Module 8 Assessment](./quiz/QUIZ.mdx) | 10 min |
 | Exploratory | [Stretch Projects](./exploratory/PROJECTS.mdx) | Optional |
 
