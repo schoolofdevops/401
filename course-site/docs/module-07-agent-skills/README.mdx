@@ -11,7 +11,11 @@ sidebar_position: 0
 **Day:** Day 3, Session 1
 
 :::info Lab Location
-The hands-on lab for this module lives in the **Hermes repository**. This page covers the conceptual foundation you need before running the lab. Read the [Concepts](./reading/concepts.mdx) and [Reference](./reading/reference.mdx) pages first, then open the Hermes lab guide.
+The hands-on lab for this module lives in this site at
+[Module 7 Lab](./lab/LAB.mdx). Track C learners should use the dedicated
+[Track C lab](./lab/LAB-track-c-kubernetes.mdx) for a linear Kubernetes-only
+path. Read the [Concepts](./reading/concepts.mdx) and [Reference](./reading/reference.mdx)
+pages first, then open the lab guide.
 :::
 
 ## What This Module Is About
@@ -31,16 +35,21 @@ By the end of this module, you will be able to:
 
 ## Choose Your Track
 
-The lab has four track options — pick the one closest to your domain:
+The lab has four track options — pick the one closest to your domain. **Stay with
+this track through Module 8 and beyond** — your Module 7 skill gets attached to
+your agent profile in Module 8, and Modules 10-13 build on the same track.
 
 | Track | Focus | Primary Tools |
 |-------|-------|--------------|
-| **SRE Track** | EC2 health check skill | `aws ec2`, CloudWatch metrics, escalation paths |
-| **DevOps Track** | Deployment safety check | Pre-deploy validation, rollback criteria, canary checks |
-| **DBA Track** | RDS slow query investigation | `psql`, `pg_stat_statements`, index recommendations |
-| **Observability Track** | Alert noise analysis | Dedup detection, correlation scoring, snooze recommendations |
+| **Track A — Database Health** | RDS slow query investigation | `psql`, `pg_stat_statements`, AWS RDS, CloudWatch metrics, index recommendations |
+| **Track B — FinOps** | EC2 cost anomaly investigation | `aws ec2`, `aws ce` (Cost Explorer), idle-resource detection, cost attribution |
+| **Track C — Kubernetes Health** | Pod failure diagnosis and self-healing | `kubectl`, KIND cluster, 6 failure modes (ImagePullBackOff, CrashLoopBackOff, OOMKilled, Liveness probe, missing Secret/ConfigMap, port mismatch) |
+| **Track D — Observability** | Alert noise analysis | CloudWatch alarms, dedup detection, correlation scoring, snooze recommendations |
 
-All four tracks produce the same artifact: a domain-specific SKILL.md your agent can execute.
+All four tracks produce the same artifact: a domain-specific SKILL.md your agent
+can execute. Track C has a [dedicated lab](./lab/LAB-track-c-kubernetes.mdx) with
+concrete `kubectl` commands and the six K8s mock scenarios — Tracks A, B, and D
+share the [unified lab](./lab/LAB.mdx) with track-specific callouts.
 
 ## Prerequisites
 
@@ -54,7 +63,7 @@ All four tracks produce the same artifact: a domain-specific SKILL.md your agent
 |---------|---------|------|
 | Reading | [Concepts: RAG, Memory Types, and Procedural Skills](./reading/concepts.mdx) | 20 min |
 | Reading | [Reference: SKILL.md Format and Skill Lifecycle](./reading/reference.mdx) | 10 min |
-| Lab | Write Your Domain-Specific SKILL.md (Hermes repo) | 50 min |
+| Lab | [Write Your Domain-Specific SKILL.md](./lab/LAB.mdx) (or [Track C version](./lab/LAB-track-c-kubernetes.mdx)) | 60 min |
 | Quiz | [Module 7 Assessment](./quiz/QUIZ.mdx) | 10 min |
 | Exploratory | [Stretch Projects](./exploratory/PROJECTS.mdx) | Optional |
 
