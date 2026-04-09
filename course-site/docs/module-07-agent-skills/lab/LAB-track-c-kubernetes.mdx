@@ -20,52 +20,33 @@ contamination is a Tier 1 rubric failure.
 
 ---
 
-## Prerequisites
+## Prerequisites (5 min)
 
-- Hermes installed and working (`hermes --version`)
-- Working directory is the course root (`cd /path/to/course`)
-- Track C starter file available at `modules/module-07-skills/starter/track-c-kubernetes/SKILL.md`
-- Track C solution file at `modules/module-07-skills/solution/track-c-kubernetes/SKILL.md` (reference — you will look at it AFTER finishing your own version)
-
-**Set up mock mode and the Track C wrapper PATH** before you start. Track C ships
-six broken-pod scenarios and a `mock-kubectl` wrapper that returns deterministic
-JSON/text for each one.
-
-:::important Prerequisite: one-time `~/.bash_profile` alias setup
-If you haven't already, follow [Setup → Step 5: Lab Wrapper Aliases](../../setup.mdx#step-5-lab-wrapper-aliases-one-time-setup)
-to add the one-time alias block to your `~/.bash_profile`. This is what lets
-Hermes's `bash -lic` subshell intercept `kubectl` calls and route them through
-the mock wrapper. Without it, `kubectl` inside the agent will hit your real
-KIND cluster (or fail) instead of the mock fixtures, even with the env vars
-below set correctly.
-:::
+Verify your KIND cluster is running and you can access it:
 
 ```bash
-# Required: tells the ~/.bash_profile alias block where the wrappers live
-export HERMES_LAB_WRAPPERS="$(pwd)/infrastructure/wrappers"
+# Check that KIND cluster exists and is ready
+kubectl cluster-info --context kind-lab
 
-export HERMES_LAB_MODE=mock
-export HERMES_LAB_SCENARIO=image-pull       # or: crashloop2 | oom | liveness | missing-secret | port-mismatch
-export HERMES_LAB_TRACK=track-c
-export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
+# Expected output: similar to:
+# Kubernetes control plane is running at https://127.0.0.1:XXXXX
+# CoreDNS is running at https://127.0.0.1:XXXXX/api/v1/namespaces/kube-system/services/coredns:dns/proxy
 
-# Optional — only helps for commands you run DIRECTLY in your outer shell
-# (not commands Hermes runs internally; those are routed via the ~/.bash_profile aliases).
-export PATH="$HERMES_LAB_WRAPPERS:$PATH"
+# Verify you can see nodes
+kubectl get nodes
 
-# Verify the wrapper script exists at the expected location
-ls "$HERMES_LAB_WRAPPERS/mock-kubectl"
-# Expected: <course-dir>/infrastructure/wrappers/mock-kubectl
-
-# Spot-check the mock data
-ls $MOCK_DATA_DIR/kubernetes/ | head -5
+# Expected output:
+# NAME                 STATUS   ROLES           AGE   VERSION
+# kind-control-plane   Ready    control-plane   XXd   vX.XX.X
 ```
+
+That's it. No environment variables. No wrapper setup. Your KIND cluster from Module 6 is all you need.
 
 **Your reference material for Track C:**
 
-- 6 broken pod manifests at `infrastructure/scenarios/k8s/0[1-6]-*.yaml` — read them for the failure-mode patterns; apply them with `kubectl apply -f` if you're running against KIND in live mode
-- 13 captured mock JSON/text files at `infrastructure/mock-data/kubernetes/0[1-6]-*.{json,txt}` — these are the exact outputs your skill's Phase 1 will receive in mock mode
+- 6 broken pod manifests at `infrastructure/scenarios/k8s/0[1-6]-*.yaml` — you'll apply these during the lab to create failure scenarios on your cluster
 - The production reference skill at `modules/module-07-skills/solution/track-c-kubernetes/SKILL.md` (287 lines, all 6 failure modes — your 60-minute version will be smaller, that's fine)
+- Starter file available at `modules/module-07-skills/starter/track-c-kubernetes/SKILL.md`
 
 ---
 
@@ -74,7 +55,7 @@ ls $MOCK_DATA_DIR/kubernetes/ | head -5
 ```
 modules/module-07-skills/
 ├── starter/
-│   └── track-c-kubernetes/SKILL.md     ← your starting point (7 step comments inside)
+│   └── track-c-kubernetes/SKILL.md     ← your starting point
 └── solution/
     └── track-c-kubernetes/SKILL.md     ← reference implementation (look only after finishing)
 ```
@@ -85,281 +66,207 @@ Copy your starter file to a working location:
 cp modules/module-07-skills/starter/track-c-kubernetes/SKILL.md /tmp/my-k8s-skill.md
 ```
 
-Edit `/tmp/my-k8s-skill.md` throughout this lab. You will fill in a section per step,
-reading each step's concept box and then revealing the next section of the file.
+Edit `/tmp/my-k8s-skill.md` throughout this lab, filling in each section as you work through the steps below.
 
 ---
 
-## Step 1: Metadata — Skill Identity (5 min)
+## Step 1: Inject a Failure Scenario (10 min)
 
-**Concept:** A skill is a named, versioned runbook. The frontmatter is its identity card.
-It tells Hermes when to surface this skill and what domain it belongs to.
+Before you diagnose pod failures, you need to CREATE them. You'll use one of the broken pod manifests to inject a failure into your KIND cluster.
 
-**What's visible in your starter file:** The YAML frontmatter block at the top.
+**Pick one scenario:**
 
-**Your task:** Fill in every `[placeholder]` in the frontmatter:
+```bash
+# The six available failure scenarios are:
+# 01-image-pull-backoff.yaml  — Pod cannot pull image (ImagePullBackOff)
+# 02-crashloop-backoff.yaml   — Container crashes on startup (CrashLoopBackOff)
+# 03-oom-killed.yaml          — Container hits memory limit (OOMKilled)
+# 04-liveness-probe.yaml      — Liveness probe fails repeatedly
+# 05-missing-secret.yaml      — Pod references a non-existent Secret (CreateContainerConfigError)
+# 06-port-mismatch.yaml       — Service selector exists but port doesn't match (no endpoints)
 
-- `name`: kebab-case, describes what the skill does. Examples: `k8s-pod-crashloop-diagnosis`, `k8s-pod-health-check`, `sre-k8s-pod-health`
-- `description`: one sentence, action verb first, includes: what it does + Kubernetes resource + when to trigger
-- `compatibility`: `"kubectl 1.28+, KIND v0.31+, HERMES_LAB_MODE=mock|live"`
+# For this first run, apply the ImagePullBackOff scenario:
+kubectl apply -f infrastructure/scenarios/k8s/01-image-pull-backoff.yaml
+```
+
+**Verify the failure exists:**
+
+```bash
+# List pods to see the broken one
+kubectl get pods -A
+
+# You should see a pod in ImagePullBackOff state in the default namespace
+# Example output:
+# NAMESPACE     NAME                      READY   STATUS              RESTARTS   AGE
+# default       broken-image-pull-XXX     0/1     ImagePullBackOff    0          10s
+```
+
+**Understand what you did:**
+
+You just created a real, broken Kubernetes pod state — not a mock, not a simulation. Your SKILL.md will diagnose this real failure. This is how Kubernetes debugging actually works: you find a broken pod, and you diagnose it.
+
+---
+
+## Step 2: Write Your SKILL.md Structure (50 min)
+
+Your skill needs to diagnose real pod failures. Fill in each section below, using kubectl commands against your KIND cluster to understand what failure modes look like.
+
+### Section 1: Metadata — Skill Identity (5 min)
+
+Fill in every `[placeholder]` in your SKILL.md frontmatter:
+
+- `name`: kebab-case, e.g., `sre-k8s-pod-health`
+- `description`: one sentence describing what it does and when to use it
+- `compatibility`: `"kubectl 1.28+, KIND v0.31+"`
 - `metadata.hermes.category`: `sre`
-- `metadata.hermes.tags`: 3-5 relevant tags from `[kubernetes, sre, pod-health, kubectl, k8s, diagnosis, incidents, crashloop, oomkilled]`
+- `metadata.hermes.tags`: 3-5 tags from `[kubernetes, sre, pod-health, kubectl, diagnosis, crashloop, oomkilled]`
 
-**Check your work:**
+### Section 2: When to Use — Trigger Conditions (8 min)
 
-```bash
-grep -c '\[' /tmp/my-k8s-skill.md
-```
+Add a `## When to Use` section naming 3-5 specific trigger conditions using exact Kubernetes field names:
+- Pod `CrashLoopBackOff` with `restartCount > N`
+- Pod `ImagePullBackOff` / `ErrImagePull`
+- Container terminated with `reason == "OOMKilled"` and `exitCode == 137`
+- Pod `Pending` with `CreateContainerConfigError` (missing Secret/ConfigMap)
+- `kubectl describe pod` Events contain `Liveness probe failed`
+- Service exists but `kubectl get endpoints` returns `<none>`
 
-Result must show no `[placeholders]` remaining in the frontmatter section.
+Add 2 "Do NOT use this skill for" anti-cases (out-of-scope scenarios).
 
----
+### Section 3: Inputs — Parameterize Your Skill (5 min)
 
-## Step 2: When to Use — Trigger Conditions (8 min)
+Add an `## Inputs` section with a table listing:
+- `NAMESPACE` (env var, required)
+- `POD_NAME` (env var, optional)
+- Required tools: `kubectl 1.28+`
 
-**Concept:** Skills activate on SPECIFIC, OBSERVABLE conditions — not vague descriptions.
-"When a pod is unhealthy" is wrong. "When a pod's `status.containerStatuses[].state.waiting.reason`
-equals `ImagePullBackOff`" is right. If the trigger is vague, the agent will invoke the skill
-for the wrong scenarios.
+**For live KIND mode, that's all you need.** No HERMES_LAB_MODE, no mock data paths.
 
-**Reveal:** Add the `## When to Use` section to your skill file after the frontmatter.
+### Section 4: Phase 1 — Scripts Zone (12 min)
 
-**Your task:**
+Add a `## Procedure` section with `### Phase 1: Gather Pod Data`.
 
-1. Name 3-5 specific trigger conditions for Track C. Use exact Kubernetes field names:
-   - Pod `CrashLoopBackOff` with `restartCount > N`
-   - Pod `ImagePullBackOff` / `ErrImagePull`
-   - Container terminated with `reason == "OOMKilled"` and `exitCode == 137`
-   - Pod `Pending` with `CreateContainerConfigError` (missing Secret/ConfigMap)
-   - `kubectl describe pod` Events section contains `Liveness probe failed`
-   - Service exists but `kubectl get endpoints` returns `<none>`
+Write 3-5 `kubectl` commands that collect diagnostic data. For each command, include:
+- Exact command (e.g., `kubectl get pods -n $NAMESPACE -o json`)
+- Expected output format (what fields to look for in the JSON or text)
+- What a healthy pod vs. broken pod looks like
 
-2. Add 2 "Do NOT use this skill for" anti-cases — out-of-scope scenarios your skill
-   explicitly does not handle. Examples: PVC binding failures, RBAC/admission webhook
-   errors, cluster autoscaler issues, network policy debugging, steady-state capacity
-   planning.
-
-**Reference:** The Track C solution file has a complete `## When to Use` example at the top.
-
----
-
-## Step 3: Inputs — Parameterize Your Skill (7 min)
-
-**Concept:** Skills are functions. Explicit inputs make skills reusable across environments.
-A skill that hardcodes `namespace=default` cannot diagnose problems in `namespace=prod`
-without editing.
-
-**Reveal:** Add the `## Inputs` and `## Prerequisites` sections.
-
-**Your task:**
-
-1. Fill the Inputs table with every env var and parameter your skill uses
-2. For each input: name, source (env var / user prompt), required (yes/no), description
-3. ALWAYS include `HERMES_LAB_MODE` as an input (mock vs live mode routing)
-4. List required tools with version numbers
-5. Add a Track C mock mode setup block showing how to verify mock data files are accessible
-
-**Required Track C inputs:**
-
-| Input | Source | Required | Description |
-|-------|--------|----------|-------------|
-| `NAMESPACE` | env var | YES | Target Kubernetes namespace |
-| `POD_NAME` | env var | NO | Specific pod to diagnose; if unset, scan all unhealthy pods |
-| `KUBECONFIG` | env var | NO | Path to kubeconfig (default: `~/.kube/config`) |
-| `HERMES_LAB_MODE` | env var | NO | `mock` or `live` (default: `live`) |
-| `HERMES_LAB_SCENARIO` | env var | NO | Required only when `HERMES_LAB_MODE=mock` |
-
----
-
-## Step 4: Phase 1 — Scripts Zone (10 min)
-
-**Concept:** The Scripts Zone is deterministic. It contains only CLI commands and their expected
-output. No prose decisions. No "if you see X...". Just: run this command, here is what success
-looks like, here is what a problem looks like. The agent executes these commands and feeds the
-output to Phase 2.
-
-**Reveal:** Add `## Procedure` with `### Phase 1` content.
-
-**Your task:**
-
-1. Write 3-5 `kubectl` steps that collect all diagnostic data your skill needs
-2. For EACH step: exact command (with env var references) + expected healthy output + expected degraded output
-3. Use real Kubernetes API field names (camelCase for kubectl: `containerStatuses`, `state.waiting.reason`)
-4. `HERMES_LAB_MODE` check: your `mock-kubectl` wrapper returns the same JSON structure as real kubectl — same field paths
-
-**Track C Phase 1 starter commands:**
+**Example Phase 1 commands:**
 
 ```bash
-# Step 1: Pod inventory — broad scan with field-level details
+# Step 1.1: Pod inventory
 kubectl get pods -n $NAMESPACE -o json
-# Mock mode: reads from infrastructure/mock-data/kubernetes/${HERMES_LAB_SCENARIO}-get-pods.json
-# Live mode: hits your real KIND cluster
 
-# Step 2: Pod-specific deep-dive — events, container state, restart count
+# Step 1.2: Pod details with events
 kubectl describe pod $POD_NAME -n $NAMESPACE
-# Mock mode: reads from infrastructure/mock-data/kubernetes/${HERMES_LAB_SCENARIO}-describe.txt
 
-# Step 3: Previous-instance logs (for CrashLoopBackOff diagnosis)
-kubectl logs $POD_NAME -n $NAMESPACE --previous --tail=100
+# Step 1.3: Container logs (current and previous instance)
+kubectl logs $POD_NAME -n $NAMESPACE --tail=100
+kubectl logs $POD_NAME -n $NAMESPACE --tail=100 --previous
 ```
 
-**Expected output (image-pull scenario, partial):**
+These commands will work against your real KIND cluster with real failures injected.
 
-```json
-{
-  "items": [{
-    "status": {
-      "containerStatuses": [{
-        "state": {"waiting": {"reason": "ImagePullBackOff", "message": "Back-off pulling image..."}},
-        "ready": false,
-        "restartCount": 0
-      }]
-    },
-    "spec": {
-      "containers": [{"image": "nonexistent-registry.io/fake-app:v1.0.0"}]
-    }
-  }]
-}
-```
+**Tip:** Run these commands manually right now against the broken pod you created in Step 1. See what the output looks like for ImagePullBackOff. Your Phase 1 section should document exactly what you see.
 
-The exact JSON path your Phase 2 decision tree should reference is
-`status.containerStatuses[].state.waiting.reason` — that's the field that distinguishes
-`ImagePullBackOff` from `CrashLoopBackOff` from `CreateContainerConfigError`. Always cite
-the path, never invent it.
+### Section 5: Phase 2 — Agents Zone (12 min)
 
-**To exercise other scenarios:** swap `HERMES_LAB_SCENARIO=image-pull` for `crashloop2`,
-`oom`, `liveness`, `missing-secret`, or `port-mismatch` in your shell. Each produces
-different mock JSON shapes with different `state.waiting.reason` / `lastState.terminated.reason`
-values that your skill needs to handle.
+Add `### Phase 2: Interpret and Decide`.
 
-**Common mistake:** Including reasoning ("if `restartCount > 5`, do X") in Phase 1. Phase 1
-is data collection only. Save reasoning for Phase 2.
-
----
-
-## Step 5: Phase 2 — Agents Zone (12 min)
-
-**Concept:** The Agents Zone is where reasoning happens. Decision trees must be numeric and
-complete: every branch must end at a named diagnosis or escalation. "Investigate further" is
-not a valid terminal. Vague conditions ("if the pod seems unhealthy") are Tier 1 rubric
-failures.
-
-**Reveal:** Add `### Phase 2` under `## Procedure`.
-
-**Your task:**
-
-1. Write a decision tree using the data from Phase 1
-2. Every IF condition must reference a specific Kubernetes field: `state.waiting.reason == "OOMKilled"`, `restartCount > 5`, not "pod is unhealthy"
-3. Every branch must end with: `Diagnosis = "NAMED_ROOT_CAUSE"` or `ESCALATE`
-4. Include at least one ELSE branch (handles normal state)
-5. Cover at least 3 of the 6 Track C failure modes
-
-**Required format:**
+Write a decision tree covering at least 3 of the 6 failure modes. Use exact field paths:
 
 ```
 IF status.containerStatuses[].state.waiting.reason == "ImagePullBackOff":
   THEN: Diagnosis = "IMAGE_PULL_FAILURE"
-  EVIDENCE: spec.containers[].image value
-  CONFIDENCE: High — kubectl directly reports the reason
-ELSE IF lastState.terminated.reason == "OOMKilled" AND lastState.terminated.exitCode == 137:
+ELSE IF lastState.terminated.reason == "OOMKilled" AND exitCode == 137:
   THEN: Diagnosis = "OOM_KILLED"
-  EVIDENCE: lastState.terminated.finishedAt, spec.containers[].resources.limits.memory
-  CONFIDENCE: High — kernel-level signal
 ELSE:
   THEN: Diagnosis = "NO_ISSUE_FOUND"
 ```
 
-**Common mistake:** Writing a Phase 2 step that runs a new `kubectl` command. Phase 2 interprets
-existing data — it does not gather new data. If you need a new command, it goes in Phase 1.
+Every branch must end in a named diagnosis or escalation. No "investigate further."
 
----
+### Section 6: Escalation & Safety (8 min)
 
-## Step 6: Escalation Rules and NEVER DO (8 min)
+Add `## Escalation Rules` and `## NEVER DO` sections.
 
-**Concept:** Safety posture. Every skill must know when to stop and hand off to a human.
-`NEVER DO` rules prevent the most catastrophic agent actions — they must be specific
-commands, not abstract prohibitions ("never do anything dangerous" is not a NEVER DO rule).
+**Escalation Rules:** 3-4 specific conditions (e.g., `restartCount > 10`, any unrecognized failure mode).
 
-**Reveal:** Add `## Escalation Rules` and `## NEVER DO`.
+**NEVER DO:** 4-5 hard prohibitions, e.g.:
+- NEVER execute `kubectl delete` — prevents accidental resource removal
+- NEVER execute `kubectl exec` — this skill is read-only
+- NEVER modify resource limits without approval
+- NEVER execute `kubectl patch`, `kubectl edit`, or `kubectl apply`
 
-**Your task (Escalation Rules):**
+### Section 7: Verification (5 min)
 
-1. Write 3-4 escalation triggers with specific, observable Kubernetes conditions
-2. Each trigger: what condition, why it exceeds agent scope, what to hand off to human
-3. Include the escalation handoff template (Subject, Findings, Evidence, Urgency)
-
-**Track C escalation examples:**
-
-- `restartCount > 10` across multiple pods in the same deployment (systemic issue)
-- Node `NotReady` condition persists more than 2 minutes
-- `OOMKilled` events across multiple namespaces (possible cluster-wide memory pressure)
-- Any failure mode not in the six covered by this skill
-
-**Your task (NEVER DO):**
-
-Write 4-5 hard prohibitions — the most destructive things your Kubernetes agent could do.
-Each prohibition: specific `kubectl` command + specific catastrophic outcome.
-
-**Track C NEVER DO starter list:**
-
-- NEVER execute `kubectl delete` (pod, deployment, any resource) — use case: prevents accidental removal
-- NEVER execute `kubectl drain` — affects all workloads on a node, always escalate
-- NEVER execute `kubectl cordon` without approval — prevents new pod scheduling
-- NEVER modify resource limits/requests without an approved change request
-- NEVER execute `kubectl exec`, `kubectl edit`, `kubectl patch`, or `kubectl apply` — this skill is read-only
-
----
-
-## Step 7: Rollback and Verification (5 min)
-
-**Concept:** Every mutation needs an undo path. Even read-only skills need a verification
-checklist to confirm the diagnostic run was complete.
-
-**Reveal:** Add `## Rollback Procedure` and `## Verification`.
-
-**Your task (Rollback):**
-
-Because this skill is read-only (Phase 3 mutations are escalated, not executed), the rollback
-section should document: "This skill performs no mutations. All self-healing actions are
-escalated for human execution. If a human executes a rollback, they should use the standard
-`kubectl rollout undo deployment/<name>` pattern with the deployment name from Phase 1."
-
-**Your task (Verification checklist):**
-
-Add a checklist confirming:
-
-- [ ] All Phase 1 commands ran successfully and returned data (not errors)
-- [ ] Phase 2 decision tree reached a named diagnosis (not "investigate further")
-- [ ] Evidence cited includes specific pod name, namespace, and Kubernetes field paths
+Add `## Verification` section with a checklist confirming:
+- [ ] All Phase 1 commands ran and returned data
+- [ ] Phase 2 decision tree reached a named diagnosis
+- [ ] Evidence includes specific pod name, namespace, and Kubernetes field paths
 - [ ] No write-verb `kubectl` commands were executed
-- [ ] Escalation trigger conditions were checked
+
+---
+
+## Step 3: Test Your Skill Against a Real Broken Pod (Optional: 10 min)
+
+Once you've completed your SKILL.md, test it against the real broken pod:
+
+```bash
+# If you still have the broken pod from Step 1:
+kubectl get pods -A
+
+# Run your Phase 1 commands manually and see if you can identify the failure mode
+# using your Phase 2 decision tree
+
+# For example:
+export NAMESPACE=default
+export POD_NAME=<pod-name-from-step-1>
+
+# Run your Phase 1 commands
+kubectl get pods -n $NAMESPACE -o json
+kubectl describe pod $POD_NAME -n $NAMESPACE
+
+# Work through your Phase 2 decision tree
+# Can you reach a diagnosis?
+```
+
+If you want to test against another scenario, clean up and apply a different one:
+
+```bash
+# Clean up the old pod
+kubectl delete -f infrastructure/scenarios/k8s/01-image-pull-backoff.yaml
+
+# Apply a different scenario
+kubectl apply -f infrastructure/scenarios/k8s/02-crashloop-backoff.yaml
+
+# Test your skill again
+# Does your Phase 2 decision tree work for this failure mode too?
+```
 
 ---
 
 ## Quality Gate
 
-Run the rubric before comparing to the solution:
+Before comparing to the solution, verify your SKILL.md is complete:
 
 ```bash
 # Check 1: No unfilled placeholders
 grep -c '\[' /tmp/my-k8s-skill.md
 # Expected: 0
 
-# Check 2: Decision tree has numeric conditions or specific reason strings
-grep -E '(>[[:space:]]*[0-9]|reason == "|restartCount)' /tmp/my-k8s-skill.md | head -5
+# Check 2: Decision tree has specific conditions
+grep -E '(reason ==|restartCount|exitCode)' /tmp/my-k8s-skill.md | head -5
 # Expected: at least 3 lines with specific Kubernetes conditions
 
 # Check 3: NEVER DO section exists with specific kubectl commands
-grep "NEVER.*kubectl" /tmp/my-k8s-skill.md | head -5
-# Expected: at least 4 NEVER DO rules naming specific kubectl verbs
+grep "NEVER.*kubectl" /tmp/my-k8s-skill.md
+# Expected: at least 4 NEVER DO rules
 
-# Check 4: Both SCRIPTS ZONE and AGENTS ZONE present
-grep "SCRIPTS ZONE\|AGENTS ZONE" /tmp/my-k8s-skill.md
-# Expected: both appear
+# Check 4: Both PROCEDURE and decision branches present
+grep "Phase 1\|Phase 2\|Decision Branch" /tmp/my-k8s-skill.md
+# Expected: both Phase 1 and Phase 2 sections present
 ```
-
-Open `skills/RUBRIC.md` (or `modules/module-07-skills/solution/track-c-kubernetes/SKILL.md`
-as an implicit rubric reference) and confirm all Tier 1 items are present — they are blockers.
 
 ---
 
@@ -371,7 +278,7 @@ Your completed skill vs. the reference implementation:
 diff /tmp/my-k8s-skill.md modules/module-07-skills/solution/track-c-kubernetes/SKILL.md
 ```
 
-Differences are expected and fine — this is YOUR skill for the scenario you focused on.
+Differences are expected and fine — this is YOUR skill for the scenarios you focused on.
 The solution file covers all 6 failure modes in 287 lines; your 60-minute version will be
 smaller. What must match: structure (all sections present), format (specific conditions,
 named diagnoses), completeness (0 placeholders).
@@ -390,13 +297,10 @@ cp /tmp/my-k8s-skill.md modules/module-07-skills/my-track-c-skill.md
 
 ## Next Steps
 
-Continue to **[Module 8 Track C Lab](../../module-08-tool-integration/lab/LAB-track-c-kubernetes.mdx)**
+Continue to **[Module 8](../../module-08-tool-integration/lab/LAB-track-c-kubernetes.mdx)**
 where you will:
 
 1. Create a Hermes `track-c` agent profile
 2. Examine and copy the reference `SOUL.md` and `config.yaml` into your profile
 3. Attach your Module 7 skill to the profile
-4. Run your Track C agent against mock Kubernetes scenarios
-
-You will also use the same six mock scenarios in Module 10 Track C to build Kiran — the
-production-grade Kubernetes health agent.
+4. Run your Track C agent against real Kubernetes scenarios with your KIND cluster
