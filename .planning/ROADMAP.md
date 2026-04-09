@@ -137,7 +137,10 @@ Plans:
   3. All cross-references in Modules 7-14, setup.mdx, and CLAUDE.md use the new numbering — zero references to "Module 11" meaning fleet or "Module 12" meaning triggers
   4. Module 12 (Fleet) prerequisites updated to require Module 11 (Triggers) — not the old Module 10
   5. README.mdx titles, lab references, and reading materials reflect correct module numbers
-**Plans:** 0/? plans (to be determined)
+**Plans:** 2 plans
+Plans:
+- [ ] 11-01-PLAN.md — Directory swap (git mv via temp) + internal content updates (frontmatter IDs, titles, _category_.json, prerequisites, Day/Session numbers)
+- [ ] 11-02-PLAN.md — Cross-reference updates in Modules 1, 4, 8, 10, 14, resources, intro.mdx, and CLAUDE.md tool split table
 
 ### Phase 12: New Module 11 Track C Triggers Lab
 **Goal**: Create a dedicated Track C triggers lab for the renamed Module 11 (Triggers) that uses real KIND infrastructure — Hermes cron, AlertManager, K8s CronJob, GitHub webhook, Telegram
@@ -175,7 +178,7 @@ Plans:
 | 8. Agent Triggers | v1.1 | 3/3 | Complete    | 2026-04-07 |
 | 9. Multi-Agent Workflows & Production | v1.1 | 2/2 | Complete    | 2026-04-07 |
 | 10. Labs 7-8 Real KIND Refactor | v1.1 | 5/5 | Complete   | 2026-04-09 |
-| 11. Module 11↔12 Swap | v1.1 | 0/? | Planned | — |
+| 11. Module 11↔12 Swap | v1.1 | 0/2 | Planned | — |
 | 12. Module 11 Track C Triggers Lab | v1.1 | 0/? | Planned | — |
 | 13. Module 13 Governance Refactor | v1.1 | 0/? | Planned | — |
 
