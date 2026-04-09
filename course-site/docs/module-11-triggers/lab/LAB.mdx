@@ -164,7 +164,7 @@ You scheduled the job for 8 AM — but you do not need to wait. Manual trigger f
 immediately and is your primary verification tool:
 
 ```bash
-hermes cron trigger daily-db-health
+hermes cron run daily-db-health
 ```
 
 (Use the job name you created: `daily-cost-check` for Track B, `daily-k8s-check` for Track C.)
@@ -1096,7 +1096,7 @@ hermes cron create "*/5 * * * *" \
 Trigger it manually to confirm it works:
 
 ```bash
-hermes cron trigger cross-track-check
+hermes cron run cross-track-check
 ```
 
 Then run:
@@ -1217,7 +1217,7 @@ hermes webhook unsubscribe rds-alerts
 hermes cron status                      # Always run at session start
 hermes cron create "<schedule>" "<prompt>" --name ... --skill ... --deliver local
 hermes cron list
-hermes cron trigger <name>              # Manual fire + recovery verification
+hermes cron run <name>              # Manual fire + recovery verification
 hermes cron pause <name>
 hermes cron resume <name>
 hermes cron delete <name>
@@ -1262,7 +1262,7 @@ hermes cron list
 # Expected: daily-db-health (or daily-cost-check / daily-k8s-check) in the list
 
 # 3. Job fires successfully on demand
-hermes cron trigger daily-db-health
+hermes cron run daily-db-health
 # Expected: agent runs and prints output (or [SILENT] if no anomalies)
 
 # 4. Webhook endpoint is live

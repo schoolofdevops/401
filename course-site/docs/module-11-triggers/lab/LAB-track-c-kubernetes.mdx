@@ -77,7 +77,7 @@ Create a daily health check cron job that runs a Kubernetes pod health check acr
 hermes cron create "0 8 * * *" \
   "Run morning pod health check across all namespaces. Report only if pods or nodes show issues." \
   --name "daily-k8s-check" \
-  --skill "kubernetes-health" \
+  --skill "sre-k8s-pod-health" \
   --deliver local
 ```
 
@@ -108,7 +108,7 @@ Expected output:
 
 ```
 Name              Schedule        Next Run              Skill               State
-daily-k8s-check   0 8 * * *       2026-04-10 08:00:00   kubernetes-health   scheduled
+daily-k8s-check   0 8 * * *       2026-04-10 08:00:00   sre-k8s-pod-health   scheduled
 ```
 
 :::note About --deliver local
@@ -125,11 +125,11 @@ You scheduled the job for 8 AM -- but you do not need to wait. Manual trigger fi
 immediately and is your primary verification tool:
 
 ```bash
-hermes cron trigger daily-k8s-check
+hermes cron run daily-k8s-check
 ```
 
 Watch the terminal. The agent will:
-1. Load the `kubernetes-health` SKILL.md runbook
+1. Load the `sre-k8s-pod-health` SKILL.md runbook
 2. Run `kubectl get pods --all-namespaces` against your KIND cluster
 3. Print its findings to the terminal
 
@@ -202,7 +202,7 @@ Next tick: in ~51s
 
 ## Step 2: AlertManager -- Prometheus Stack + Live Webhook (20 min)
 
-You used `hermes cron trigger` to fire an agent manually. Now you wire a REAL alert source: the Prometheus + AlertManager stack on your KIND cluster, firing on a real broken pod. This is the moment Hermes stops being a chat agent and starts being an incident-response agent -- alerts arrive without you typing anything.
+You used `hermes cron run` to fire an agent manually. Now you wire a REAL alert source: the Prometheus + AlertManager stack on your KIND cluster, firing on a real broken pod. This is the moment Hermes stops being a chat agent and starts being an incident-response agent -- alerts arrive without you typing anything.
 
 ### Sub-step 2a: Enable AlertManager in the Helm release
 
@@ -652,7 +652,7 @@ hermes cron status
 # Expected: Scheduler: running, daily-k8s-check listed
 
 hermes cron list
-# Expected: daily-k8s-check  0 8 * * *  kubernetes-health  scheduled
+# Expected: daily-k8s-check  0 8 * * *  sre-k8s-pod-health  scheduled
 
 # 2. AlertManager -- Prometheus stack and PrometheusRule deployed
 kubectl get pods -n monitoring -l app.kubernetes.io/name=alertmanager
@@ -700,14 +700,14 @@ Create a cron job that checks pods across both `kube-system` and `default` names
 hermes cron create "*/5 * * * *" \
   "Run pod health check across kube-system and default namespaces. Report pod counts, restart counts, and any non-Running pods." \
   --name "cross-namespace-check" \
-  --skill "kubernetes-health" \
+  --skill "sre-k8s-pod-health" \
   --deliver local
 ```
 
 Trigger it manually to see the output:
 
 ```bash
-hermes cron trigger cross-namespace-check
+hermes cron run cross-namespace-check
 ```
 
 **Questions to explore:**
@@ -799,7 +799,7 @@ Open a PR that modifies a YAML file in your test repo. The agent should:
 hermes cron status                      # Always run at session start
 hermes cron create "<schedule>" "<prompt>" --name ... --skill ... --deliver local
 hermes cron list
-hermes cron trigger <name>              # Manual fire + recovery verification
+hermes cron run <name>              # Manual fire + recovery verification
 hermes cron pause <name>
 hermes cron resume <name>
 hermes cron delete <name>
