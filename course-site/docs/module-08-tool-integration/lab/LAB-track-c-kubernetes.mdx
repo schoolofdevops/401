@@ -181,7 +181,7 @@ cp agents/track-c-kubernetes/SOUL.md ~/.hermes/profiles/track-c/SOUL.md
 
 ```bash
 grep -c '\[' ~/.hermes/profiles/track-c/SOUL.md
-# Expected: 0
+# Expected: 1
 ```
 
 ### Step 3c (optional): Customize
@@ -250,8 +250,6 @@ claude setup-token
 # Export it as an environment variable (paste the token it printed)
 export ANTHROPIC_TOKEN=<your-token>
 
-# Add it to the track-c profile's .env file
-echo "ANTHROPIC_API_KEY=$ANTHROPIC_TOKEN" >> ~/.hermes/profiles/track-c/.env
 ```
 
 :::tip Alternate provider setup
@@ -481,9 +479,6 @@ grep "mode:" ~/.hermes/profiles/track-c/config.yaml
 grep "timeout:" ~/.hermes/profiles/track-c/config.yaml
 # Expected: timeout: 300
 
-# 5. Anthropic API key is in place
-test -f ~/.hermes/profiles/track-c/.env && grep -q ANTHROPIC_API_KEY ~/.hermes/profiles/track-c/.env && echo "OK"
-# Expected: OK
 ```
 
 ---
