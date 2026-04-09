@@ -48,7 +48,7 @@ Requirements for v1.1: Realistic Agents & Production Workflows. Each maps to roa
 ### Module Sequencing & Renaming
 
 - [x] **SWAP-01**: Module 11 (Fleet) renamed to Module 12, Module 12 (Triggers) renamed to Module 11 — directories, sidebar positions, and all internal content updated
-- [ ] **SWAP-02**: All cross-references across Modules 7-14, setup docs, and CLAUDE.md updated to reflect new numbering
+- [x] **SWAP-02**: All cross-references across Modules 7-14, setup docs, and CLAUDE.md updated to reflect new numbering
 
 ### Track C Triggers Lab
 
