@@ -11,7 +11,9 @@ sidebar_position: 0
 **Day:** Day 3, Session 5
 
 :::info Lab Location
-The hands-on lab for this module lives in the **Hermes repository**. Read the [Concepts](./reading/concepts.mdx) page to understand the four interface patterns and why each serves a different operational need. Then open the Hermes lab guide to configure cron schedules and webhooks.
+**Tracks A, B, D:** The hands-on lab for this module is the unified [Triggers Lab](./lab/LAB.mdx). Read the [Concepts](./reading/concepts.mdx) page first, then open the lab guide to configure cron schedules and webhooks.
+
+**Track C (Kubernetes):** Use the dedicated [Track C: Kubernetes Triggers Lab](./lab/LAB-track-c-kubernetes.mdx) which covers all 5 trigger types using real KIND infrastructure.
 :::
 
 ## What This Module Is About
@@ -33,9 +35,16 @@ By the end of this module, you will be able to:
 
 ## Prerequisites
 
-- Module 10 completed (you have a working agent)
+**All tracks:**
 - Hermes running with cron and webhook support enabled
 - Basic understanding of HTTP webhooks (if you've used Slack or GitHub webhooks, you're ready)
+
+**Tracks A, B, D:**
+- Module 10 completed (you have a working agent)
+
+**Track C (Kubernetes):**
+- Module 8 Track C lab complete (you have a working `track-c` agent profile)
+- KIND cluster running (`kubectl cluster-info --context kind-lab`)
 
 ## Module Contents
 
@@ -44,6 +53,7 @@ By the end of this module, you will be able to:
 | Reading | [Concepts: Interface Patterns and Trigger Design](./reading/concepts.mdx) | 15 min |
 | Reading | [Reference: Cron Config, Webhook Setup, Slack Integration](./reading/reference.mdx) | 10 min |
 | Lab | Configure Triggers and Interfaces (Hermes repo) | 25 min |
+| Lab | [Triggers Lab — Track C: Kubernetes](./lab/LAB-track-c-kubernetes.mdx) | 90 min |
 | Quiz | [Module 11 Assessment](./quiz/QUIZ.mdx) | 10 min |
 | Exploratory | [Stretch Projects](./exploratory/PROJECTS.mdx) | Optional |
 
