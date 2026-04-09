@@ -52,7 +52,7 @@ Requirements for v1.1: Realistic Agents & Production Workflows. Each maps to roa
 
 ### Track C Triggers Lab
 
-- [ ] **TRKC-01**: Dedicated Track C triggers lab for new Module 11 — Hermes cron, AlertManager on KIND, K8s CronJob, GitHub webhook, Telegram bot (no mock CloudWatch steps)
+- [x] **TRKC-01**: Dedicated Track C triggers lab for new Module 11 — Hermes cron, AlertManager on KIND, K8s CronJob, GitHub webhook, Telegram bot (no mock CloudWatch steps)
 - [ ] **TRKC-02**: New Module 11 prerequisites updated: Module 8 Track C agent + running KIND cluster (not Module 10)
 
 ### Governance Refactor (Wrapper-Free)
