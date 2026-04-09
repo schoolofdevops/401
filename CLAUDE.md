@@ -62,7 +62,7 @@ module-NN-name/
 | 7-8 (Skills + Tools) | **Hermes** | SKILL.md authoring, tool wiring |
 | 9 (Design Patterns) | Conceptual + Hermes examples | Pattern teaching |
 | 10 (Domain Agents) | **Hermes** | Full agent builds (3 tracks) |
-| 11-13 (Fleet/Triggers/Gov) | **Hermes** | Advanced agent systems |
+| 11-13 (Triggers/Fleet/Gov) | **Hermes** | Advanced agent systems |
 | 14 (Capstone) | Participant-driven | Presentations + 30-day plan |
 
 ## What's Built HERE vs in Hermes Repo
