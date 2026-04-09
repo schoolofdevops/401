@@ -1,9 +1,9 @@
 ---
-id: module-11-quiz
+id: module-12-quiz
 title: "Quiz: Fleet Orchestration"
 sidebar_label: "Quiz"
 sidebar_position: 1
-description: "Test your understanding of fleet patterns, delegation, and coordinator design from Module 11"
+description: "Test your understanding of fleet patterns, delegation, and coordinator design from Module 12"
 ---
 
 # Quiz: Fleet Orchestration
@@ -127,7 +127,7 @@ This is the coordinator-mediated context pattern from the concepts reading. The 
 - The coordinator wants to know what the K8s specialist finds independently, without the DB finding biasing their analysis
 - The coordinator can compare independent findings afterward to assess whether they converge or diverge
 
-In the Module 11 lab, the coordinator includes relevant cross-domain context in its delegation messages — the "Note:" section in the good delegation example. This is the most common pattern for 2-3 specialist fleets where the coordinator has enough context to know what's useful to share.
+In the Module 12 lab, the coordinator includes relevant cross-domain context in its delegation messages — the "Note:" section in the good delegation example. This is the most common pattern for 2-3 specialist fleets where the coordinator has enough context to know what's useful to share.
 
 Option D (always sequential, always pass findings) loses the parallelism benefit — it takes 3x longer than parallel operation with coordinator-mediated context.
 
@@ -266,7 +266,7 @@ delegation mechanics.
 Your team has built a Phase 9 fleet coordinator and wants to deploy it in production. Your alert
 volume is ~15 alerts/minute at peak, all routed through a single Morgan webhook receiver. Your
 team runs three different services with different on-call rotations and wants to keep alert audit
-logs separate per service for SOC 2 compliance. Which deployment pattern from the Module 11
+logs separate per service for SOC 2 compliance. Which deployment pattern from the Module 12
 productionization reference (§7.4 Scaling) should you choose?
 
 A) Single Morgan Deployment with `replicas: 1`, all services share one agent
@@ -284,7 +284,7 @@ D) Queue-based pattern with SQS → worker pool pulling from the queue
 The key constraint is "keep alert audit logs separate per service for SOC 2 compliance." That is
 a multi-tenant isolation requirement at the regulatory level, not a convenience preference.
 
-The Module 11 reference §7.4 Scaling discusses two isolation models:
+The Module 12 reference §7.4 Scaling discusses two isolation models:
 
 1. **Profile-per-team** (shared runtime): Each team gets its own fleet profile name but shares a
    single Hermes runtime and audit log stream

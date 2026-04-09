@@ -1,5 +1,5 @@
 ---
-id: module-11-reference
+id: module-12-reference
 title: "Reference: Fleet Configuration and Coordinator Templates"
 sidebar_label: "Reference"
 sidebar_position: 2
@@ -8,7 +8,7 @@ description: "Fleet configuration patterns, coordinator SOUL.md template, and de
 
 # Reference: Fleet Configuration and Coordinator Templates
 
-Quick-reference for Module 11 — configuring a Hermes fleet with a coordinator and specialist agents.
+Quick-reference for Module 12 — configuring a Hermes fleet with a coordinator and specialist agents.
 
 ---
 
@@ -305,7 +305,7 @@ wrapper enforcement to travel with the container rather than requiring runtime P
 Hermes loads profiles by the directory name inside `HERMES_PROFILE_DIR`. If you copy your
 `agents/fleet-coordinator/` to `/app/profiles/fleet/`, Hermes launches it as `hermes -p fleet`.
 If the directory is named `fleet-coordinator` (not `fleet`), the launch command changes to
-`hermes -p fleet-coordinator`. The Module 11 lab uses `-p fleet` — match the convention in your
+`hermes -p fleet-coordinator`. The Module 12 lab uses `-p fleet` — match the convention in your
 Dockerfile's COPY destination path.
 
 ---
@@ -385,7 +385,7 @@ kubectl create secret generic telegram-bot \
 
 Scheduled agents like periodic health-check bots run as K8s CronJobs. This is the Phase 8
 TRIG-02 pattern — see `infrastructure/scenarios/k8s/cronjob/` for the manifests you built in
-Module 12.
+Module 11.
 
 Key production considerations for scheduled agents:
 
@@ -698,7 +698,7 @@ spec:
 The K8s Agent Sandbox project (`kubernetes-sigs/agent-sandbox`) is an emerging approach to
 per-agent isolation using CRDs. It is currently alpha (v0.2.1 as of 2026-04-07) and Phase 9
 ships it only as an exploratory project — see
-`course-site/docs/module-11-fleet/exploratory/PROJECTS.mdx` Project 3.
+`course-site/docs/module-12-fleet/exploratory/PROJECTS.mdx` Project 3.
 
 The Sandbox CRD model provides:
 
@@ -762,13 +762,13 @@ in this section:
 | `infrastructure/scenarios/k8s/gitops/apply.sh` | Phase 9 Plan 01 | 7.2 Deployment Pattern C — GitOps sync |
 | `agents/fleet-coordinator/config.yaml` | Phase 9 Plan 01 | 7.1 Packaging — platform_toolsets.cli |
 | `agents/fleet-coordinator/SOUL.md` | Phase 9 Plan 01 | 7.1 Packaging — behavioral spec travels with container |
-| `course-site/docs/module-11-fleet/exploratory/PROJECTS.mdx` Project 3 | Phase 9 | 7.4 Scaling — Sandbox CRD exploratory |
-| Phase 9 Module 11 Lab | Phase 9 | Full live FLEET-01 walkthrough for all sections |
+| `course-site/docs/module-12-fleet/exploratory/PROJECTS.mdx` Project 3 | Phase 9 | 7.4 Scaling — Sandbox CRD exploratory |
+| Phase 9 Module 12 Lab | Phase 9 | Full live FLEET-01 walkthrough for all sections |
 
 ---
 
 **End of Section 7.** The rest of the reading above covers fleet patterns and coordinator templates
 that are the architectural foundation. Section 7 builds on that foundation to answer "how do I run
-this in production." Module 13 reference covers governance depth; Module 12 reference covers
+this in production." Module 13 reference covers governance depth; Module 11 reference covers
 trigger patterns. This section covers everything that sits between those and the production cluster.
 

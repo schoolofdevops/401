@@ -1,9 +1,9 @@
 ---
-id: module-12-quiz
+id: module-11-quiz
 title: "Quiz: Triggers, Scheduling, and Interfaces"
 sidebar_label: "Quiz"
 sidebar_position: 1
-description: "Test your understanding of trigger patterns, cron scheduling, and webhook design from Module 12"
+description: "Test your understanding of trigger patterns, cron scheduling, and webhook design from Module 11"
 ---
 
 # Quiz: Triggers, Scheduling, and Interfaces
@@ -225,7 +225,7 @@ The diagnostic itself is stateless (read slow_log, identify outliers, report) �
 
 **Why not D?** `hermes webhook test` is for simulating events during development — it's not a production trigger.
 
-**Real-world honest stance:** most agent work uses Hermes cron because state matters. But when the requirement explicitly calls for GitOps + stateless one-shot, K8s CronJob is the right answer. See Module 12 Step 11 for the full "Use Hermes cron when... / Use K8s CronJob when..." comparison.
+**Real-world honest stance:** most agent work uses Hermes cron because state matters. But when the requirement explicitly calls for GitOps + stateless one-shot, K8s CronJob is the right answer. See Module 11 Step 11 for the full "Use Hermes cron when... / Use K8s CronJob when..." comparison.
 
 </details>
 
@@ -263,7 +263,7 @@ The fix: ensure `labels.release` in the PrometheusRule metadata matches your Hel
 
 **Why not D (broken prompt template)?** A broken template would render as literal text and the agent would still run (just with a garbage prompt). The symptoms say the agent never runs at all.
 
-**Reference:** The `release` label requirement is documented in Module 12 Step 9 (AlertManager setup). Verify with: `kubectl get prometheusrule -n monitoring hermes-lab-rules -o yaml | yq '.metadata.labels'`.
+**Reference:** The `release` label requirement is documented in Module 11 Step 9 (AlertManager setup). Verify with: `kubectl get prometheusrule -n monitoring hermes-lab-rules -o yaml | yq '.metadata.labels'`.
 
 </details>
 
@@ -283,7 +283,7 @@ D) The bot rejects the command entirely because slash commands cannot include `-
 
 **Correct answer: B) The agent runs at L2 because Telegram bot governance is per-PROCESS — set when the gateway started, inherited by every command run during that gateway's lifetime, no per-message override**
 
-Per Module 12 Step 16 and CONTEXT.md D-19, Telegram bot governance is **per-process, not per-message**. The `HERMES_LAB_GOVERNANCE` env var is read by the gateway when it starts and inherited by every agent run spawned by the gateway during its lifetime. To change the governance level, the operator must restart the gateway:
+Per Module 11 Step 16 and CONTEXT.md D-19, Telegram bot governance is **per-process, not per-message**. The `HERMES_LAB_GOVERNANCE` env var is read by the gateway when it starts and inherited by every agent run spawned by the gateway during its lifetime. To change the governance level, the operator must restart the gateway:
 
 ```bash
 hermes gateway stop
@@ -303,7 +303,7 @@ The `--governance L4` text in the slash command is not a flag the bot parses —
 
 **Why not D?** The bot accepts any slash command text, including `--` flags as part of the message. The text is passed through to the agent without parsing.
 
-**Reference:** Module 12 Step 16 demonstrates this exact scenario: restart gateway with `HERMES_LAB_GOVERNANCE=L4` to escalate all commands for that gateway session.
+**Reference:** Module 11 Step 16 demonstrates this exact scenario: restart gateway with `HERMES_LAB_GOVERNANCE=L4` to escalate all commands for that gateway session.
 
 </details>
 

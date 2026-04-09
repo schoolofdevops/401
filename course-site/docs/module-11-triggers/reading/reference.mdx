@@ -1,5 +1,5 @@
 ---
-id: module-12-reference
+id: module-11-reference
 title: "Reference: Cron Config, Webhook Setup, and Slack Integration"
 sidebar_label: "Reference"
 sidebar_position: 2
@@ -8,7 +8,7 @@ description: "Hermes cron job configuration, webhook subscription setup, and Sla
 
 # Reference: Cron Config, Webhook Setup, and Slack Integration
 
-Quick-reference for Module 12 — configuring automated triggers and interfaces in Hermes.
+Quick-reference for Module 11 — configuring automated triggers and interfaces in Hermes.
 
 ---
 
@@ -227,12 +227,12 @@ This format renders correctly in Slack markdown and provides all information nee
 
 ## 6. Phase 8: Real Trigger Types — Comparison
 
-Module 12's existing content (Sections 1-4 above) covers Hermes-native cron and webhook patterns with simulated payloads. Phase 8 adds four REAL trigger sources you wire to live infrastructure:
+Module 11's existing content (Sections 1-4 above) covers Hermes-native cron and webhook patterns with simulated payloads. Phase 8 adds four REAL trigger sources you wire to live infrastructure:
 
 | Trigger Type | Source | When To Use | State Required | Governance Inheritance |
 |---|---|---|---|---|
-| **Hermes cron** (Module 12 Steps 2-4) | Internal scheduler | Most agent work — gateway-shared state, fast iteration, audit trail context | Gateway running | `HERMES_LAB_GOVERNANCE` from gateway env |
-| **Hermes webhook test** (Module 12 Step 7) | `hermes webhook test` CLI | Lab/development — simulating events without external services | Gateway running | `HERMES_LAB_GOVERNANCE` from gateway env |
+| **Hermes cron** (Module 11 Steps 2-4) | Internal scheduler | Most agent work — gateway-shared state, fast iteration, audit trail context | Gateway running | `HERMES_LAB_GOVERNANCE` from gateway env |
+| **Hermes webhook test** (Module 11 Step 7) | `hermes webhook test` CLI | Lab/development — simulating events without external services | Gateway running | `HERMES_LAB_GOVERNANCE` from gateway env |
 | **AlertManager webhook** (Phase 8 / TRIG-01) | Real Prometheus + AlertManager on KIND | Event-driven incident response — alerts arrive without polling | KIND cluster + helm release + PrometheusRule applied | `HERMES_LAB_GOVERNANCE` from gateway env (universal inheritance) |
 | **K8s CronJob** (Phase 8 / TRIG-02) | Kubernetes native CronJob resource | GitOps schedule-in-git, stateless one-shot diagnostics, multi-tenant K8s | KIND cluster + Docker image + Secret | `HERMES_LAB_GOVERNANCE` set on container env spec |
 | **GitHub webhook** (Phase 8 / TRIG-03) | Real GitHub webhook via smee.io public proxy | PR review automation, push-to-investigate workflows | GitHub repo + PAT + smee.io channel + smee-client running | `HERMES_LAB_GOVERNANCE` from gateway env |
