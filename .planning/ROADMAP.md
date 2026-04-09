@@ -119,11 +119,11 @@ Plans:
   3. Lab failure scenarios are applied **during the lab** via `kubectl apply infrastructure/scenarios/k8s/0[1-6]-*.yaml` — learners create their own broken pods, not pre-baked fixtures
   4. Setup documentation (SETUP.md) removes all references to `HERMES_LAB_MODE`, `HERMES_LAB_SCENARIO`, wrapper env vars, and ~/.bash_profile alias block — just "verify KIND is running"
   5. infrastructure/wrappers/ and infrastructure/mock-data/ directories are archived (kept for reference) but removed from critical path; labs do not depend on them for Track C
-**Plans:** 0/? plans (to be determined)
+**Plans:** 3/5 plans executed
 Plans:
-- [ ] 10-01-PLAN.md — Module 7 Track C LAB.mdx refactor: remove mock env vars, add `kubectl apply scenario manifests` instructions, simplify prerequisites
-- [ ] 10-02-PLAN.md — Module 8 Track C lab consolidation: merge LAB.mdx + former LAB-track-c-kubernetes.mdx from Module 10, restructure into 5-phase BUILD-AND-TEST flow
-- [ ] 10-03-PLAN.md — Module 10 Track C decision: remove entirely (testing now in Module 8) OR reposition as optional "Advanced Optimization" exploratory project
+- [x] 10-01-PLAN.md — Module 7 Track C LAB.mdx refactor: remove mock env vars, add `kubectl apply scenario manifests` instructions, simplify prerequisites
+- [x] 10-02-PLAN.md — Module 8 Track C lab consolidation: merge LAB.mdx + former LAB-track-c-kubernetes.mdx from Module 10, restructure into 5-phase BUILD-AND-TEST flow
+- [x] 10-03-PLAN.md — Module 10 Track C decision: remove entirely (testing now in Module 8) OR reposition as optional "Advanced Optimization" exploratory project
 - [ ] 10-04-PLAN.md — SETUP.md refactor: remove mock-mode aliases, simplify to KIND-only prereq check, remove wrapper scripts from critical path
 - [ ] 10-05-PLAN.md — Infrastructure cleanup & documentation: archive mock-data/, wrappers/ with "deprecated but kept for reference" note; verify all course labs still work
 
@@ -140,7 +140,7 @@ Plans:
 | 7. Guardrails & Governance | v1.1 | 3/3 | Complete    | 2026-04-07 |
 | 8. Agent Triggers | v1.1 | 3/3 | Complete    | 2026-04-07 |
 | 9. Multi-Agent Workflows & Production | v1.1 | 2/2 | Complete    | 2026-04-07 |
-| 10. Labs 7-8 Real KIND Refactor | v1.1 | 0/5 | Planning    | — |
+| 10. Labs 7-8 Real KIND Refactor | v1.1 | 3/5 | In Progress|  |
 
 ---
 
