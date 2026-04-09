@@ -107,8 +107,8 @@ hermes cron list
 Expected output:
 
 ```
-Name              Schedule        Next Run              Skill               State
-daily-k8s-check   0 8 * * *       2026-04-10 08:00:00   sre-k8s-pod-health   scheduled
+ID              Name              Schedule        Next Run              Skill               State
+f8081a091378    daily-k8s-check   0 8 * * *       2026-04-10 08:00:00   sre-k8s-pod-health   scheduled
 ```
 
 :::note About --deliver local
@@ -122,10 +122,15 @@ even if you are not at your terminal.
 ### Trigger manually and verify output
 
 You scheduled the job for 8 AM -- but you do not need to wait. Manual trigger fires the job
-immediately and is your primary verification tool:
+immediately and is your primary verification tool.
+
+Note the **Job ID** (the hex hash like `f8081a091378`) from `hermes cron list` -- `hermes cron run`
+takes the job ID, not the name:
 
 ```bash
-hermes cron run daily-k8s-check
+# Use the Job ID from hermes cron list output (first column)
+hermes cron run <job-id>
+# Example: hermes cron run f8081a091378
 ```
 
 Watch the terminal. The agent will:
@@ -159,7 +164,7 @@ full report when it finds something worth reporting.
 Pause the job without deleting it:
 
 ```bash
-hermes cron pause daily-k8s-check
+hermes cron pause <job-id>
 ```
 
 Check the paused state:
@@ -180,7 +185,7 @@ Next tick: in ~43s
 Resume the job:
 
 ```bash
-hermes cron resume daily-k8s-check
+hermes cron resume <job-id>
 ```
 
 Verify it is back to scheduled state:
@@ -707,7 +712,7 @@ hermes cron create "*/5 * * * *" \
 Trigger it manually to see the output:
 
 ```bash
-hermes cron run cross-namespace-check
+hermes cron run <job-id>   # use the ID from hermes cron list
 ```
 
 **Questions to explore:**
@@ -799,9 +804,9 @@ Open a PR that modifies a YAML file in your test repo. The agent should:
 hermes cron status                      # Always run at session start
 hermes cron create "<schedule>" "<prompt>" --name ... --skill ... --deliver local
 hermes cron list
-hermes cron run <name>              # Manual fire + recovery verification
-hermes cron pause <name>
-hermes cron resume <name>
+hermes cron run <job-id>            # Manual fire (use ID from cron list, not name)
+hermes cron pause <job-id>
+hermes cron resume <job-id>
 hermes cron delete <name>
 
 # Webhook management
