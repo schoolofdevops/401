@@ -57,8 +57,8 @@ Requirements for v1.1: Realistic Agents & Production Workflows. Each maps to roa
 
 ### Governance Refactor (Wrapper-Free)
 
-- [ ] **GOVR-01**: Module 13 governance lab refactored for Track C without wrapper enforcement — SOUL.md behavioral refusal as primary mechanism, DANGEROUS_PATTERNS for shell commands
-- [ ] **GOVR-02**: L1-L4 progression demonstrated via config changes + SOUL.md policy (not wrapper_allowlist expansion)
+- [x] **GOVR-01**: Module 13 governance lab refactored for Track C without wrapper enforcement — SOUL.md behavioral refusal as primary mechanism, DANGEROUS_PATTERNS for shell commands
+- [x] **GOVR-02**: L1-L4 progression demonstrated via config changes + SOUL.md policy (not wrapper_allowlist expansion)
 
 ## v1.2 Requirements
 

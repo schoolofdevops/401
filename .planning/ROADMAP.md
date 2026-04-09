@@ -165,10 +165,10 @@ Plans:
   2. Lab explicitly teaches: "SOUL.md is the production governance mechanism; wrapper allowlists are optional operational scaffolding"
   3. DANGEROUS_PATTERNS demo (rm -rf) still works and is shown alongside SOUL.md refusal for kubectl — two enforcement mechanisms, not one
   4. Zero references to HERMES_LAB_GOVERNANCE env var or wrapper_allowlist in the Track C lab path
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 13-01-PLAN.md — Rewrite LAB-track-c-kubernetes.mdx with SOUL.md-primary L1-L4 governance progression (no wrapper_allowlist)
-- [ ] 13-02-PLAN.md — Update reading materials (concepts.mdx, reference.mdx) and README.mdx with wrapper-free two-layer framing
+- [x] 13-01-PLAN.md — Rewrite LAB-track-c-kubernetes.mdx with SOUL.md-primary L1-L4 governance progression (no wrapper_allowlist)
+- [x] 13-02-PLAN.md — Update reading materials (concepts.mdx, reference.mdx) and README.mdx with wrapper-free two-layer framing
 
 ## Progress
 
@@ -186,7 +186,7 @@ Plans:
 | 10. Labs 7-8 Real KIND Refactor | v1.1 | 5/5 | Complete   | 2026-04-09 |
 | 11. Module 11↔12 Swap | v1.1 | 2/2 | Complete   | 2026-04-09 |
 | 12. Module 11 Track C Triggers Lab | v1.1 | 2/2 | Complete   | 2026-04-09 |
-| 13. Module 13 Governance Refactor | v1.1 | 0/2 | Planned | — |
+| 13. Module 13 Governance Refactor | v1.1 | 2/2 | Complete   | 2026-04-09 |
 
 ---
 
