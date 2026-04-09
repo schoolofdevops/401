@@ -127,6 +127,40 @@ Plans:
 - [x] 10-04-PLAN.md — SETUP.md refactor: remove mock-mode aliases, simplify to KIND-only prereq check, remove wrapper scripts from critical path
 - [x] 10-05-PLAN.md — Infrastructure cleanup & documentation: archive mock-data/, wrappers/ with "deprecated but kept for reference" note; verify all course labs still work
 
+### Phase 11: Module 11↔12 Swap — Rename Triggers Before Fleet
+**Goal**: Rename current Module 12 (Triggers) to Module 11 and current Module 11 (Fleet) to Module 12 so learners set up trigger infrastructure before using it in fleet orchestration
+**Depends on**: Phase 10
+**Requirements**: SWAP-01, SWAP-02
+**Success Criteria** (what must be TRUE):
+  1. Directory `module-11-triggers` exists (formerly module-12-triggers), directory `module-12-fleet` exists (formerly module-11-fleet) — old directories removed
+  2. All `_category_.json` sidebar positions updated: triggers=11, fleet=12
+  3. All cross-references in Modules 7-14, setup.mdx, and CLAUDE.md use the new numbering — zero references to "Module 11" meaning fleet or "Module 12" meaning triggers
+  4. Module 12 (Fleet) prerequisites updated to require Module 11 (Triggers) — not the old Module 10
+  5. README.mdx titles, lab references, and reading materials reflect correct module numbers
+**Plans:** 0/? plans (to be determined)
+
+### Phase 12: New Module 11 Track C Triggers Lab
+**Goal**: Create a dedicated Track C triggers lab for the renamed Module 11 (Triggers) that uses real KIND infrastructure — Hermes cron, AlertManager, K8s CronJob, GitHub webhook, Telegram
+**Depends on**: Phase 11
+**Requirements**: TRKC-01, TRKC-02
+**Success Criteria** (what must be TRUE):
+  1. `LAB-track-c-kubernetes.mdx` exists in module-11-triggers/lab/ with KIND-native trigger steps: Hermes cron for daily-k8s-check, AlertManager webhook from Prometheus on KIND, K8s CronJob with Docker build, GitHub webhook via smee.io, Telegram bot
+  2. Track C lab has zero mock CloudWatch steps and zero HERMES_LAB_MODE references — all triggers use real infrastructure
+  3. Module 11 README references the Track C lab and lists KIND cluster as prerequisite
+  4. AlertManager + Prometheus setup is self-contained within the lab (not assumed from elsewhere)
+**Plans:** 0/? plans (to be determined)
+
+### Phase 13: Module 13 Governance Refactor — Wrapper-Free Track C
+**Goal**: Refactor Module 13 governance lab so Track C demonstrates L1-L4 progression using SOUL.md behavioral enforcement as the primary mechanism — no dependency on mock-kubectl wrapper allowlists
+**Depends on**: Phase 12
+**Requirements**: GOVR-01, GOVR-02
+**Success Criteria** (what must be TRUE):
+  1. Module 13 Track C lab demonstrates L1 (no terminal), L2 (SOUL.md refuses kubectl delete), L3 (smart approval reduces friction), L4 (SOUL.md allows kubectl apply/rollout undo) — all without wrapper_allowlist enforcement
+  2. Lab explicitly teaches: "SOUL.md is the production governance mechanism; wrapper allowlists are optional operational scaffolding"
+  3. DANGEROUS_PATTERNS demo (rm -rf) still works and is shown alongside SOUL.md refusal for kubectl — two enforcement mechanisms, not one
+  4. Zero references to HERMES_LAB_GOVERNANCE env var or wrapper_allowlist in the Track C lab path
+**Plans:** 0/? plans (to be determined)
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -141,6 +175,9 @@ Plans:
 | 8. Agent Triggers | v1.1 | 3/3 | Complete    | 2026-04-07 |
 | 9. Multi-Agent Workflows & Production | v1.1 | 2/2 | Complete    | 2026-04-07 |
 | 10. Labs 7-8 Real KIND Refactor | v1.1 | 5/5 | Complete   | 2026-04-09 |
+| 11. Module 11↔12 Swap | v1.1 | 0/? | Planned | — |
+| 12. Module 11 Track C Triggers Lab | v1.1 | 0/? | Planned | — |
+| 13. Module 13 Governance Refactor | v1.1 | 0/? | Planned | — |
 
 ---
 

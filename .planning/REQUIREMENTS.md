@@ -45,6 +45,21 @@ Requirements for v1.1: Realistic Agents & Production Workflows. Each maps to roa
 - [x] **FLEET-01**: End-to-end workflow: AlertManager alert triggers triage agent, diagnostic agent investigates, proposes fix, human approves, agent applies
 - [x] **FLEET-02**: Fleet coordinator (Morgan) rebuilt with real cross-domain incident synthesis using working specialist agents
 
+### Module Sequencing & Renaming
+
+- [ ] **SWAP-01**: Module 11 (Fleet) renamed to Module 12, Module 12 (Triggers) renamed to Module 11 — directories, sidebar positions, and all internal content updated
+- [ ] **SWAP-02**: All cross-references across Modules 7-14, setup docs, and CLAUDE.md updated to reflect new numbering
+
+### Track C Triggers Lab
+
+- [ ] **TRKC-01**: Dedicated Track C triggers lab for new Module 11 — Hermes cron, AlertManager on KIND, K8s CronJob, GitHub webhook, Telegram bot (no mock CloudWatch steps)
+- [ ] **TRKC-02**: New Module 11 prerequisites updated: Module 8 Track C agent + running KIND cluster (not Module 10)
+
+### Governance Refactor (Wrapper-Free)
+
+- [ ] **GOVR-01**: Module 13 governance lab refactored for Track C without wrapper enforcement — SOUL.md behavioral refusal as primary mechanism, DANGEROUS_PATTERNS for shell commands
+- [ ] **GOVR-02**: L1-L4 progression demonstrated via config changes + SOUL.md policy (not wrapper_allowlist expansion)
+
 ## v1.2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -96,12 +111,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROD-02 | Phase 9 | Complete |
 | FLEET-01 | Phase 9 | Complete |
 | FLEET-02 | Phase 9 | Complete |
+| LAB-01 | Phase 10 | Complete |
+| LAB-02 | Phase 10 | Complete |
+| LAB-03 | Phase 10 | Complete |
+| LAB-04 | Phase 10 | Complete |
+| LAB-05 | Phase 10 | Complete |
+| SWAP-01 | Phase 11 | Planned |
+| SWAP-02 | Phase 11 | Planned |
+| TRKC-01 | Phase 12 | Planned |
+| TRKC-02 | Phase 12 | Planned |
+| GOVR-01 | Phase 13 | Planned |
+| GOVR-02 | Phase 13 | Planned |
 
 **Coverage:**
-- v1.1 requirements: 20 total
-- Mapped to phases: 20
+- v1.1 requirements: 31 total
+- Mapped to phases: 31
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-07*
-*Last updated: 2026-04-07 after v1.1 roadmap creation — all 20 requirements mapped to phases 5-9*
+*Last updated: 2026-04-09 — added Phase 10 (LAB), Phase 11 (SWAP), Phase 12 (TRKC), Phase 13 (GOVR) requirements*
