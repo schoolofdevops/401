@@ -545,9 +545,7 @@ Or edit `~/.hermes/config.yaml` directly:
 model: claude-haiku-4-5
 ```
 
-> Skills give Hermes structured instructions and mock data is compact JSON, so Haiku produces correct results at near-zero token cost. Upgrade to Sonnet only for the complex reasoning scenarios in Module 10.
-
-> **Note on `HERMES_LAB_MODE`:** This variable (`mock` or `live`) controls whether Hermes uses pre-baked mock data or real infrastructure. It is set per-lab in each module's instructions — do not set it globally.
+> Skills give Hermes structured instructions and kubectl output is compact, so Haiku produces correct results at near-zero token cost. Upgrade to Sonnet only for complex reasoning scenarios.
 
 ---
 
@@ -569,209 +567,29 @@ bash setup/verify.sh
 
 ---
 
-### Step 5: Lab Wrapper Aliases (One-Time Setup)
+### Step 5: Track C Prerequisites (Kubernetes Diagnostic Agent)
 
-From Module 7 onwards, the labs use course-shipped mock wrappers at
-`infrastructure/wrappers/` that intercept `kubectl`, `aws`, and `psql` calls when
-`HERMES_LAB_MODE=mock`. These wrappers serve deterministic fixture data for the
-six Kubernetes failure scenarios, mock AWS responses, and mock psql outputs —
-letting you run the labs offline without a real cluster, AWS account, or database.
-
-#### Why this setup is needed
-
-Hermes spawns its terminal tool as `bash -lic` (login + interactive). Login-shell
-startup reads system and user startup files that **rebuild PATH** — on macOS via
-`/usr/libexec/path_helper`, and on most systems via whatever conda/cargo/rancher/etc.
-added to your `~/.bash_profile`. The net effect: any wrapper directory you prepend
-to `PATH` in your outer shell gets demoted inside Hermes's subshell, and `kubectl`
-resolves to the real binary instead of the mock wrapper.
-
-The clean, portable fix is to use **bash aliases** in `~/.bash_profile` instead
-of relying on `PATH` prepending. Aliases:
-
-- Are preserved through login-shell startup (define them with
-  `shopt -s expand_aliases` enabled)
-- Are expanded by bash's parser at command-execution time, even in `bash -c`
-  invocations (which is what Hermes runs)
-- Leave your global `PATH` untouched, so real `kubectl`/`aws`/`psql` remain
-  accessible via absolute path or `\kubectl` (backslash bypass)
-
-:::important Which shell does this apply to?
-Regardless of your interactive terminal shell (bash, zsh, fish), Hermes always
-spawns `bash -lic` for tool execution. That means:
-
-- The alias block goes in **`~/.bash_profile`** (what bash reads during login
-  startup) — NOT `~/.zshrc`, `~/.bashrc`, or `config.fish`
-- Your login shell being zsh is irrelevant; Hermes invokes bash as a child process
-- If you don't have a `~/.bash_profile`, create an empty one first: `touch ~/.bash_profile`
-:::
-
----
-
-#### Setup for macOS and Linux (including WSL2)
-
-**Step 1: Add the alias block to `~/.bash_profile`**
-
-Copy this whole block into your terminal and run it once:
+**Prerequisites:** You already installed KIND and created the `lab` cluster in a previous module. Before starting Module 7, verify your cluster is running:
 
 ```bash
-cat >> ~/.bash_profile <<'EOF'
-
-# ── Hermes DevOps Course lab wrapper aliases ─────────────────────────────
-# When HERMES_LAB_WRAPPERS is set before launching `hermes chat`, route
-# kubectl/aws/psql through the course's mock wrappers. Needed because
-# Hermes spawns `bash -lic`, which triggers login-shell startup that
-# rebuilds PATH and demotes any wrapper dir we set in PATH.
-if [ -n "${HERMES_LAB_WRAPPERS:-}" ] && [ -d "$HERMES_LAB_WRAPPERS" ]; then
-  shopt -s expand_aliases
-  alias kubectl="$HERMES_LAB_WRAPPERS/mock-kubectl"
-  alias aws="$HERMES_LAB_WRAPPERS/mock-aws"
-  alias psql="$HERMES_LAB_WRAPPERS/mock-psql"
-fi
-# ─────────────────────────────────────────────────────────────────────────
-EOF
+kubectl cluster-info --context kind-lab
+# Expected output: Kubernetes control plane is running at https://127.0.0.1:...
 ```
-
-**Step 2: Per-session export before launching `hermes chat`**
-
-Every time you start a lab session, from your course root directory:
 
 ```bash
-cd /path/to/course
-export HERMES_LAB_WRAPPERS="$(pwd)/infrastructure/wrappers"
-export HERMES_LAB_MODE=mock
-export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
-hermes -p track-c chat
+kubectl get nodes
+# Expected output:
+# NAME                 STATUS   ROLES           AGE   VERSION
+# lab-control-plane    Ready    control-plane   ...   v1.32.x
 ```
 
-`HERMES_LAB_WRAPPERS` is inherited by Hermes's bash subshell. When that subshell
-reads `~/.bash_profile`, the alias block kicks in and defines `kubectl`/`aws`/`psql`
-aliases pointing at the wrapper scripts.
-
----
-
-#### Setup for Windows
-
-On Windows, you have two supported bash environments:
-
-##### Option A: WSL2 (recommended)
-
-WSL2 gives you a full Linux bash environment, which behaves identically to the
-macOS/Linux setup above. Follow the macOS/Linux instructions inside your WSL2
-distribution (Ubuntu, etc.).
-
-**Path note:** Inside WSL2, your course directory might live at a Linux path
-like `/home/<user>/course` or at a Windows-mounted path like
-`/mnt/c/Users/<user>/course`. Either works — `$(pwd)` will produce the correct
-absolute path when you `cd` into the course root first.
-
-Install Hermes inside WSL2 (not on Windows host) so the `bash -lic` subshell
-is the same bash that reads your WSL2 `~/.bash_profile`.
-
-##### Option B: Git Bash (MinGW)
-
-Git Bash is the MSYS2 bash shipped with Git for Windows. It reads
-`C:\Users\<user>\.bash_profile` (accessible as `~/.bash_profile` from within
-Git Bash). Instructions are nearly identical:
-
-**Step 1: Enable symlink support in git** (one-time, needed for the wrapper
-`kubectl`/`aws`/`psql` symlinks that ship in the course repo):
+If the cluster is not running, start it:
 
 ```bash
-git config --global core.symlinks true
+kind create cluster --name lab --config infrastructure/cluster-config.yaml
 ```
 
-Then re-clone the course (or run `git checkout -- infrastructure/wrappers`
-inside an existing clone) so the symlinks get materialized.
-
-**Step 2: Add the alias block to `~/.bash_profile`**
-
-Open Git Bash and run:
-
-```bash
-cat >> ~/.bash_profile <<'EOF'
-
-# ── Hermes DevOps Course lab wrapper aliases ─────────────────────────────
-if [ -n "${HERMES_LAB_WRAPPERS:-}" ] && [ -d "$HERMES_LAB_WRAPPERS" ]; then
-  shopt -s expand_aliases
-  alias kubectl="$HERMES_LAB_WRAPPERS/mock-kubectl"
-  alias aws="$HERMES_LAB_WRAPPERS/mock-aws"
-  alias psql="$HERMES_LAB_WRAPPERS/mock-psql"
-fi
-# ─────────────────────────────────────────────────────────────────────────
-EOF
-```
-
-**Step 3: Per-session export**
-
-Git Bash represents Windows paths with forward slashes and a `/c/` prefix for
-the C: drive:
-
-```bash
-cd /c/Users/<you>/path/to/course
-export HERMES_LAB_WRAPPERS="$(pwd)/infrastructure/wrappers"
-export HERMES_LAB_MODE=mock
-export MOCK_DATA_DIR="$(pwd)/infrastructure/mock-data"
-hermes -p track-c chat
-```
-
-**Step 4: Tell Hermes where Git Bash lives (if not auto-detected)**
-
-Hermes looks for Git Bash on Windows automatically, but if it can't find it
-you can point it explicitly:
-
-```bash
-export HERMES_GIT_BASH_PATH="/c/Program Files/Git/bin/bash.exe"
-```
-
-Add this to `~/.bash_profile` to make it permanent.
-
-**Known Windows limitations:**
-- KIND clusters on Windows require Docker Desktop with WSL2 backend (recommended)
-  or Podman Desktop — they will not work with Git Bash alone
-- Some lab steps that use `chmod`, `find -exec`, or Linux-only utilities may
-  need WSL2 rather than Git Bash
-- If you hit shell-level compatibility issues in Git Bash, switch to WSL2
-
----
-
-#### Verify the setup (all platforms)
-
-After setup, launch a fresh `hermes chat` session and ask the agent:
-
-```
-Run: type kubectl && kubectl get pods 2>&1 | head -8
-```
-
-**Expected output:**
-
-```
-kubectl is aliased to `<course-dir>/infrastructure/wrappers/mock-kubectl'
-
-╔══════════════════════════════════════════╗
-║            [ MOCK MODE ]                 ║
-║   Data source: pre-baked JSON files      ║
-║   Set HERMES_LAB_MODE=live for real K8s  ║
-╚══════════════════════════════════════════╝
-{
-  "kind": "PodList",
-  ...
-}
-```
-
-If you see real cluster pods (or `connection refused`) instead of the mock
-fixtures, check:
-
-1. Did you `export HERMES_LAB_WRAPPERS="$(pwd)/infrastructure/wrappers"` in
-   the **same shell** where you launched `hermes chat`?
-2. Did you add the alias block to **`~/.bash_profile`** (not `~/.zshrc`,
-   `~/.bashrc`, or `~/.profile`)?
-3. On Windows Git Bash: is `core.symlinks=true` set? Do the wrapper files
-   actually exist as executable scripts (not as text files containing the
-   symlink target)?
-4. Is the wrapper directory path correct? Run `echo $HERMES_LAB_WRAPPERS` in
-   your outer shell and confirm it points at a real directory containing
-   `mock-kubectl`, `mock-aws`, `mock-psql`.
+That's it -- no environment variables, no wrapper setup. You will use the real KIND cluster for all Track C labs (Modules 7, 8, 9+).
 
 ---
 
