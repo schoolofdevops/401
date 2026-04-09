@@ -151,7 +151,10 @@ Plans:
   2. Track C lab has zero mock CloudWatch steps and zero HERMES_LAB_MODE references — all triggers use real infrastructure
   3. Module 11 README references the Track C lab and lists KIND cluster as prerequisite
   4. AlertManager + Prometheus setup is self-contained within the lab (not assumed from elsewhere)
-**Plans:** 0/? plans (to be determined)
+**Plans:** 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — Create LAB-track-c-kubernetes.mdx with all 5 trigger types (cron, AlertManager, CronJob, GitHub, Telegram) using real KIND infrastructure
+- [ ] 12-02-PLAN.md — Update README.mdx with Track C lab reference, track-aware prerequisites (Module 8 + KIND for Track C)
 
 ### Phase 13: Module 13 Governance Refactor — Wrapper-Free Track C
 **Goal**: Refactor Module 13 governance lab so Track C demonstrates L1-L4 progression using SOUL.md behavioral enforcement as the primary mechanism — no dependency on mock-kubectl wrapper allowlists
@@ -179,7 +182,7 @@ Plans:
 | 9. Multi-Agent Workflows & Production | v1.1 | 2/2 | Complete    | 2026-04-07 |
 | 10. Labs 7-8 Real KIND Refactor | v1.1 | 5/5 | Complete   | 2026-04-09 |
 | 11. Module 11↔12 Swap | v1.1 | 2/2 | Complete   | 2026-04-09 |
-| 12. Module 11 Track C Triggers Lab | v1.1 | 0/? | Planned | — |
+| 12. Module 11 Track C Triggers Lab | v1.1 | 0/2 | Planned | — |
 | 13. Module 13 Governance Refactor | v1.1 | 0/? | Planned | — |
 
 ---
