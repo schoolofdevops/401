@@ -135,12 +135,6 @@ grep -c '\[' ~/.hermes/profiles/track-c/SOUL.md
 $EDITOR ~/.hermes/profiles/track-c/SOUL.md
 ```
 
-Then verify no unresolved placeholders:
-
-```bash
-grep -c '\[' ~/.hermes/profiles/track-c/SOUL.md
-# Expected: 0
-```
 
 ---
 
@@ -185,9 +179,6 @@ ls ~/.hermes/profiles/track-c/skills/$SKILL_NAME/
 Before running the agent against failures, verify the baseline cluster is healthy.
 
 ```bash
-# Verify KIND cluster is still running
-kubectl cluster-info --context kind-lab
-
 # Get all nodes
 kubectl get nodes
 # Expected: kind-control-plane   Ready   control-plane
@@ -208,7 +199,7 @@ hermes -p track-c chat
 **Ask your agent:**
 
 ```
-Who are you and what is your operating mode?
+Who are you and which kubernetes related skills you have access to? 
 ```
 
 **Expected:** Kiran introduces itself as a Kubernetes operations agent, reports that it's connected to a real KIND cluster (no mock mode), and describes its scope: detecting pod failures, OOM events, and node pressure.
@@ -398,10 +389,6 @@ ls ~/.hermes/profiles/track-c/
 ls ~/.hermes/profiles/track-c/skills/
 # Expected: <your-skill-name>/
 
-# 3. No placeholders remain in SOUL.md
-grep -c '\[' ~/.hermes/profiles/track-c/SOUL.md
-# Expected: 0
-
 # 4. Config has correct approval settings
 grep "mode:" ~/.hermes/profiles/track-c/config.yaml
 # Expected: mode: manual
@@ -436,16 +423,3 @@ Continue to **Module 9: Design Patterns** to learn about multi-agent architectur
 
 ---
 
-## Cleanup (Optional)
-
-To reclaim resources after labs, you can optionally delete the KIND cluster:
-
-```bash
-kind delete cluster --name hermes-lab
-```
-
-Re-create it before the next lab if needed:
-
-```bash
-kind create cluster --name hermes-lab && kind export kubeconfig --name hermes-lab
-```
