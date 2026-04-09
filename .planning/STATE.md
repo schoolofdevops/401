@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Realistic Agents & Production Workflows
 status: Milestone complete
-stopped_at: Completed 10-04-PLAN.md — SETUP.mdx refactor (remove mock-mode aliases and env vars)
-last_updated: "2026-04-09T15:10:23.541Z"
+stopped_at: Completed 10-05-PLAN.md — infrastructure archival (deprecation notices for wrappers/ and mock-data/)
+last_updated: "2026-04-09T15:15:23.615Z"
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 19
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 # Project State
@@ -77,6 +77,7 @@ Plan: Not started
 | Phase 09-multi-agent-workflows-production P02 | 12 | 3 tasks | 5 files |
 | Phase 10 P03 | 2min | 1 tasks | 1 files |
 | Phase 10 P04 | 3min | 1 tasks | 1 files |
+| Phase 10 P05 | 2min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -174,6 +175,7 @@ Recent decisions affecting current work:
 - [Phase 09-multi-agent-workflows-production]: D-23: Phase 9 Plan 02 is the final v1.1 content deliverable — milestone ready for /gsd:audit-uat and /gsd:complete-milestone
 - [Phase 10]: OPTION 1 chosen: Track C removed from Module 10 entirely (not repositioned as optional) for cleaner learner pathway
 - [Phase 10]: SETUP.mdx mock-mode removal: 194 lines removed, replaced with 12-line KIND cluster check for Track C
+- [Phase 10]: Deprecation-not-deletion pattern: archive unused infrastructure with README.md notices instead of removing files
 
 ### Pending Todos
 
@@ -199,6 +201,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-09T15:10:23.538Z
-Stopped at: Completed 10-04-PLAN.md — SETUP.mdx refactor (remove mock-mode aliases and env vars)
+Last session: 2026-04-09T15:15:23.611Z
+Stopped at: Completed 10-05-PLAN.md — infrastructure archival (deprecation notices for wrappers/ and mock-data/)
 Resume file: None
