@@ -270,41 +270,32 @@ Next tick: in ~51s
 
 You used `hermes cron run` to fire an agent manually. Now you wire a REAL alert source: the Prometheus + AlertManager stack on your KIND cluster, firing on a real broken pod. This is the moment Hermes stops being a chat agent and starts being an incident-response agent -- alerts arrive without you typing anything.
 
-### Sub-step 2a: Enable AlertManager in the Helm release
+### Sub-step 2a: Verify the Prometheus + AlertManager stack
 
-Verify the Helm values have AlertManager enabled:
-
-```bash
-yq '.alertmanager.enabled' infrastructure/helm/prometheus-lab-values.yaml
-```
-
-Expected output: `true`
-
-Apply the updated values to install (or upgrade) the Prometheus stack with AlertManager enabled:
+The Prometheus stack was installed during initial course setup (`make monitoring` in the
+reference-app directory, Helm release name `monitoring`). Verify it is running:
 
 ```bash
-helm upgrade --install kube-prometheus prometheus-community/kube-prometheus-stack \
-  --namespace monitoring --create-namespace \
-  -f infrastructure/helm/prometheus-lab-values.yaml
+# Verify Prometheus and AlertManager pods are running
+kubectl get pods -n monitoring | grep -E "prometheus|alertmanager"
+# Expected: prometheus-monitoring-* and alertmanager-monitoring-* pods in Running state
+
+# Verify AlertManager is accessible
+curl -s http://localhost:30093/-/healthy
+# Expected: OK
 ```
 
-Wait for the AlertManager pods to reach Ready:
-
+:::note If Prometheus is not running
+If you don't see the monitoring pods, install the stack:
 ```bash
-kubectl wait --for=condition=Ready pod \
-  -l app.kubernetes.io/name=alertmanager \
-  -n monitoring --timeout=120s
+cd reference-app && make monitoring && cd ..
 ```
-
-Expected output:
-
-```
-pod/alertmanager-kube-prometheus-alertmanager-0 condition met
-```
+This installs kube-prometheus-stack with Helm release name `monitoring`.
+:::
 
 ### Sub-step 2b: Apply the PrometheusRule
 
-Apply the PrometheusRule that fires when a pod in the `k8s-trouble-crashloop` namespace restarts more than 2 times in 2 minutes:
+Apply the PrometheusRule that fires when a pod in the `k8s-trouble-crashloop` namespace has more than 1 restart:
 
 ```bash
 kubectl apply -f infrastructure/scenarios/k8s/alertmanager/prometheus-rules.yaml
@@ -331,38 +322,70 @@ PodCrashLooping
 Open the Prometheus UI at http://localhost:30091 and navigate to Status then Rules. You should see the `hermes-lab.k8s-crashloop` group with the `PodCrashLooping` rule listed and state "inactive" (no broken pods yet).
 
 :::tip Why the `release` label matters
-The PrometheusRule manifest includes a `labels: release: monitoring` field. The kube-prometheus-stack Helm chart configures Prometheus to ONLY load rules whose label matches the Helm release name. In this course the release is named `kube-prometheus` (from the `helm upgrade --install kube-prometheus ...` command above), so the label must match. Without it, your rule would be silently ignored -- `kubectl get prometheusrule` would show it, but the Prometheus UI Rules page would not. Verify the expected label with: `kubectl get prometheus -n monitoring -o jsonpath='{.items[0].spec.ruleSelector}'`
+The PrometheusRule manifest includes `labels: release: monitoring`. The kube-prometheus-stack
+Helm chart configures Prometheus to ONLY load rules whose `release` label matches the Helm
+release name. In this course the release is named `monitoring` (from `make monitoring`), so
+the label must match. Without it, your rule would be silently ignored — `kubectl get prometheusrule`
+would show it, but the Prometheus UI Rules page would not. Verify with:
+`kubectl get prometheus -n monitoring -o jsonpath='{.items[0].spec.ruleSelector}'`
 :::
 
-### Sub-step 2c: Verify the gateway and subscribe
+### Sub-step 2c: Configure the webhook subscription and restart the gateway
 
-Your gateway should already be running from Step 1 (cron setup). Verify it:
+The webhook subscription needs two settings that differ from the defaults:
 
-```bash
-hermes gateway status
-# Expected: Gateway running on port 8644 (or similar)
+1. **No HMAC signature** — AlertManager doesn't sign its POST requests, so the subscription
+   must use `INSECURE_NO_AUTH` to skip signature validation
+2. **Deliver to log** — webhook-triggered output uses `log` delivery (saved to gateway log),
+   not `local` (which is cron-only)
 
-# If the gateway is NOT running, start it in a separate terminal:
-# hermes gateway run
-```
-
-Now subscribe the AlertManager webhook (in your current terminal — the gateway is already
-running in the background or another terminal):
+Edit the subscription file directly (or create it if it doesn't exist):
 
 ```bash
-hermes webhook subscribe alertmanager \
-  --events "alertmanager-alert" \
-  --prompt "AlertManager PodCrashLooping alert fired. Details: {alerts}. Load the sre-k8s-pod-health skill and diagnose the affected pod in the namespace shown in the alert labels." \
-  --skill "sre-k8s-pod-health" \
-  --deliver local
-
-# Verify the subscription is active
-hermes webhook list
+cat > ~/.hermes/webhook_subscriptions.json << 'EOF'
+{
+  "alertmanager": {
+    "description": "AlertManager PodCrashLooping webhook",
+    "events": [],
+    "secret": "INSECURE_NO_AUTH",
+    "prompt": "AlertManager PodCrashLooping alert fired. Details: {alerts}. Load the sre-k8s-pod-health skill and diagnose the affected pod in the namespace shown in the alert labels.",
+    "skills": [
+      "sre-k8s-pod-health"
+    ],
+    "deliver": "log"
+  }
+}
+EOF
 ```
 
 :::warning CRITICAL: `{alerts}` not `{alerts[0].labels.pod}`
-Notice the `{alerts}` placeholder in the subscribe command above -- NOT `{alerts[0].labels.pod}`. The Hermes prompt template only supports dot-notation access to dict keys, NOT array index access. The agent receives the full `alerts[]` JSON array as a string and parses it to find the pod and namespace. If you accidentally use `{alerts[0].labels.pod}`, it will render as a literal string -- the agent will see that text instead of the pod name.
+The Hermes prompt template only supports dot-notation access to dict keys, NOT array index
+access. The agent receives the full `alerts[]` JSON array as a string and parses it to find
+the pod and namespace. If you use `{alerts[0].labels.pod}`, it renders as a literal string.
 :::
+
+:::info Why `INSECURE_NO_AUTH`?
+In production, webhook endpoints should validate HMAC signatures to prevent unauthorized
+requests from triggering agent runs. AlertManager does not support HMAC signing natively.
+For lab work, `INSECURE_NO_AUTH` skips validation. In production, you would place
+AlertManager behind a reverse proxy that adds HMAC signatures, or use network-level
+access control (Kubernetes NetworkPolicy, firewall rules).
+:::
+
+:::info Why `"events": []`?
+AlertManager POSTs do not include event-type headers (`X-GitHub-Event`, `X-GitLab-Event`).
+An empty events list means "accept all POSTs to this route" — no event filtering.
+:::
+
+Now restart the gateway to pick up the new subscription:
+
+```bash
+hermes gateway stop
+hermes gateway start
+
+# Verify the subscription loaded
+hermes webhook list
+```
 
 ### Sub-step 2d: Apply the crashloop scenario and observe
 
@@ -376,36 +399,101 @@ kubectl apply -f infrastructure/scenarios/k8s/02-crashloop-backoff.yaml
 watch kubectl get pods -n k8s-trouble-crashloop
 ```
 
+### How the AlertManager → Hermes chain works
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  KIND Cluster                                                        │
+│                                                                      │
+│  ┌─────────────┐    scrapes     ┌──────────────┐                     │
+│  │ kube-state-  │──────────────▶│  Prometheus   │                    │
+│  │ metrics      │   every 30s   │  :30091       │                    │
+│  └─────────────┘                └──────┬───────┘                     │
+│        ▲                               │ rule fires                  │
+│        │ watches                        │ (restarts > 1)             │
+│  ┌─────┴───────┐                ┌──────▼───────┐                     │
+│  │ crasher pod  │                │ AlertManager  │                    │
+│  │ CrashLoop    │                │  :30093       │                    │
+│  │ BackOff      │                └──────┬───────┘                     │
+│  └─────────────┘                        │ POST webhook               │
+│                                         │                            │
+└─────────────────────────────────────────┼────────────────────────────┘
+                                          │
+                                          ▼
+                              ┌───────────────────────┐
+                              │  Hermes Gateway       │  ← your Mac
+                              │  :8644                │
+                              │  /webhooks/alertmanager│
+                              └───────────┬───────────┘
+                                          │ spawns agent
+                                          ▼
+                              ┌───────────────────────┐
+                              │  Hermes Agent         │
+                              │  loads sre-k8s-pod-   │
+                              │  health skill         │
+                              │  runs kubectl get/    │
+                              │  describe/logs        │
+                              │  produces diagnosis   │
+                              └───────────────────────┘
+```
+
 ### Expected timeline
 
 - **t=0s**: pod applied, status `ContainerCreating`
 - **t=10s**: pod status `CrashLoopBackOff`, restartCount=1
-- **t=60s**: restartCount=4-6
-- **t=90s**: PromQL `increase()` exceeds 2 over the 2-min window
-- **t=120s**: AlertManager dispatches; Terminal 1 shows `Received alertmanager-alert event`
-- **t=125s**: Hermes spawns agent run; `sre-k8s-pod-health` loads; diagnosis appears
+- **t=30s**: Prometheus scrapes kube-state-metrics, sees restartCount > 1
+- **t=60s**: Rule fires → alert goes PENDING → FIRING (no `for` delay)
+- **t=70s**: AlertManager dispatches POST to `host.docker.internal:8644`
+- **t=75s**: Hermes gateway accepts webhook, spawns agent run
+- **t=110s**: Agent completes diagnosis (kubectl calls + LLM reasoning ~35s)
 
-Open the AlertManager UI at http://localhost:30093 to see the active alert and its receiver routing.
+Open the AlertManager UI at http://localhost:30093 to see the active alert and its receiver
+routing to `hermes-webhook`.
 
-### Where to see the agent's output
-
-**Real-time (Terminal 1):** The gateway runs in the foreground, so you see the agent's
-tool calls (`kubectl get pods`, `kubectl describe pod`, etc.) stream live as they execute.
-This is your primary feedback — watch Terminal 1 after AlertManager dispatches.
-
-**Saved report:** With `--deliver local`, the agent's final diagnosis is saved to a file:
+### How to verify each step
 
 ```bash
-# Webhook-triggered outputs go to the misc/ directory (no cron job ID)
-ls ~/.hermes/cron/output/misc/
-cat ~/.hermes/cron/output/misc/*.md
+# 1. Pod is crashing?
+kubectl get pods -n k8s-trouble-crashloop
+# Expected: CrashLoopBackOff with restarts > 1
+
+# 2. Prometheus sees the metric?
+# Open http://localhost:30091 → Query tab → run:
+# kube_pod_container_status_restarts_total{namespace="k8s-trouble-crashloop"}
+# Expected: value > 1
+
+# 3. Alert is firing?
+# Open http://localhost:30091 → Alerts tab
+# Expected: PodCrashLooping in FIRING state
+
+# 4. AlertManager received the alert?
+# Open http://localhost:30093
+# Expected: PodCrashLooping alert with receiver hermes-webhook
+
+# 5. Gateway received the POST?
+tail -20 ~/.hermes/logs/gateway.log | grep -i "accepted\|alertmanager"
+# Expected: {"status": "accepted", "route": "alertmanager", ...}
+
+# 6. Agent ran and produced output?
+tail -50 ~/.hermes/logs/gateway.log | grep -i "response ready"
+# Expected: response ready: platform=webhook ... response=NNNN chars
+```
+
+### Where to see the agent's diagnosis
+
+With `--deliver log`, the agent's full diagnosis is written to the gateway log:
+
+```bash
+# View the full agent response
+tail -200 ~/.hermes/logs/gateway.log | grep -A100 "Response for webhook:alertmanager"
 ```
 
 :::tip Cron output vs webhook output
-Both use `--deliver local` and both save to `~/.hermes/cron/output/`, but in different
-subdirectories:
-- **Cron jobs:** `~/.hermes/cron/output/<job-id>/` (filed by job ID)
-- **Webhook triggers:** `~/.hermes/cron/output/misc/` (no job ID to file under)
+These use different delivery mechanisms:
+- **Cron jobs** (`--deliver local`): saved to `~/.hermes/cron/output/<job-id>/*.md`
+- **Webhook triggers** (`--deliver log`): written to `~/.hermes/logs/gateway.log`
+
+In production, both can deliver to Telegram or Slack instead.
 :::
 
 :::info Teaching point -- cron vs webhook

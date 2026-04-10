@@ -23,13 +23,13 @@ spec:
       rules:
         - alert: PodCrashLooping
           expr: |
-            increase(kube_pod_container_status_restarts_total{namespace="k8s-trouble-crashloop"}[2m]) > 2
-          for: 30s
+            kube_pod_container_status_restarts_total{namespace="k8s-trouble-crashloop"} > 1
+          for: 0s
           labels:
             severity: warning
             track: c
             trigger_source: alertmanager
           annotations:
             summary: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is crash-looping"
-            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} has restarted more than 2 times in 2 minutes."
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} has restarted {{ $value }} times."
             runbook_url: "https://hermes-lab.local/runbook/k8s-crashloop"
