@@ -49,6 +49,24 @@ Verify Hermes gateway capability:
 hermes --version
 ```
 
+Start the gateway (runs in the background as a service):
+
+```bash
+hermes gateway start
+hermes gateway status
+# Expected: Gateway running
+```
+
+:::tip Watching gateway logs
+Throughout this lab, keep a **separate terminal** open with:
+```bash
+tail -f ~/.hermes/logs/gateway.log
+```
+This is your real-time view into everything the gateway does — cron ticks, webhook
+receipts, agent runs, delivery results. When something doesn't work, this is the
+first place to check.
+:::
+
 ---
 
 ## GUIDED PHASE -- 70 minutes
