@@ -836,7 +836,7 @@ hermes cron list
 
 # 2. AlertManager -- Prometheus stack and PrometheusRule deployed
 kubectl get pods -n monitoring -l app.kubernetes.io/name=alertmanager
-# Expected: alertmanager-kube-prometheus-alertmanager-0  Running
+# Expected: alertmanager-monitoring-kube-prometheus-alertmanager-0  Running
 
 kubectl get prometheusrule -n monitoring hermes-lab-rules
 # Expected: row exists
@@ -987,13 +987,14 @@ hermes cron delete <name>
 # Webhook management
 hermes gateway run                      # Start the webhook gateway
 curl http://localhost:8644/health       # Verify endpoint is live
-hermes webhook subscribe <name> --events ... --prompt ... --deliver local
 hermes webhook list
 hermes webhook test <name> --payload '{"key": "value"}'
 hermes webhook unsubscribe <name>
+# AlertManager: edit ~/.hermes/webhook_subscriptions.json directly
+#   (set secret=INSECURE_NO_AUTH, events=[], deliver=log)
 
 # Trigger-specific commands
-hermes webhook subscribe alertmanager --events "alertmanager-alert" --prompt "..." --skill "..." --deliver local
+# AlertManager webhook: configure via webhook_subscriptions.json (see Step 2c)
 hermes webhook subscribe github --events "pull_request" --prompt "..." --deliver github_comment
 kubectl apply -f infrastructure/scenarios/k8s/cronjob/agent-health-check.yaml -l track=track-c
 ./infrastructure/scenarios/k8s/github-webhook/smee-setup.sh
