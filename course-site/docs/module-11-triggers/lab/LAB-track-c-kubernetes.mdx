@@ -334,17 +334,22 @@ Open the Prometheus UI at http://localhost:30091 and navigate to Status then Rul
 The PrometheusRule manifest includes a `labels: release: monitoring` field. The kube-prometheus-stack Helm chart configures Prometheus to ONLY load rules whose label matches the Helm release name. In this course the release is named `kube-prometheus` (from the `helm upgrade --install kube-prometheus ...` command above), so the label must match. Without it, your rule would be silently ignored -- `kubectl get prometheusrule` would show it, but the Prometheus UI Rules page would not. Verify the expected label with: `kubectl get prometheus -n monitoring -o jsonpath='{.items[0].spec.ruleSelector}'`
 :::
 
-### Sub-step 2c: Start the gateway and subscribe
+### Sub-step 2c: Verify the gateway and subscribe
 
-Run the following in separate terminals:
+Your gateway should already be running from Step 1 (cron setup). Verify it:
 
 ```bash
-# Terminal 1: Start the gateway in the foreground so you see live POSTs arrive
-hermes gateway run
+hermes gateway status
+# Expected: Gateway running on port 8644 (or similar)
+
+# If the gateway is NOT running, start it in a separate terminal:
+# hermes gateway run
 ```
 
+Now subscribe the AlertManager webhook (in your current terminal — the gateway is already
+running in the background or another terminal):
+
 ```bash
-# Terminal 2: Subscribe the alertmanager webhook
 hermes webhook subscribe alertmanager \
   --events "alertmanager-alert" \
   --prompt "AlertManager PodCrashLooping alert fired. Details: {alerts}. Load the sre-k8s-pod-health skill and diagnose the affected pod in the namespace shown in the alert labels." \
