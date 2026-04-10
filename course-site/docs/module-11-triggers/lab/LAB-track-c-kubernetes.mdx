@@ -81,10 +81,11 @@ hermes -p track-c cron create "0 8 * * *" \
   --deliver local
 ```
 
-:::caution Profile flag is required
-The `-p track-c` flag tells Hermes to use the Track C profile, which has the
-`sre-k8s-pod-health` skill installed. Without it, the cron job runs under the default
-profile and will report "skill not found" — producing an empty output file.
+:::caution Profile flag is required on EVERY hermes command
+The `-p track-c` flag tells Hermes to use the Track C profile. You must include it on
+**every** `hermes` command — `cron create`, `cron list`, `cron run`, `cron pause`, etc.
+Without it, Hermes uses the default profile which does not have your skills installed.
+Symptoms: `cron list` shows "No scheduled jobs", or cron output says "skill not found."
 :::
 
 ### What each argument does
@@ -107,7 +108,7 @@ they are keyword arguments.
 ### Verify the job was registered
 
 ```bash
-hermes cron list
+hermes -p track-c cron list
 ```
 
 Expected output:
@@ -130,18 +131,18 @@ even if you are not at your terminal.
 You scheduled the job for 8 AM -- but you do not need to wait. Manual trigger fires the job
 immediately and is your primary verification tool.
 
-Note the **Job ID** (the hex hash like `f8081a091378`) from `hermes cron list` -- `hermes cron run`
+Note the **Job ID** (the hex hash like `f8081a091378`) from `hermes -p track-c cron list` -- `hermes -p track-c cron run`
 takes the job ID, not the name:
 
 ```bash
-# Use the Job ID from hermes cron list output (first column)
-hermes cron run <job-id>
-# Example: hermes cron run f8081a091378
+# Use the Job ID from hermes -p track-c cron list output (first column)
+hermes -p track-c cron run <job-id>
+# Example: hermes -p track-c cron run f8081a091378
 ```
 
 **How cron execution works:**
 
-`hermes cron run` does NOT execute the job in your terminal. It schedules the job
+`hermes -p track-c cron run` does NOT execute the job in your terminal. It schedules the job
 for the gateway's next scheduler tick (within 60 seconds). The gateway runs the job
 in its own thread, and with `--deliver local`, the output is saved to a file.
 
@@ -184,13 +185,13 @@ of whether the agent reports findings or stays silent. Check the file to see wha
 Pause the job without deleting it:
 
 ```bash
-hermes cron pause <job-id>
+hermes -p track-c cron pause <job-id>
 ```
 
 Check the paused state:
 
 ```bash
-hermes cron status
+hermes -p track-c cron status
 ```
 
 Expected output shows the job in paused state:
@@ -205,13 +206,13 @@ Next tick: in ~43s
 Resume the job:
 
 ```bash
-hermes cron resume <job-id>
+hermes -p track-c cron resume <job-id>
 ```
 
 Verify it is back to scheduled state:
 
 ```bash
-hermes cron status
+hermes -p track-c cron status
 ```
 
 Expected:
@@ -227,7 +228,7 @@ Next tick: in ~51s
 
 ## Step 2: AlertManager -- Prometheus Stack + Live Webhook (20 min)
 
-You used `hermes cron run` to fire an agent manually. Now you wire a REAL alert source: the Prometheus + AlertManager stack on your KIND cluster, firing on a real broken pod. This is the moment Hermes stops being a chat agent and starts being an incident-response agent -- alerts arrive without you typing anything.
+You used `hermes -p track-c cron run` to fire an agent manually. Now you wire a REAL alert source: the Prometheus + AlertManager stack on your KIND cluster, firing on a real broken pod. This is the moment Hermes stops being a chat agent and starts being an incident-response agent -- alerts arrive without you typing anything.
 
 ### Sub-step 2a: Enable AlertManager in the Helm release
 
@@ -673,10 +674,10 @@ Run these commands to confirm all 5 trigger types completed successfully:
 
 ```bash
 # 1. Cron -- scheduler running and daily job registered
-hermes cron status
+hermes -p track-c cron status
 # Expected: Scheduler: running, daily-k8s-check listed
 
-hermes cron list
+hermes -p track-c cron list
 # Expected: daily-k8s-check  0 8 * * *  sre-k8s-pod-health  scheduled
 
 # 2. AlertManager -- Prometheus stack and PrometheusRule deployed
@@ -732,7 +733,7 @@ hermes -p track-c cron create "*/5 * * * *" \
 Trigger it manually to see the output:
 
 ```bash
-hermes cron run <job-id>   # use the ID from hermes cron list
+hermes -p track-c cron run <job-id>   # use the ID from hermes -p track-c cron list
 ```
 
 **Questions to explore:**
@@ -821,13 +822,13 @@ Open a PR that modifies a YAML file in your test repo. The agent should:
 
 ```bash
 # Cron management
-hermes cron status                      # Always run at session start
+hermes -p track-c cron status                      # Always run at session start
 hermes -p track-c cron create "<schedule>" "<prompt>" --name ... --skill ... --deliver local
-hermes cron list
-hermes cron run <job-id>            # Manual fire (use ID from cron list, not name)
-hermes cron pause <job-id>
-hermes cron resume <job-id>
-hermes cron delete <name>
+hermes -p track-c cron list
+hermes -p track-c cron run <job-id>            # Manual fire (use ID from cron list, not name)
+hermes -p track-c cron pause <job-id>
+hermes -p track-c cron resume <job-id>
+hermes -p track-c cron delete <name>
 
 # Webhook management
 hermes gateway run                      # Start the webhook gateway
