@@ -382,6 +382,27 @@ watch kubectl get pods -n k8s-trouble-crashloop
 
 Open the AlertManager UI at http://localhost:30093 to see the active alert and its receiver routing.
 
+### Where to see the agent's output
+
+**Real-time (Terminal 1):** The gateway runs in the foreground, so you see the agent's
+tool calls (`kubectl get pods`, `kubectl describe pod`, etc.) stream live as they execute.
+This is your primary feedback — watch Terminal 1 after AlertManager dispatches.
+
+**Saved report:** With `--deliver local`, the agent's final diagnosis is saved to a file:
+
+```bash
+# Webhook-triggered outputs go to the misc/ directory (no cron job ID)
+ls ~/.hermes/cron/output/misc/
+cat ~/.hermes/cron/output/misc/*.md
+```
+
+:::tip Cron output vs webhook output
+Both use `--deliver local` and both save to `~/.hermes/cron/output/`, but in different
+subdirectories:
+- **Cron jobs:** `~/.hermes/cron/output/<job-id>/` (filed by job ID)
+- **Webhook triggers:** `~/.hermes/cron/output/misc/` (no job ID to file under)
+:::
+
 :::info Teaching point -- cron vs webhook
 
 You now have both trigger mechanisms running:
