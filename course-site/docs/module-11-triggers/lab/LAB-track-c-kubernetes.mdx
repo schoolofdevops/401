@@ -162,16 +162,36 @@ hermes cron run <job-id>
 
 **How cron execution works:**
 
-`hermes cron run` does NOT execute the job in your terminal. It schedules the job
-for the gateway's next scheduler tick (within 60 seconds). The gateway runs the job
-in its own thread, and with `--deliver local`, the output is saved to a file.
+`hermes cron run` does NOT execute the job in your terminal. It marks the job as "due"
+and waits for the gateway's scheduler to pick it up on the next tick (up to 60 seconds).
+The gateway runs the job in its own thread, and with `--deliver local`, the output is
+saved to a file.
 
-**Check your gateway terminal** -- you should see execution status in the gateway logs.
-
-**Read the output file:**
+If you don't want to wait for the next tick, force it immediately:
 
 ```bash
-# Wait ~60 seconds for the gateway scheduler to pick up the job, then:
+# Option 1: Wait for the gateway's scheduler (~60 seconds)
+hermes cron run <job-id>
+# then wait...
+
+# Option 2: Force the tick immediately (recommended for lab work)
+hermes cron run <job-id>
+hermes cron tick
+```
+
+`hermes cron tick` manually triggers the scheduler — it checks for any due jobs and
+executes them right now. You will see the agent's tool calls (kubectl commands) stream
+to your terminal in real time. This is the fastest way to verify your cron job works.
+
+:::tip When to use `cron tick`
+Use `hermes cron tick` during lab work whenever you want to see results immediately
+after `hermes cron run`. In production, the gateway runs ticks automatically every
+60 seconds — you never need to call `tick` manually.
+:::
+
+**Read the saved output file:**
+
+```bash
 ls ~/.hermes/cron/output/
 # You should see a directory named with your job ID
 
