@@ -800,7 +800,9 @@ Expected: bot replies with the list of available commands.
 /diagnose k8s-trouble-crashloop
 ```
 
-Watch the gateway terminal -- you should see the message arrive and the agent run. Within ~10 seconds, the bot replies in the same Telegram chat thread with the agent's findings from running `kubectl get pods -n k8s-trouble-crashloop` against your KIND cluster.
+Watch the gateway terminal -- you should see the message arrive and the agent run. Within
+~30 seconds, the bot replies in the same Telegram chat thread with the agent's findings
+from running `kubectl get pods -n k8s-trouble-crashloop` against your KIND cluster.
 
 5. Send `/status` to see current gateway state:
 
@@ -810,8 +812,44 @@ Watch the gateway terminal -- you should see the message arrive and the agent ru
 
 Expected: bot replies with scheduler status, active webhook subscriptions, and gateway health.
 
-:::tip All slash commands are automatic
-The Hermes Telegram adapter passes the entire slash command message through to the agent as the prompt. There is no per-command Python registration needed. The adapter handles ALL slash commands automatically. Experiment: send `/whatever` and the agent will see exactly that text and respond.
+### Sub-step 5e: Conversational chat via Telegram
+
+The Telegram bot is not limited to slash commands -- it is a full conversational interface
+to your Hermes agent. Any free-form text you type (without a `/` prefix) goes directly
+to the agent as a prompt. This is the same experience as `hermes -p track-c chat`, but
+from your phone.
+
+Try these conversational prompts:
+
+```
+Check all pods in the default namespace and tell me if anything looks unhealthy
+```
+
+```
+What nodes are in my cluster and how much CPU is available?
+```
+
+```
+I just deployed a new version of the API. Can you verify the rollout status?
+```
+
+The agent receives your message, runs kubectl commands against your KIND cluster, and
+replies in the same Telegram chat. You are talking to a real Kubernetes diagnostic agent
+from your phone.
+
+:::tip Slash commands vs free-form text
+Both work. Slash commands like `/diagnose` are just text starting with `/` -- the adapter
+passes them through to the agent as-is. Free-form text (no `/` prefix) works identically.
+Use whichever feels natural. Slash commands are useful for quick, predefined actions;
+free-form text is better for open-ended investigation where you want to ask follow-up
+questions.
+:::
+
+:::info Chat history in Telegram
+Each Telegram conversation maintains session context within the gateway's lifetime.
+Follow-up messages like "what about the kube-system namespace?" work because the agent
+remembers the prior exchange. If you restart the gateway (`hermes gateway stop` then
+`hermes gateway start`), the session resets.
 :::
 
 ### Cleanup
@@ -819,6 +857,148 @@ The Hermes Telegram adapter passes the entire slash command message through to t
 ```bash
 hermes gateway stop
 ```
+
+---
+
+## Step 6: Slack Integration (Optional -- 15 min)
+
+Slack is the production-grade chat platform for most DevOps teams. This step is optional
+because it requires Slack workspace admin access to create an app. If you have admin access,
+this gives you the same conversational agent experience as Telegram but inside your team's
+Slack workspace.
+
+:::note Skip this step if...
+- You don't have Slack workspace admin access
+- You're a solo Udemy learner without a team Slack
+- You've already demonstrated the chat interface via Telegram
+
+The Telegram bot from Step 5 covers the same learning objectives. Slack adds production
+realism but is not required for course completion.
+:::
+
+### Sub-step 6a: Create a Slack App (~5 min)
+
+1. Go to [https://api.slack.com/apps](https://api.slack.com/apps) and click **Create New App** → **From Scratch**
+2. Name it (e.g., `Hermes Lab Bot`) and select your workspace
+
+3. **Enable Socket Mode:**
+   - Settings → Socket Mode → Enable
+   - Create an App-Level Token with scope `connections:write`
+   - Copy the `xapp-...` token -- this is your **SLACK_APP_TOKEN**
+
+4. **Add Bot Token Scopes:**
+   - Features → OAuth & Permissions → Scopes → Bot Token Scopes
+   - Add these scopes:
+     - `chat:write` (send messages)
+     - `app_mentions:read` (respond when mentioned)
+     - `channels:history`, `channels:read` (read channel messages)
+     - `groups:history` (private channels -- optional)
+     - `im:history`, `im:read`, `im:write` (direct messages)
+     - `users:read` (resolve user names)
+     - `files:write` (upload files -- for long reports)
+
+5. **Subscribe to Events:**
+   - Features → Event Subscriptions → Enable Events
+   - Subscribe to bot events:
+     - `message.im` (DM messages)
+     - `message.channels` (channel messages)
+     - `app_mention` (@ mentions)
+     - `message.groups` (private channels -- optional)
+
+   :::warning Without `message.channels`, the bot will ONLY work in DMs
+   If you skip the channel event subscriptions, the bot will not respond to messages
+   in public channels -- even if you @ mention it. Add `message.channels` and
+   `app_mention` to enable channel interaction.
+   :::
+
+6. **Install to Workspace:**
+   - Settings → Install App → Install to Workspace → Authorize
+   - Copy the `xoxb-...` token -- this is your **SLACK_BOT_TOKEN**
+
+7. **Reinstall** the app if you made any scope or event changes after the initial install
+
+8. **Find your Slack user ID:**
+   - Click your profile picture → click the three dots → **Copy member ID**
+   - This goes into `SLACK_ALLOWED_USERS`
+
+9. **Invite the bot to a channel:**
+   - In the channel where you want the bot, type: `/invite @HermesLabBot`
+
+### Sub-step 6b: Configure env vars and start the gateway
+
+```bash
+# Stop any existing gateway
+hermes gateway stop
+sleep 5
+
+# Set Slack env vars
+export SLACK_BOT_TOKEN="xoxb-..."           # From step 6 above
+export SLACK_APP_TOKEN="xapp-..."           # From step 3 above
+export SLACK_ALLOWED_USERS="U0123456789"    # From step 8 above
+
+# Keep Telegram running too (if you want both)
+export TELEGRAM_BOT_TOKEN="123456:ABC..."   # From Step 5
+export TELEGRAM_ALLOWED_USERS="987654321"   # From Step 5
+
+# Start the gateway
+hermes gateway run
+```
+
+Expected output includes:
+
+```
+✓ slack connected
+✓ telegram connected (if both configured)
+```
+
+### Sub-step 6c: Talk to the agent in Slack
+
+**DM the bot:**
+1. In Slack, find your bot in the Direct Messages sidebar
+2. Send a message:
+
+```
+Check all pods in the default namespace
+```
+
+The agent runs kubectl against your KIND cluster and replies in the DM thread.
+
+**In a channel (@ mention):**
+1. Go to the channel where you invited the bot
+2. Type:
+
+```
+@HermesLabBot diagnose pods in k8s-trouble-crashloop namespace
+```
+
+The bot replies in a thread under your message.
+
+**Slash-style commands also work:**
+
+```
+/diagnose k8s-trouble-crashloop
+```
+
+### Sub-step 6d: Cleanup
+
+```bash
+hermes gateway stop
+```
+
+:::info Slack vs Telegram for production
+| Aspect | Telegram | Slack |
+|--------|----------|-------|
+| **Setup** | 2 min via @BotFather | 5 min via api.slack.com, needs admin |
+| **Access control** | User ID allowlist | User ID allowlist + workspace boundary |
+| **Channels** | Groups (limited) | Full channel support with threads |
+| **Threading** | Flat conversation | Thread replies under the trigger message |
+| **File uploads** | Supported | Supported (for long reports) |
+| **Best for** | Personal/lab use, solo learners | Team environments, on-call workflows |
+
+In production, most teams use Slack because it integrates with their existing incident
+response workflow (PagerDuty → Slack channel → agent responds in thread). Telegram is
+excellent for personal agents and labs where Slack admin access is not available.
+:::
 
 ---
 
@@ -862,7 +1042,8 @@ python3 -c "from telegram import Bot; print('telegram OK')"
 - [ ] AlertManager fired PodCrashLooping alert and agent diagnosed automatically
 - [ ] K8s CronJob ran containerized agent on schedule
 - [ ] GitHub webhook forwarded PR event and agent posted review (or Solo Learner fallback tested)
-- [ ] Telegram bot responded to `/help` and `/diagnose` slash commands
+- [ ] Telegram bot responded to `/help`, `/diagnose`, AND free-form conversational prompts
+- [ ] (Optional) Slack bot responded to DMs and channel @ mentions
 
 ---
 
