@@ -728,71 +728,70 @@ hermes webhook unsubscribe github
 
 ---
 
-## Step 5: Telegram Bot -- Chat Interface (10 min)
+## Step 5: Telegram Bot -- Chat Interface (15 min)
 
-Telegram is the right primary chat platform for this lab: free, no admin approval, works for every learner globally. You create a real bot via @BotFather, configure Hermes to activate the Telegram adapter, and start receiving slash commands from your phone.
+Telegram is the right primary chat platform for this lab: free, no admin approval, works
+for every learner globally. Hermes has a built-in interactive setup that handles bot
+creation, user allowlists, and home channel configuration in one step.
 
 :::warning Telegram long-polling conflict
-Telegram bots use long polling. Only ONE bot instance can poll at a time. If you previously ran `hermes gateway run` in another terminal, stop it first with `hermes gateway stop` and wait 30 seconds before starting a new instance, or you will get 409 Conflict errors (`telegram_polling_conflict` fatal error after 3 retries). This is a Telegram API restriction, not a Hermes bug.
+Telegram bots use long polling. Only ONE bot instance can poll at a time. If you previously
+ran `hermes gateway run` in another terminal, stop it first with `hermes gateway stop` and
+wait 30 seconds before starting, or you will get 409 Conflict errors. This is a Telegram
+API restriction, not a Hermes bug.
 :::
 
 ### Sub-step 5a: Create your bot via @BotFather (~2 min)
 
-:::info Solo Learner
-The @BotFather setup takes about 2 minutes total. You only do it once -- your bot stays registered with Telegram permanently. No payment, no admin approval, no workspace required.
-:::
-
 1. Open Telegram (mobile app or https://web.telegram.org)
-2. Search for **@BotFather** (verified blue checkmark -- the official bot creation bot)
+2. Search for **@BotFather** (verified blue checkmark)
 3. Send `/newbot`
 4. Choose a display name (e.g., `Hermes Lab Bot`)
 5. Choose a username -- must end in `bot` (e.g., `hermes_lab_yourname_bot`)
-6. Copy the bot token from BotFather's response -- looks like `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`
-7. **Treat this token like a password** -- anyone with it can impersonate your bot
+6. Copy the bot token -- looks like `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`
+7. Get your user ID: search for **@userinfobot**, send `/start`, copy the numeric ID
 
-### Sub-step 5b: Get your Telegram user ID via @userinfobot (~30 sec)
+### Sub-step 5b: Configure Telegram via `hermes gateway setup`
 
-The Telegram adapter restricts the bot to user IDs listed in `TELEGRAM_ALLOWED_USERS`. To find your own ID:
-
-1. In Telegram, search for **@userinfobot** (a public utility bot)
-2. Send `/start`
-3. Copy your numeric user ID (e.g., `987654321`)
-
-### Sub-step 5c: Configure env vars and start the gateway
+Instead of manually exporting environment variables, use the interactive setup:
 
 ```bash
-# Stop any existing gateway (Telegram polling lock)
-hermes gateway stop
-sleep 30
-
-# Set the Telegram env vars
-export TELEGRAM_BOT_TOKEN="123456:ABC..."      # From @BotFather
-export TELEGRAM_ALLOWED_USERS="987654321"      # From @userinfobot
-
-# Verify the python-telegram-bot package is installed (from [messaging] extra)
-python3 -c "from telegram import Bot; print('telegram OK')"
-
-# Start the gateway -- look for "Telegram adapter started, polling..." in the output
-hermes gateway run
+hermes gateway stop    # stop any running gateway first
+hermes gateway setup
 ```
 
-Expected output includes:
+The setup wizard walks you through:
+1. Select **Telegram** from the platform list
+2. Paste your **bot token** from @BotFather
+3. Enter your **user ID** from @userinfobot (this creates the allowlist)
+4. Set the **home channel ID** -- use your user ID (your DM with the bot)
+5. Say **yes** to restart the gateway
 
+:::info What is a home channel?
+The home channel is where Hermes delivers cron job results and notifications. When you
+set your Telegram user ID as the home channel, cron jobs created with `--deliver telegram`
+send their output directly to your Telegram DM. Without a home channel, delivery to
+"telegram" fails silently because Hermes doesn't know which chat to target.
+:::
+
+After setup completes, verify the gateway is running with Telegram connected:
+
+```bash
+hermes gateway status
+# Expected: Gateway running, telegram connected
 ```
-Telegram adapter started, polling...
-```
 
-### Sub-step 5d: Send slash commands from Telegram
+### Sub-step 5c: Send slash commands from Telegram
 
-1. Open Telegram on your phone or in the web browser
-2. Search for your bot's username (the one you chose with @BotFather)
-3. Open the chat and send:
+1. Open Telegram on your phone
+2. Search for your bot's username and open the chat
+3. Send:
 
 ```
 /help
 ```
 
-Expected: bot replies with the list of available commands.
+Expected: bot replies with available commands.
 
 4. Send the diagnostic command:
 
@@ -800,24 +799,20 @@ Expected: bot replies with the list of available commands.
 /diagnose k8s-trouble-crashloop
 ```
 
-Watch the gateway terminal -- you should see the message arrive and the agent run. Within
-~30 seconds, the bot replies in the same Telegram chat thread with the agent's findings
-from running `kubectl get pods -n k8s-trouble-crashloop` against your KIND cluster.
+Within ~30 seconds, the bot replies with the agent's diagnosis from running kubectl
+commands against your KIND cluster.
 
-5. Send `/status` to see current gateway state:
+5. Check gateway status:
 
 ```
 /status
 ```
 
-Expected: bot replies with scheduler status, active webhook subscriptions, and gateway health.
-
-### Sub-step 5e: Conversational chat via Telegram
+### Sub-step 5d: Conversational chat via Telegram
 
 The Telegram bot is not limited to slash commands -- it is a full conversational interface
-to your Hermes agent. Any free-form text you type (without a `/` prefix) goes directly
-to the agent as a prompt. This is the same experience as `hermes -p track-c chat`, but
-from your phone.
+to your Hermes agent. Any free-form text you type goes directly to the agent as a prompt.
+This is the same experience as `hermes chat`, but from your phone.
 
 Try these conversational prompts:
 
@@ -833,23 +828,93 @@ What nodes are in my cluster and how much CPU is available?
 I just deployed a new version of the API. Can you verify the rollout status?
 ```
 
-The agent receives your message, runs kubectl commands against your KIND cluster, and
-replies in the same Telegram chat. You are talking to a real Kubernetes diagnostic agent
-from your phone.
+The agent runs kubectl commands against your KIND cluster and replies in the same chat.
 
 :::tip Slash commands vs free-form text
-Both work. Slash commands like `/diagnose` are just text starting with `/` -- the adapter
-passes them through to the agent as-is. Free-form text (no `/` prefix) works identically.
-Use whichever feels natural. Slash commands are useful for quick, predefined actions;
-free-form text is better for open-ended investigation where you want to ask follow-up
-questions.
+Both work identically. Slash commands like `/diagnose` are just text starting with `/`.
+Free-form text works the same way. Use whichever feels natural.
+:::
+
+### Sub-step 5e: Set home channel for cron delivery
+
+You can also set the home channel directly from Telegram by typing `/sethome` in the
+bot chat. This tells Hermes "deliver cron job output and notifications to this chat."
+
+```
+/sethome
+```
+
+Expected: bot confirms this chat is now the home channel for Telegram delivery.
+
+Now update your cron job to deliver via Telegram instead of local files:
+
+```bash
+# Delete old cron job
+hermes cron delete daily-k8s-check
+
+# Recreate with Telegram delivery
+hermes cron create "0 8 * * *" \
+  "Run morning pod health check across all namespaces. Report only if pods or nodes show issues." \
+  --name "daily-k8s-check" \
+  --skill "sre-k8s-pod-health" \
+  --deliver telegram
+
+# Trigger it
+hermes cron run <job-id>
+hermes cron tick
+```
+
+The diagnosis report now arrives in your Telegram DM instead of a local file.
+
+### Sub-step 5f: Default agent vs profile agent
+
+When you use `hermes -p track-c chat`, Hermes loads Kiran's identity (SOUL.md),
+config, and skills. The **gateway** runs the **default agent** -- it has access to
+ALL globally installed skills (everything in `~/.hermes/skills/`) but no profile-specific
+identity.
+
+| Mode | Identity | Skills Available | Use When |
+|------|----------|-----------------|----------|
+| `hermes -p track-c chat` | Kiran (SOUL.md) | Profile skills only | Interactive investigation with behavioral rules |
+| `hermes chat` (no profile) | Default Hermes | All global skills | General-purpose agent |
+| Gateway (Telegram/Slack) | Default Hermes | All global skills | Chat interface from phone |
+| Cron jobs | No identity | Global skills only | Scheduled automation |
+
+:::info Making the gateway use a specific profile
+The gateway currently runs as the default agent. To give it Kiran's identity for all
+Telegram interactions, you could copy the Track C SOUL.md into the global config:
+```bash
+cp ~/.hermes/profiles/track-c/SOUL.md ~/.hermes/SOUL.md
+```
+This makes the gateway agent behave like Kiran (with NEVER rules and K8s expertise)
+for all chat platforms. Remove it to restore the default agent.
+:::
+
+:::tip Advanced: Multiple bots for different profiles
+In production, you might want separate Telegram bots for different agents — one for
+the K8s health agent (Kiran), another for the FinOps agent, and a general-purpose bot.
+
+Each Hermes profile can run its own gateway on a different port:
+```bash
+# Terminal 1: Kiran (Track C) on port 8644
+hermes -p track-c gateway run
+
+# Terminal 2: Default agent on port 8645
+WEBHOOK_PORT=8645 hermes gateway run
+```
+
+Each gateway needs its own Telegram bot token (create multiple bots via @BotFather).
+Set different `TELEGRAM_BOT_TOKEN` values in each profile's `.env` file
+(`~/.hermes/profiles/track-c/.env` vs `~/.hermes/.env`).
+
+This gives you dedicated bots with different identities, skills, and behavioral rules
+— all running simultaneously.
 :::
 
 :::info Chat history in Telegram
-Each Telegram conversation maintains session context within the gateway's lifetime.
+Each conversation maintains session context within the gateway's lifetime.
 Follow-up messages like "what about the kube-system namespace?" work because the agent
-remembers the prior exchange. If you restart the gateway (`hermes gateway stop` then
-`hermes gateway start`), the session resets.
+remembers the prior exchange. Restarting the gateway resets all sessions.
 :::
 
 ### Cleanup
@@ -878,94 +943,60 @@ realism but is not required for course completion.
 
 ### Sub-step 6a: Create a Slack App (~5 min)
 
-1. Go to [https://api.slack.com/apps](https://api.slack.com/apps) and click **Create New App** → **From Scratch**
+1. Go to [https://api.slack.com/apps](https://api.slack.com/apps) → **Create New App** → **From Scratch**
 2. Name it (e.g., `Hermes Lab Bot`) and select your workspace
+3. **Enable Socket Mode:** Settings → Socket Mode → Enable → Create App-Level Token with scope `connections:write` → copy the `xapp-...` token
+4. **Add Bot Token Scopes:** Features → OAuth & Permissions → Bot Token Scopes:
+   - `chat:write`, `app_mentions:read`, `channels:history`, `channels:read`
+   - `groups:history` (optional, for private channels)
+   - `im:history`, `im:read`, `im:write`, `users:read`, `files:write`
+5. **Subscribe to Events:** Features → Event Subscriptions → Enable:
+   - `message.im`, `message.channels`, `app_mention`
+   - `message.groups` (optional)
+6. **Install to Workspace:** Settings → Install App → copy the `xoxb-...` token
+7. **Reinstall** if you changed scopes or events after initial install
+8. **Find your user ID:** Click profile → three dots → **Copy member ID**
+9. **Invite the bot:** In your channel, type `/invite @HermesLabBot`
 
-3. **Enable Socket Mode:**
-   - Settings → Socket Mode → Enable
-   - Create an App-Level Token with scope `connections:write`
-   - Copy the `xapp-...` token -- this is your **SLACK_APP_TOKEN**
+:::warning Without `message.channels`, the bot ONLY works in DMs
+Add both `message.channels` and `app_mention` to enable channel interaction.
+:::
 
-4. **Add Bot Token Scopes:**
-   - Features → OAuth & Permissions → Scopes → Bot Token Scopes
-   - Add these scopes:
-     - `chat:write` (send messages)
-     - `app_mentions:read` (respond when mentioned)
-     - `channels:history`, `channels:read` (read channel messages)
-     - `groups:history` (private channels -- optional)
-     - `im:history`, `im:read`, `im:write` (direct messages)
-     - `users:read` (resolve user names)
-     - `files:write` (upload files -- for long reports)
+### Sub-step 6b: Configure Slack via `hermes gateway setup`
 
-5. **Subscribe to Events:**
-   - Features → Event Subscriptions → Enable Events
-   - Subscribe to bot events:
-     - `message.im` (DM messages)
-     - `message.channels` (channel messages)
-     - `app_mention` (@ mentions)
-     - `message.groups` (private channels -- optional)
-
-   :::warning Without `message.channels`, the bot will ONLY work in DMs
-   If you skip the channel event subscriptions, the bot will not respond to messages
-   in public channels -- even if you @ mention it. Add `message.channels` and
-   `app_mention` to enable channel interaction.
-   :::
-
-6. **Install to Workspace:**
-   - Settings → Install App → Install to Workspace → Authorize
-   - Copy the `xoxb-...` token -- this is your **SLACK_BOT_TOKEN**
-
-7. **Reinstall** the app if you made any scope or event changes after the initial install
-
-8. **Find your Slack user ID:**
-   - Click your profile picture → click the three dots → **Copy member ID**
-   - This goes into `SLACK_ALLOWED_USERS`
-
-9. **Invite the bot to a channel:**
-   - In the channel where you want the bot, type: `/invite @HermesLabBot`
-
-### Sub-step 6b: Configure env vars and start the gateway
+Just like Telegram, use the interactive setup:
 
 ```bash
-# Stop any existing gateway
 hermes gateway stop
-sleep 5
-
-# Set Slack env vars
-export SLACK_BOT_TOKEN="xoxb-..."           # From step 6 above
-export SLACK_APP_TOKEN="xapp-..."           # From step 3 above
-export SLACK_ALLOWED_USERS="U0123456789"    # From step 8 above
-
-# Keep Telegram running too (if you want both)
-export TELEGRAM_BOT_TOKEN="123456:ABC..."   # From Step 5
-export TELEGRAM_ALLOWED_USERS="987654321"   # From Step 5
-
-# Start the gateway
-hermes gateway run
+hermes gateway setup
 ```
 
-Expected output includes:
+Select **Slack** from the platform list and enter:
+1. **Bot Token** (`xoxb-...`) from step 6
+2. **App Token** (`xapp-...`) from step 3
+3. **Allowed user IDs** -- your member ID from step 8
+4. **Home channel ID** -- optional, or set later with `/sethome` in Slack
+
+Say **yes** to restart the gateway. Both Telegram and Slack can run simultaneously.
+
+Expected output after restart:
 
 ```
+✓ telegram connected
 ✓ slack connected
-✓ telegram connected (if both configured)
 ```
 
 ### Sub-step 6c: Talk to the agent in Slack
 
 **DM the bot:**
-1. In Slack, find your bot in the Direct Messages sidebar
-2. Send a message:
 
 ```
-Check all pods in the default namespace
+Check all pods in the default namespace and tell me if anything looks unhealthy
 ```
 
-The agent runs kubectl against your KIND cluster and replies in the DM thread.
+The agent runs kubectl against your KIND cluster and replies in the DM.
 
 **In a channel (@ mention):**
-1. Go to the channel where you invited the bot
-2. Type:
 
 ```
 @HermesLabBot diagnose pods in k8s-trouble-crashloop namespace
@@ -973,11 +1004,10 @@ The agent runs kubectl against your KIND cluster and replies in the DM thread.
 
 The bot replies in a thread under your message.
 
-**Slash-style commands also work:**
+**Set home channel for delivery:**
 
-```
-/diagnose k8s-trouble-crashloop
-```
+Type `/sethome` in the Slack channel where you want cron reports delivered. This works
+identically to the Telegram `/sethome` command.
 
 ### Sub-step 6d: Cleanup
 
@@ -991,8 +1021,7 @@ hermes gateway stop
 | **Setup** | 2 min via @BotFather | 5 min via api.slack.com, needs admin |
 | **Access control** | User ID allowlist | User ID allowlist + workspace boundary |
 | **Channels** | Groups (limited) | Full channel support with threads |
-| **Threading** | Flat conversation | Thread replies under the trigger message |
-| **File uploads** | Supported | Supported (for long reports) |
+| **Threading** | Flat conversation | Thread replies under trigger message |
 | **Best for** | Personal/lab use, solo learners | Team environments, on-call workflows |
 
 In production, most teams use Slack because it integrates with their existing incident
