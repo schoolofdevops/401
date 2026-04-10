@@ -133,30 +133,44 @@ hermes cron run <job-id>
 # Example: hermes cron run f8081a091378
 ```
 
-Watch the terminal. The agent will:
-1. Load the `sre-k8s-pod-health` SKILL.md runbook
-2. Run `kubectl get pods --all-namespaces` against your KIND cluster
-3. Print its findings to the terminal
+**How cron execution works:**
+
+`hermes cron run` does NOT execute the job in your terminal. It schedules the job
+for the gateway's next scheduler tick (within 60 seconds). The gateway runs the job
+in its own thread, and with `--deliver local`, the output is saved to a file.
+
+**Check your gateway terminal** -- you should see execution status in the gateway logs.
+
+**Read the output file:**
+
+```bash
+# Wait ~60 seconds for the gateway scheduler to pick up the job, then:
+ls ~/.hermes/cron/output/
+# You should see a directory named with your job ID
+
+# Read the output (replace with your job ID)
+cat ~/.hermes/cron/output/<job-id>/*.md
+```
 
 Expected output shape (from a healthy KIND cluster):
 
-```
-[Cron] Firing job: daily-k8s-check
+```markdown
+# Kubernetes Health Check -- kind-lab
 
-Kubernetes Health Check -- kind-lab
 Namespaces scanned: kube-system, default, local-path-storage
 
 All pods running. No restarts detected above threshold.
 Node kind-control-plane: Ready, allocatable CPU 4 cores, memory 8Gi.
-
-[SILENT] (no anomalies to report)
 ```
 
-:::info About [SILENT]
-When the cron agent finds nothing to report, it responds with `[SILENT]`.
-This suppresses delivery -- you will not receive a Slack or Telegram notification. This is by
-design: agents that cry wolf on every run lose their usefulness. The agent only delivers a
-full report when it finds something worth reporting.
+:::info About [SILENT] and delivery
+When the cron agent finds nothing to report, it may respond with `[SILENT]`.
+This suppresses delivery to external channels -- you will not receive a Slack or Telegram
+notification. This is by design: agents that cry wolf on every run lose their usefulness.
+The agent only delivers a full report when it finds something worth reporting.
+
+With `--deliver local`, output is always saved to `~/.hermes/cron/output/<job-id>/` regardless
+of whether the agent reports findings or stays silent. Check the file to see what happened.
 :::
 
 ### Lifecycle demo: pause and resume
