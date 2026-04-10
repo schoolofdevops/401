@@ -74,12 +74,18 @@ Cron expressions use the standard five-field format: `minute hour day-of-month m
 Create a daily health check cron job that runs a Kubernetes pod health check across all namespaces:
 
 ```bash
-hermes cron create "0 8 * * *" \
+hermes -p track-c cron create "0 8 * * *" \
   "Run morning pod health check across all namespaces. Report only if pods or nodes show issues." \
   --name "daily-k8s-check" \
   --skill "sre-k8s-pod-health" \
   --deliver local
 ```
+
+:::caution Profile flag is required
+The `-p track-c` flag tells Hermes to use the Track C profile, which has the
+`sre-k8s-pod-health` skill installed. Without it, the cron job runs under the default
+profile and will report "skill not found" — producing an empty output file.
+:::
 
 ### What each argument does
 
@@ -716,7 +722,7 @@ Choose challenges based on your available time and experience level.
 Create a cron job that checks pods across both `kube-system` and `default` namespaces:
 
 ```bash
-hermes cron create "*/5 * * * *" \
+hermes -p track-c cron create "*/5 * * * *" \
   "Run pod health check across kube-system and default namespaces. Report pod counts, restart counts, and any non-Running pods." \
   --name "cross-namespace-check" \
   --skill "sre-k8s-pod-health" \
@@ -816,7 +822,7 @@ Open a PR that modifies a YAML file in your test repo. The agent should:
 ```bash
 # Cron management
 hermes cron status                      # Always run at session start
-hermes cron create "<schedule>" "<prompt>" --name ... --skill ... --deliver local
+hermes -p track-c cron create "<schedule>" "<prompt>" --name ... --skill ... --deliver local
 hermes cron list
 hermes cron run <job-id>            # Manual fire (use ID from cron list, not name)
 hermes cron pause <job-id>
