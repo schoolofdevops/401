@@ -1,0 +1,341 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Module 2 — Platform AI Lab: "Broken Fleet" stack.
+  Launches a self-contained VPC with four intentionally-misconfigured EC2 instances
+  plus a set of CloudWatch alarms. Learners use CloudWatch, Amazon Q, DevOps Guru,
+  and optionally Datadog to triage the fleet. See fleet-issues.md for the answer key.
+
+# ---------------------------------------------------------------------------
+# Parameters — everything learners may need to customize
+# ---------------------------------------------------------------------------
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Existing EC2 KeyPair name for SSH (create one via EC2 > Key Pairs first).
+
+  AllowedSshCidr:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: >
+      CIDR allowed to SSH to the "normal" instances. Default is wide open for simplicity;
+      narrow to YOUR_IP/32 in production. (The "permissive-sg" instance is always 0.0.0.0/0
+      by design — that IS one of the issues.)
+    AllowedPattern: ^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$
+
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: Amazon Linux 2023 AMI (resolved at deploy time via SSM Parameter Store).
+
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues: [t2.micro, t3.micro, t3.small]
+    Description: Free-tier t2.micro by default. Use t3.small only if you've exited free tier.
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # ===== Networking =======================================================
+  LabVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.20.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags: [{ Key: Name, Value: platform-ai-lab-vpc }]
+
+  LabIgw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags: [{ Key: Name, Value: platform-ai-lab-igw }]
+
+  AttachIgw:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref LabVpc
+      InternetGatewayId: !Ref LabIgw
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref LabVpc
+      CidrBlock: 10.20.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags: [{ Key: Name, Value: platform-ai-lab-public }]
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref LabVpc
+      Tags: [{ Key: Name, Value: platform-ai-lab-rt }]
+
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachIgw
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref LabIgw
+
+  PublicSubnetAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # ===== Security Groups =================================================
+
+  # ISSUE #S-1: SSH wide open to 0.0.0.0/0 regardless of learner's AllowedSshCidr.
+  # Amazon Q should flag this on a code review of the template.
+  PermissiveSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "ISSUE: SSH open to the world"
+      VpcId: !Ref LabVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags: [{ Key: Name, Value: permissive-sg }]
+
+  # Reasonable SG
+  NormalSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Standard SSH from allowed CIDR, all egress open
+      VpcId: !Ref LabVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AllowedSshCidr
+      Tags: [{ Key: Name, Value: normal-sg }]
+
+  # ===== IAM role for CloudWatch Agent ===================================
+  CwAgentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  CwAgentProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [ !Ref CwAgentRole ]
+
+  # ===== Instance 1: alpha-noisy (CPU burn + permissive SG) ===============
+  AlphaNoisy:
+    Type: AWS::EC2::Instance
+    DependsOn: DefaultRoute
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref CwAgentProfile
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds: [ !Ref PermissiveSg ]        # ISSUE #S-1
+      Tags: [{ Key: Name, Value: alpha-noisy }]
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -eux
+          dnf install -y amazon-cloudwatch-agent stress-ng
+          cat > /opt/aws/amazon-cloudwatch-agent/etc/config.json <<'EOF'
+          {"agent":{"metrics_collection_interval":60},
+           "metrics":{"namespace":"PlatformAILab",
+             "metrics_collected":{
+               "mem":{"measurement":["mem_used_percent"]},
+               "disk":{"measurement":["used_percent"],"resources":["/"]}},
+             "append_dimensions":{"InstanceId":"${aws:InstanceId}"}}}
+          EOF
+          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+            -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/config.json -s
+          cat > /etc/systemd/system/cpu-burn.service <<'EOF'
+          [Unit]
+          Description=Intentional CPU burner (lab issue #E-1)
+          After=network.target
+          [Service]
+          ExecStart=/usr/bin/stress-ng --cpu 2 --cpu-method matrixprod
+          Restart=always
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          systemctl daemon-reload
+          systemctl enable --now cpu-burn.service
+
+  # ===== Instance 2: beta-leaky (memory leak) =============================
+  BetaLeaky:
+    Type: AWS::EC2::Instance
+    DependsOn: DefaultRoute
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref CwAgentProfile
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds: [ !Ref NormalSg ]
+      Tags: [{ Key: Name, Value: beta-leaky }]
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -eux
+          dnf install -y amazon-cloudwatch-agent python3
+          cat > /opt/aws/amazon-cloudwatch-agent/etc/config.json <<'EOF'
+          {"agent":{"metrics_collection_interval":60},
+           "metrics":{"namespace":"PlatformAILab",
+             "metrics_collected":{
+               "mem":{"measurement":["mem_used_percent"]},
+               "disk":{"measurement":["used_percent"],"resources":["/"]}},
+             "append_dimensions":{"InstanceId":"${aws:InstanceId}"}}}
+          EOF
+          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+            -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/config.json -s
+          cat > /usr/local/bin/leak.py <<'EOF'
+          # ISSUE #E-2: slow memory leak — allocates 80 MB per minute until OOM.
+          import time
+          buf = []
+          while True:
+              buf.append(bytearray(80 * 1024 * 1024))
+              time.sleep(60)
+          EOF
+          cat > /etc/systemd/system/mem-leak.service <<'EOF'
+          [Unit]
+          Description=Intentional memory leaker (lab issue #E-2)
+          After=network.target
+          [Service]
+          ExecStart=/usr/bin/python3 /usr/local/bin/leak.py
+          Restart=always
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          systemctl daemon-reload
+          systemctl enable --now mem-leak.service
+
+  # ===== Instance 3: gamma-disk (disk filler + broken fstab) ==============
+  # Uses a simple cron script that pushes a custom CloudWatch metric with
+  # ONLY InstanceId as a dimension. Avoids the CW Agent disk plugin's extra
+  # dimensions (device, fstype) which made the previous alarm INSUFFICIENT_DATA.
+  GammaDisk:
+    Type: AWS::EC2::Instance
+    DependsOn: DefaultRoute
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref CwAgentProfile
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds: [ !Ref NormalSg ]
+      Tags: [{ Key: Name, Value: gamma-disk }]
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -eux
+          # ISSUE #E-4: broken fstab entry — next reboot / `mount -a` will fail.
+          echo "UUID=00000000-dead-beef-0000-000000000000 /broken xfs defaults 0 2" >> /etc/fstab
+          # ISSUE #E-3: cron fills /var/lab-fill at ~40 MB/min
+          mkdir -p /var/lab-fill
+          cat > /usr/local/bin/fill-disk.sh <<'EOF'
+          #!/bin/bash
+          dd if=/dev/urandom of=/var/lab-fill/app-$(date +%s).log bs=1M count=40 2>/dev/null
+          EOF
+          chmod +x /usr/local/bin/fill-disk.sh
+          # Publisher: pushes custom metric `data_fill_percent` with only InstanceId dim.
+          cat > /usr/local/bin/publish-fill.sh <<'EOF'
+          #!/bin/bash
+          TOKEN=$(curl -sS -X PUT "http://169.254.169.254/latest/api/token" \
+            -H "X-aws-ec2-metadata-token-ttl-seconds: 600")
+          IID=$(curl -sS -H "X-aws-ec2-metadata-token: $TOKEN" \
+            http://169.254.169.254/latest/meta-data/instance-id)
+          REGION=$(curl -sS -H "X-aws-ec2-metadata-token: $TOKEN" \
+            http://169.254.169.254/latest/meta-data/placement/region)
+          PCT=$(df / --output=pcent | tail -1 | tr -d ' %')
+          aws cloudwatch put-metric-data \
+            --namespace PlatformAILab \
+            --metric-name data_fill_percent \
+            --value "$PCT" \
+            --unit Percent \
+            --dimensions InstanceId="$IID" \
+            --region "$REGION"
+          EOF
+          chmod +x /usr/local/bin/publish-fill.sh
+          # Cron: fill and publish every minute
+          cat > /etc/cron.d/lab-disk <<'EOF'
+          * * * * * root /usr/local/bin/fill-disk.sh
+          * * * * * root /usr/local/bin/publish-fill.sh
+          EOF
+          # Prime the publisher immediately so alarm leaves INSUFFICIENT_DATA faster
+          /usr/local/bin/publish-fill.sh || true
+
+  # ===== Pre-created CloudWatch alarms ===================================
+
+  AlphaCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-alpha-cpu-high"
+      AlarmDescription: "alpha-noisy CPU > 70% (issue #E-1)"
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Dimensions: [{ Name: InstanceId, Value: !Ref AlphaNoisy }]
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 70
+      ComparisonOperator: GreaterThanThreshold
+
+  BetaMemAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-beta-mem-high"
+      AlarmDescription: "beta-leaky mem > 75% via CW Agent (issue #E-2)"
+      Namespace: PlatformAILab
+      MetricName: mem_used_percent
+      Dimensions: [{ Name: InstanceId, Value: !Ref BetaLeaky }]
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 75
+      ComparisonOperator: GreaterThanThreshold
+
+  GammaDiskAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-gamma-disk-full"
+      AlarmDescription: "gamma-disk root filesystem > 50% via custom metric (issue #E-3)"
+      Namespace: PlatformAILab
+      MetricName: data_fill_percent
+      Dimensions:
+        - { Name: InstanceId, Value: !Ref GammaDisk }
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 50
+      ComparisonOperator: GreaterThanThreshold
+
+# ---------------------------------------------------------------------------
+# Outputs — make it easy for learners to jump to the right console pages
+# ---------------------------------------------------------------------------
+Outputs:
+  AlphaInstanceId:   { Value: !Ref AlphaNoisy }
+  BetaInstanceId:    { Value: !Ref BetaLeaky }
+  GammaInstanceId:   { Value: !Ref GammaDisk }
+  AlphaPublicIp:     { Value: !GetAtt AlphaNoisy.PublicIp }
+  BetaPublicIp:      { Value: !GetAtt BetaLeaky.PublicIp }
+  GammaPublicIp:     { Value: !GetAtt GammaDisk.PublicIp }
+  CloudWatchAlarmsUrl:
+    Description: Jump to the alarms dashboard for this stack
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#alarmsV2:"
+  Ec2ConsoleUrl:
+    Description: Jump to EC2 console filtered to this stack
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/ec2/home?region=${AWS::Region}#Instances:tag:aws:cloudformation:stack-name=${AWS::StackName}"

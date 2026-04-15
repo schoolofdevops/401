@@ -25,6 +25,7 @@ reference-app/dashboard/package-lock.json
 # OS
 .DS_Store
 Thumbs.db
+.obsidian/
 
 # Environment
 .env

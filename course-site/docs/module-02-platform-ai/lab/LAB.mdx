@@ -1,368 +1,315 @@
 ---
 id: module-02-lab
-title: "Lab: Exploring AWS Platform AI Features"
+title: "Lab: Triaging a Broken Fleet with Platform AI"
 sidebar_label: "Lab"
 sidebar_position: 1
-description: "Hands-on exploration of AWS AI features on free tier — set up, generate data, observe, then tear down"
+description: "Launch three pre-broken EC2 instances in a misconfigured VPC, then run CloudWatch, Amazon Q, and DevOps Guru against them to see what each tool catches."
 ---
 
-# Lab: Exploring AWS Platform AI Features
+# Lab: Triaging a Broken Fleet with Platform AI
 
-**Duration:** 75 minutes (60 min lab + ~15 min setup/teardown)
+**Duration:** 75 minutes
 **Deliverable:** A completed Platform AI Assessment for your environment (`starter/platform-ai-assessment.md`)
-**Prerequisites:** AWS account with free tier active (OR use the mock data fallback — every section has an offline option), AWS CLI installed and configured (`aws configure`)
+**Prerequisites:** AWS account with free tier active, AWS CLI configured (`aws configure`), an EC2 key pair (or we'll create one in Section 0)
 
 ---
 
 ## Overview
 
-Before building custom agents, understand what the platform already gives you. AWS has embedded AI features across its console. This lab explores four of them — and maps exactly where they stop so you know where custom agents begin.
+Instead of creating a single instance and generating load by hand, this lab hands you a **pre-broken fleet** of three EC2 instances inside a VPC that has its own set of network-level misconfigurations. Your job is to triage them using platform AI tools and see what each tool catches and what it misses.
 
-The earlier version of this lab only *read* alarms and cost data. This version walks you through **setting things up from a blank AWS account** so the observations are real. If you don't have an account, the mock-data fallback still works end-to-end.
+The fleet is deployed by a single CloudFormation stack. The stack is self-contained: VPC, subnet, IGW, security groups, IAM role, three instances, and three CloudWatch alarms. Teardown is one command.
 
-**Free tier vs demo split (Decision D-27):**
+**The three instances you're about to meet:**
 
-| Service | Lab Type | Why |
-|---------|----------|-----|
-| CloudWatch basic metrics | LAB (do it) | Always free |
-| CloudWatch alarm (threshold) | LAB (do it) | First 10 alarms free |
-| CloudWatch Anomaly Detection | DEMO (observe) | $0.30/alarm/month beyond free tier |
-| Cost Explorer web UI | LAB (do it) | Free |
-| Q Developer | LAB (do it) | Free via Builder ID |
-| DevOps Guru | DEMO (observe) | 3-month free trial, expires |
+| Instance | Symptom (baked in) | Which tool should catch it? |
+|---|---|---|
+| `alpha-noisy` | CPU pinned at 100% | Native CloudWatch (CPU is free metric) |
+| `beta-leaky` | Memory grows 80 MB/min until OOM | CloudWatch Agent (native CW can't see memory) |
+| `gamma-disk` | Root filesystem fills at 40 MB/min, plus a broken `/etc/fstab` line | Custom CW metric for disk, Amazon Q for the fstab |
+
+**And at the network layer:**
+- An overly permissive security group (`SSH 0.0.0.0/0`) — Amazon Q should flag it on template review.
+
+**The four tool passes you'll make:**
+
+1. **CloudWatch native metrics** — what AWS gives you for free, out of the box.
+2. **CloudWatch Agent + custom metrics** — memory and disk signals that native CloudWatch can't see.
+3. **Amazon Q in the Console** — the purple Q icon on the AWS Console. Code/config review and account-aware Q&A, no Builder ID or IDE setup needed.
+4. **AWS DevOps Agent** *(the 2026 agentic service — not DevOps Guru)* — observed via the Sample Investigation in CloudWatch.
+
+The answer key lives in `starter/fleet-issues.md` — don't peek until you've tried each tool pass.
 
 ---
 
 ## Section 0: One-Time Setup (10 min)
 
-Do these **once**, before Section 1. If you already have these enabled, skim and skip.
-
 ### 0.1 — Enable Cost Explorer
 
-Cost Explorer is free but **must be enabled manually**, and the first data load can take up to 24 hours.
+Free but must be enabled once. First data load can take up to 24 hours.
 
-1. AWS Console → **Billing and Cost Management** → **Cost Explorer**
-2. Click **Launch Cost Explorer**
-3. Accept the one-time enablement prompt
+AWS Console → **Billing and Cost Management** → **Cost Explorer** → **Launch Cost Explorer**.
 
-> **Tip:** Do this *before* you start the lab so the data is ready when you reach Section 2. If the dashboard is empty by the time you get there, use the mock-data fallback for Section 2 and return to the real console tomorrow.
+### 0.2 — Locate Amazon Q in the AWS Console
 
-### 0.2 — Create an AWS Builder ID (for Q Developer)
+No signup or Builder ID needed for the lab. When you sign in to the AWS Console, look at the **left edge** (or top-right on some layouts) — there's a purple **Q** icon. Click it; the Amazon Q panel expands with a chat box titled *"How can I help you today?"*. That's the tool you'll use in Section 3.
 
-Q Developer's free tier uses a **Builder ID**, not an AWS account. No billing, no credit card.
+> **Optional:** If you want Q inside your IDE later (VS Code / JetBrains), that's a separate product called **Amazon Q Developer** and it uses an AWS Builder ID from https://profile.aws.amazon.com. Not required for this lab.
 
-1. Go to https://profile.aws.amazon.com
-2. Click **Create AWS Builder ID** and follow the email verification flow
-3. Keep the credentials handy for Section 3
+### 0.3 — Create an EC2 key pair
 
-### 0.3 — Launch a free-tier t2.micro EC2 instance (for real CloudWatch data)
+If you don't already have one in the region you'll deploy to (default: `us-east-1`):
 
-You need something emitting metrics for Section 1 to feel real. A t2.micro running Amazon Linux 2023 is free tier eligible (750 hrs/month for 12 months on new accounts).
-
-**Using the Console (easiest):**
-
-1. EC2 → **Launch instance**
-2. Name: `platform-ai-lab`
-3. AMI: **Amazon Linux 2023** (free tier eligible)
-4. Instance type: **t2.micro** (free tier eligible)
-5. Key pair: create a new one or select an existing one (you'll need this if you want to SSH)
-6. Network: default VPC, **Auto-assign public IP = Enable**
-7. Storage: keep default 8 GiB gp3
-8. **Launch instance**
-
-**Using the CLI (copy-paste):**
+AWS Console → **EC2** → **Key Pairs** → **Create key pair** → name it `platform-ai-lab-key`, type RSA, format `.pem`. Download and save.
 
 ```bash
-# Find the latest Amazon Linux 2023 AMI for us-east-1
-AMI_ID=$(aws ssm get-parameters \
-  --names /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 \
-  --region us-east-1 \
-  --query 'Parameters[0].Value' --output text)
-
-aws ec2 run-instances \
-  --image-id "$AMI_ID" \
-  --instance-type t2.micro \
-  --region us-east-1 \
-  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=platform-ai-lab}]'
+chmod 400 ~/Downloads/platform-ai-lab-key.pem
 ```
 
-Save the returned `InstanceId` — you'll use it in Section 1.
+### 0.4 — Launch the Broken Fleet stack
 
-> **Cost warning:** t2.micro is free tier ONLY if your account is within its first 12 months AND you stay under 750 hours/month. **Section 6 shows you how to terminate it at the end** — don't skip that step.
+The stack template is hosted at `s3://pai342/ec2_broken_fleet.yaml`. Use the one-click quick-create URL below — it opens the AWS Console with the template and stack name pre-filled.
 
-### 0.4 — Generate some CPU load (so metrics have something to show)
+**One-click launch URL:**
 
-Fresh EC2 instances show near-zero CPU. Push it briefly so your charts aren't flat lines.
-
-**Option A — SSH in and run a stress loop:**
-
-```bash
-ssh -i your-key.pem ec2-user@<public-ip>
-# On the instance:
-yes > /dev/null &
-yes > /dev/null &
-# Let it run for 5 minutes, then:
-killall yes
+```
+https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/quickcreate?templateURL=https://pai342.s3.amazonaws.com/ec2_broken_fleet.yaml&stackName=platform-ai-lab
 ```
 
-**Option B — No SSH, push synthetic metrics from your laptop:**
+**Then:**
+
+1. Fill in parameters:
+   - **KeyName:** `platform-ai-lab-key` (from Section 0.3).
+   - **AllowedSshCidr:** narrow to `YOUR_IP/32` (find your IP at https://checkip.amazonaws.com); `0.0.0.0/0` is acceptable for a training lab.
+   - **LatestAmiId:** leave default (SSM resolves Amazon Linux 2023 automatically).
+   - **InstanceType:** leave at `t2.micro` (free tier).
+2. Check **"I acknowledge that AWS CloudFormation might create IAM resources"** (needed for the CloudWatch Agent role).
+3. Click **Create stack**.
+
+> **CLI alternative (one command):**
+>
+> ```bash
+> aws cloudformation deploy \
+>   --stack-name platform-ai-lab \
+>   --template-url https://pai342.s3.amazonaws.com/ec2_broken_fleet.yaml \
+>   --parameter-overrides KeyName=platform-ai-lab-key \
+>   --capabilities CAPABILITY_IAM \
+>   --region us-east-1
+> ```
+
+The stack takes 3–5 minutes to create. When it shows `CREATE_COMPLETE`, check the **Outputs** tab — you'll see the three instance IDs and console shortcut URLs you'll use through the rest of the lab.
+
+> **Why CloudFormation instead of `run-instances`?** Because the failure modes live across five resource types (VPC, NACL, SG, EC2, Alarm) and nine resources total. Launching them one by one in the CLI is tedious and error-prone; a declarative stack makes the whole scenario reproducible and disposable.
+
+### 0.5 — Wait ~10 minutes before starting Section 1
+
+The CloudWatch Agent on `beta-leaky` and `gamma-disk` needs a cycle or two to publish its first metrics, and the memory leak / disk fill need time to ramp. Grab coffee. When you come back:
+
+- `alpha-noisy` should already be showing high CPU in CloudWatch.
+- `beta-leaky` memory usage should be climbing through the 50–75% range.
+- `gamma-disk` should be publishing a `PlatformAILab/data_fill_percent` custom metric that trends upward each minute.
+
+---
+
+## Section 1: Tool Pass #1 — CloudWatch native metrics (15 min)
+
+### 1.1 — See what native EC2 metrics reveal
 
 ```bash
-# Push a fake "RequestCount" metric for 10 data points
-for i in {1..10}; do
-  aws cloudwatch put-metric-data \
-    --namespace "PlatformAILab" \
-    --metric-name "RequestCount" \
-    --value $((RANDOM % 100 + 20)) \
+# Pull CPU for each instance (use the Instance IDs from your stack Outputs tab)
+for ID in <alpha-id> <beta-id> <gamma-id>; do
+  echo "=== $ID ==="
+  aws cloudwatch get-metric-statistics \
+    --namespace AWS/EC2 \
+    --metric-name CPUUtilization \
+    --dimensions Name=InstanceId,Value=$ID \
+    --start-time $(date -u -v-30M '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '30 minutes ago' '+%Y-%m-%dT%H:%M:%SZ') \
+    --end-time $(date -u '+%Y-%m-%dT%H:%M:%SZ') \
+    --period 300 \
+    --statistics Average \
     --region us-east-1
-  sleep 6
 done
 ```
 
-**Expected result:** Either you see real CPU climb on your EC2 instance, or you have a custom `PlatformAILab/RequestCount` metric you can query in Section 1. Either works for the rest of the lab.
+**What you should see:**
+- `alpha-noisy` → CPU at or above 95% (our alarm fires at 70%).
+- `beta-leaky` → CPU low. Native CloudWatch gives you no hint about the memory issue.
+- `gamma-disk` → CPU low. Native CloudWatch gives you no hint about the disk issue.
 
----
+> **This is the first gap.** Native EC2 metrics only show CPU, network, and status checks. Memory and disk require the agent.
 
-## Section 1: CloudWatch Metrics Exploration (15 min)
-
-### Step 1.1 — List available metrics
-
-**If you completed Section 0 (real AWS path):**
-
-```bash
-# List EC2 metrics for your instance
-aws cloudwatch list-metrics \
-  --namespace AWS/EC2 \
-  --region us-east-1
-
-# Pull the last hour of CPUUtilization for your instance
-aws cloudwatch get-metric-statistics \
-  --namespace AWS/EC2 \
-  --metric-name CPUUtilization \
-  --dimensions Name=InstanceId,Value=<your-instance-id> \
-  --start-time $(date -u -v-1H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '1 hour ago' '+%Y-%m-%dT%H:%M:%SZ') \
-  --end-time $(date -u '+%Y-%m-%dT%H:%M:%SZ') \
-  --period 60 \
-  --statistics Average Maximum \
-  --region us-east-1
-```
-
-**If you don't have an AWS account (mock data fallback):**
+### 1.2 — Review the alarms already firing
 
 ```bash
-# Clone the course repo if you haven't already, then:
-cat infrastructure/mock-data/cloudwatch/describe-alarms-clean.json
-cat infrastructure/mock-data/cloudwatch/describe-alarms-anomaly.json
-```
-
-**Expected result:** You see a list of metrics (or mock alarm objects). Each alarm has a `MetricName`, `Namespace`, `Threshold`, `ComparisonOperator`, and current `StateValue`. Notice `StateValue: "ALARM"` vs `StateValue: "OK"`.
-
----
-
-### Step 1.2 — Create a real CloudWatch alarm (first 10 free)
-
-Threshold alarms are free up to 10 per account. Create one so Section 1.3 has a real alarm to describe.
-
-```bash
-aws cloudwatch put-metric-alarm \
-  --alarm-name "platform-ai-lab-cpu-high" \
-  --alarm-description "Fires when CPU > 50% for 1 minute" \
-  --metric-name CPUUtilization \
-  --namespace AWS/EC2 \
-  --statistic Average \
-  --period 60 \
-  --threshold 50 \
-  --comparison-operator GreaterThanThreshold \
-  --dimensions Name=InstanceId,Value=<your-instance-id> \
-  --evaluation-periods 1 \
-  --region us-east-1
-
-# Now read it back
 aws cloudwatch describe-alarms \
-  --alarm-names "platform-ai-lab-cpu-high" \
-  --region us-east-1
+  --alarm-name-prefix platform-ai-lab- \
+  --state-value ALARM \
+  --region us-east-1 \
+  --query 'MetricAlarms[].[AlarmName,StateReason]' \
+  --output table
 ```
 
-Then open `describe-alarms-anomaly.json` from the mock data (or your real `describe-alarms` output) and answer:
+Record which alarms are in `ALARM` vs `OK` vs `INSUFFICIENT_DATA` in your assessment.
 
-1. Which alarms are currently in `ALARM` state?
-2. What metric triggered them — CPU? Memory? Request count?
-3. For each alarm in ALARM state, what information is missing that you'd need to diagnose the issue?
+### 1.3 — CloudWatch Anomaly Detection (DEMO)
 
-Write your answers in the assessment template (Section 5 below).
-
-**Expected result:** You can identify 1-3 alarms in ALARM state and articulate what's missing — typically: "I don't know which service version was deployed 30 minutes ago" or "I don't know if this happened before."
+Same as before — $0.30/alarm beyond free tier. Observe in Console: Alarms → Create Alarm → select metric → Additional configuration → **Anomaly detection band**. Don't create one. The point is that it only helps on metrics you're already collecting.
 
 ---
 
-### Step 1.3 — CloudWatch Anomaly Detection (DEMO — don't create)
+## Section 2: Tool Pass #2 — CloudWatch Agent + custom metrics (10 min)
 
-CloudWatch Anomaly Detection learns metric baselines over 2 weeks and alerts on deviations. It's useful for catching unusual patterns without manually setting thresholds.
+The stack publishes to the `PlatformAILab` namespace two different ways:
 
-**Why this is a demo:** It costs $0.30/alarm/month beyond the free tier limit of 10 anomaly detection alarms. We'll show it without creating it.
+- **CW Agent** on `beta-leaky` → emits `mem_used_percent` with only `InstanceId` as a dimension.
+- **A cron script** on `gamma-disk` → emits `data_fill_percent` with only `InstanceId` as a dimension, computed from `df /` every minute.
 
-In the AWS Console: Alarms → Create Alarm → Select metric → Additional configuration → "Anomaly detection band."
-
-**Key observation:** The system learns what "normal" looks like and alerts when it deviates. What it CANNOT do:
-- Cross-reference with your deployment pipeline
-- Check whether the anomaly matches a known failure pattern
-- Follow your runbook to investigate root cause
-- Create a Jira ticket with structured context
-
-**Expected result:** You understand what CloudWatch Anomaly Detection does and its ceiling. The gap between "alert fires" and "incident resolved" is still manual.
-
----
-
-## Section 2: Cost Explorer Analysis (15 min)
-
-### Step 2.1 — View cost trends
-
-> **Reminder:** You enabled Cost Explorer in Section 0.1. If data hasn't populated yet (first load can take up to 24h), use the mock fallback and revisit the console later.
-
-**Real AWS path:**
-
-1. AWS Console → **Cost Explorer**
-2. Set date range: "Last 6 months" (or whatever data you have)
-3. Group by: **Service**
-4. Look for services with increasing month-over-month cost
-
-**Mock data fallback:**
+> **Why two mechanisms instead of just the CW Agent everywhere?** The agent's disk plugin publishes four dimensions (`InstanceId`, `path`, `device`, `fstype`) and alarms need an exact dimension-tuple match. A custom script gives us control over dimensions — a useful pattern when agent defaults don't line up with what you want to alarm on. (This is itself a platform-AI gap: CloudWatch tooling exists but wiring it up correctly is still your job.)
 
 ```bash
-cat infrastructure/mock-data/cost-explorer/normal-spend.json
-cat infrastructure/mock-data/cost-explorer/anomaly-spike.json
+# See all PlatformAILab metrics
+aws cloudwatch list-metrics \
+  --namespace PlatformAILab \
+  --region us-east-1 \
+  --output table
+
+# Memory for beta-leaky
+aws cloudwatch get-metric-statistics \
+  --namespace PlatformAILab --metric-name mem_used_percent \
+  --dimensions Name=InstanceId,Value=<beta-id> \
+  --start-time $(date -u -v-30M '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '30 minutes ago' '+%Y-%m-%dT%H:%M:%SZ') \
+  --end-time $(date -u '+%Y-%m-%dT%H:%M:%SZ') \
+  --period 300 --statistics Average --region us-east-1
+
+# Disk fill for gamma-disk
+aws cloudwatch get-metric-statistics \
+  --namespace PlatformAILab --metric-name data_fill_percent \
+  --dimensions Name=InstanceId,Value=<gamma-id> \
+  --start-time $(date -u -v-30M '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '30 minutes ago' '+%Y-%m-%dT%H:%M:%SZ') \
+  --end-time $(date -u '+%Y-%m-%dT%H:%M:%SZ') \
+  --period 300 --statistics Average --region us-east-1
 ```
 
-**Expected result:** You see costs broken down by service. The `anomaly-spike.json` file shows a month with an unexpected spike in one service's cost.
+**Key observation:** With the agent (and a small custom publisher), you now see the issues native CloudWatch missed. Two of the three problems only become visible once you opt in to some form of agent — a real-world reminder that "I have CloudWatch" doesn't mean "I have observability."
+
+**What the agent still doesn't tell you:**
+- Why memory is growing (is it a leak? a legitimate cache? a spike in traffic?).
+- What's writing to the disk (logs that should be rotated, or a runaway process?).
+- Whether the `/etc/fstab` on `gamma-disk` will prevent the next reboot from succeeding.
 
 ---
 
-### Step 2.2 — Identify the top 3 cost drivers
+## Section 3: Tool Pass #3 — Amazon Q in the Console (15 min)
 
-Using either the console or the mock data, identify:
+Amazon Q is already available in your AWS Console — no install, no Builder ID needed. Click the purple **Q** icon (left panel or top-right, depending on your layout) to open the chat panel.
 
-1. Top 3 services by total spend
-2. Which service has the steepest month-over-month increase
-3. What would you need to know to explain that increase?
+### 3.1 — Ask Q about what's running in your account
 
-**Expected result:** You can name the top services and articulate what's missing — typically: "I don't know which team launched new resources" or "I can't correlate this with deployment activity."
+Start with a scoped, account-aware question Q can actually answer from the live console:
+
+```
+List the EC2 instances in my account tagged with the CloudFormation stack "platform-ai-lab" and tell me which security groups they use.
+```
+
+**What you should see:** Q returns the three instances by name, with their SG attachments. Notably, it can already tell you that `alpha-noisy` is in a security group with `0.0.0.0/0` on port 22 — **platform AI catches issue #S-1 for free, just by asking**.
+
+### 3.2 — Review the CloudFormation template
+
+Open `starter/broken-fleet.yaml` in any editor and paste its contents into Q with:
+
+```
+Review this CloudFormation template for reliability, security, and operational issues. List every concern you can find.
+```
+
+**What Q should surface (roughly in this order):**
+- `PermissiveSg` allows SSH from `0.0.0.0/0` (issue #S-1).
+- `cpu-burn.service` and `mem-leak.service` look like deliberate fault injection, not real workloads (issues #E-1, #E-2).
+- The broken fstab UUID in `GammaDisk`'s user-data will fail on reboot (issue #E-4).
+- The disk-fill cron on `gamma-disk` will eventually exhaust the root filesystem (issue #E-3).
+
+Compare Q's findings against the answer key in `fleet-issues.md`. **Typical result:** Q finds 3–4 of the 5 issues reliably; strongest on the SG and code-level issues.
+
+### 3.3 — Test Q's context limits
+
+Paste the alarm output from Section 1 into Q and ask:
+
+```
+Based on this alarm state, what would you investigate first and why?
+```
+
+**What you'll see:** Q gives generic "check CPU saturation on alpha-noisy" advice. It doesn't know your topology, it doesn't know `beta-leaky` has a memory leak (CPU is normal there), and it can't follow your team's runbook.
+
+The gap between Q's generic advice and what you now know (from the answer key) is exactly the space custom agents fill in Module 3 onward.
 
 ---
 
-### Step 2.3 — The context engineering connection
+## Section 4: Tool Pass #4 — AWS DevOps Agent (DEMO, 10 min)
 
-Connect this to Module 1. To give an AI agent useful cost analysis capability, you'd need to provide:
+> **Important distinction.** AWS has *two* related services with confusingly similar names:
+>
+> - **Amazon DevOps Guru** (2020) — passive, ML-based anomaly detection. Fires "insights" when metrics deviate. No investigation, no action, no agent loop.
+> - **AWS DevOps Agent** (GA March 31, 2026) — an *agentic* SRE teammate. When a CloudWatch alarm fires, it builds a topology map, pulls logs/traces/code changes, proposes a hypothesis, and suggests a fix. Delivered inside CloudWatch as "Investigations."
+>
+> This lab uses the newer **DevOps Agent**, because it's the closest thing AWS sells to what Modules 3+ will teach you to build yourself.
 
-- **Historical baseline:** "Our normal EC2 spend is $X/month"
-- **Architecture context:** "We have 3 environments (prod/staging/dev) — prod runs 24/7, staging spins up during business hours"
-- **Change context:** "Deployments happen Tuesday/Thursday — cost spikes on those days are expected"
+### 4.1 — Observe a sample investigation
 
-This is context engineering applied to cost data. Without this context, an AI can only tell you what's already obvious in the graph.
+Go to **CloudWatch Console → AI Operations → Investigations**. If you haven't enabled DevOps Agent, click **Sample Investigation** — AWS provides a canned DynamoDB throttling scenario you can walk through without enabling anything.
 
-**Expected result:** You can articulate at least 2 context layers that would improve an AI cost analysis.
+Walk through the sample and note:
+- **Feed** (left pane): observations, queries, evidence the agent gathered.
+- **Hypothesis** (right pane): the agent's root-cause guess with a "Show reasoning" expander.
+- **Accept / Reject buttons**: human-in-the-loop feedback that improves future suggestions.
 
----
+### 4.2 — What it would do against our fleet (if enabled)
 
-## Section 3: Q Developer (15 min)
+Given the `alpha-cpu-high`, `beta-mem-high`, and `gamma-disk-full` alarms we pre-created, DevOps Agent would:
 
-### Step 3.1 — Connect Amazon Q in your IDE
+- Start an investigation when any alarm enters ALARM state.
+- Query the corresponding instance's logs, traces, and recent CloudFormation events.
+- Generate a hypothesis like *"alpha-noisy CPU is saturated because a systemd unit cpu-burn.service is running stress-ng continuously."*
+- Suggest remediation: disable the unit, cordon the instance, or roll back the stack.
 
-You already created your Builder ID in Section 0.2.
+**Why we don't enable it in this lab:** 2-month free trial for new customers, then metered billing. We observe via the sample investigation instead.
 
-1. Open VS Code (or a JetBrains IDE)
-2. Install the **AWS Toolkit** extension (includes Amazon Q)
-3. Click **Connect to AWS** → **Use a personal email** → sign in with the Builder ID from Section 0.2
+### 4.3 — Where DevOps Agent still hits the ceiling
 
-**Expected result:** The Q Developer chat panel opens in your IDE and shows your free tier quota (50 agentic requests/month).
+Even this purpose-built agentic tool can't:
+- Read *your* runbook and apply *your* escalation policy (it uses AWS's generic patterns).
+- File a ticket in *your* Jira/Linear with *your* custom fields.
+- Coordinate with teams outside AWS (on-call rotation in PagerDuty, comms in Slack).
+- Make decisions that require business context (e.g. "should we fail over to the other region during business hours?").
 
----
-
-### Step 3.2 — Give Q a DevOps task
-
-Open any Terraform, Ansible, or Kubernetes file from your environment (or use a file from the course repo starter files). Ask Q:
-
-```
-Explain this configuration. What security improvements would you recommend?
-```
-
-Then ask a follow-up:
-
-```
-What would happen if the instance_type was changed to t2.nano in a production environment?
-```
-
-**Expected result:** Q provides an explanation and security suggestions. Note what it can and cannot tell you — it understands the code syntax and common patterns, but it doesn't know your specific deployment context, network topology, or team's risk tolerance.
-
----
-
-### Step 3.3 — Test Q's context limits
-
-Ask Q:
-
-```
-Based on this configuration, what alerts should I set up in CloudWatch for this infrastructure?
-```
-
-**Expected result:** Q gives generic CloudWatch alarm recommendations. It doesn't know your SLAs, error budget, or historical baselines. Compare this to what YOU would recommend for your own environment — the gap between Q's output and your answer is exactly what SKILL.md files will fill in Module 7.
-
----
-
-## Section 4: DevOps Guru (5 min — DEMO ONLY)
-
-DevOps Guru analyzes CloudWatch, CloudTrail, and Config data to detect operational issues before they become incidents. It uses ML to identify resource relationships and anomalies across services.
-
-**Why this is demo-only:** DevOps Guru has a 3-month free tier. After it expires, costs can be significant depending on your resource footprint. We are NOT creating DevOps Guru resources in this lab.
-
-**What it can do:**
-- Detect multi-service anomalies (e.g., "Lambda errors correlate with RDS connection exhaustion")
-- Identify unexpected changes in operational metrics
-- Surface insights from across your AWS account automatically
-
-**What it cannot do:**
-- Execute remediation steps
-- Follow your team's escalation procedures
-- Access your runbooks or knowledge base
-- Integrate with non-AWS observability tools
-
-**Key takeaway:** Platform AI can detect patterns in your metrics, but it can't follow YOUR runbook, check YOUR topology, or apply YOUR team's decision criteria. Detection is solved. The gap is investigation and action.
+**This is the punchline of Module 2.** AWS has shipped the most capable platform-AI-for-DevOps on the market, and it *still* stops at a ceiling. The space above that ceiling — your runbook, your context, your policies — is exactly what custom agents fill. That's Module 3 onward.
 
 ---
 
 ## Section 5: Complete the Platform AI Assessment (10 min)
 
-Open `starter/platform-ai-assessment.md` and fill it in based on what you observed in Sections 1-4.
-
-**Expected result:** A completed assessment showing which services are available in your account, whether the free tier applies, what capability you gained, and — critically — what that service CANNOT do. This gap analysis is the foundation for understanding where custom agents add value.
+Open `starter/platform-ai-assessment.md` and fill it in with what you just observed. In particular, use the coverage matrix in `fleet-issues.md` (once you've checked your work) to rate tool-vs-issue coverage honestly.
 
 ---
 
-## Section 6: Teardown (5 min) — Don't skip this
-
-If you launched real AWS resources in Section 0, clean them up now so you don't accidentally exit the free tier later.
+## Section 6: Teardown (5 min) — **Don't skip**
 
 ```bash
-# 1. Delete the CloudWatch alarm (alarms are free up to 10, but tidy is tidy)
-aws cloudwatch delete-alarms \
-  --alarm-names "platform-ai-lab-cpu-high" \
+aws cloudformation delete-stack \
+  --stack-name platform-ai-lab \
   --region us-east-1
 
-# 2. Terminate the EC2 instance
-aws ec2 terminate-instances \
-  --instance-ids <your-instance-id> \
-  --region us-east-1
-
-# 3. (Optional) Verify it's gone
-aws ec2 describe-instances \
-  --instance-ids <your-instance-id> \
+# Watch it disappear
+aws cloudformation describe-stacks \
+  --stack-name platform-ai-lab \
   --region us-east-1 \
-  --query 'Reservations[0].Instances[0].State.Name'
-# Should return "shutting-down" then "terminated"
+  --query 'Stacks[0].StackStatus'
+# When this command errors with "does not exist", teardown is complete.
 ```
 
+Everything the stack created — VPC, subnet, IGW, NACL, SGs, IAM role, EC2 instances, EBS volumes, alarms — is deleted in one call. That's the main reason we used CloudFormation: unambiguous cleanup.
+
 **What you do NOT need to tear down:**
-- Cost Explorer (free, keep it enabled)
-- AWS Builder ID (free, keep it for Module 7)
-- Custom `PlatformAILab/*` metrics (they age out automatically, no storage cost)
+- Cost Explorer (free, keep it enabled).
+- AWS Builder ID (free, you'll reuse it in Module 7).
 
 ---
 
@@ -370,8 +317,46 @@ aws ec2 describe-instances \
 
 After completing this lab, you should be able to answer:
 
-1. Which AWS AI features are available to you right now at zero cost?
-2. What is the "capability ceiling" of each — where does it stop?
-3. What would you need a custom agent to do that platform AI cannot?
+1. Which AWS AI features are available to you at zero cost, and what do they each catch?
+2. Where is the "capability ceiling" of each tool — what does it not see?
+3. For each of the six issues in this fleet, which tool was the best signal, and which tool was silent?
 
-Bring your completed assessment to Module 3, where a custom agent (Hermes) will demonstrate what's possible beyond that ceiling.
+Bring your completed assessment to Module 3, where a custom agent (Hermes) will demonstrate what's possible when you cross that ceiling.
+
+---
+
+## Appendix A — Offline / Mock-Data Fallback
+
+If you cannot launch the stack (locked-down environment, no free tier, etc.):
+
+```bash
+cat infrastructure/mock-data/cloudwatch/describe-alarms-clean.json
+cat infrastructure/mock-data/cloudwatch/describe-alarms-anomaly.json
+cat infrastructure/mock-data/cost-explorer/normal-spend.json
+cat infrastructure/mock-data/cost-explorer/anomaly-spike.json
+```
+
+The mock data mirrors roughly what the stack would produce. The tool passes in Sections 2–4 won't be live, but you can still complete the assessment using the mock data + the issues catalog as a scenario walkthrough.
+
+## Appendix B — Optional: Add Datadog to the mix
+
+Datadog integrates cleanly with AWS and adds a second pane of glass so you can compare UX against CloudWatch. It's optional — skip if you don't already have a workspace.
+
+### B.1 — If you have a Datadog account
+
+1. In Datadog: **Integrations → AWS → Add AWS Account**. Follow the CloudFormation-based role setup (Datadog provides its own template URL).
+2. Wait ~10 min for metrics to flow in. You'll see CloudWatch metrics appear in Datadog under the `aws.ec2.*` namespace.
+3. **Optional:** install the Datadog Agent on the three instances via SSM Run Command, then compare host-level metrics (memory, disk, processes) to what the CloudWatch Agent is publishing.
+
+### B.2 — What Datadog adds over CloudWatch
+
+- Unified host, container, APM view (CloudWatch needs Container Insights + X-Ray to match).
+- Better dashboards out of the box.
+- Cross-cloud / cross-vendor — if you also run GCP or on-prem, Datadog sees both.
+
+### B.3 — What Datadog doesn't add
+
+- It still doesn't know your runbook, your ticketing system, or your deployment pipeline.
+- The detection-to-action gap is the same one CloudWatch has; Datadog just draws nicer graphs of the detection half.
+
+The point of this appendix is **not** to learn Datadog — it's to confirm that the "platform AI ceiling" isn't a CloudWatch-specific limitation. Every observability platform hits the same ceiling; the gap above it is where custom agents live.
