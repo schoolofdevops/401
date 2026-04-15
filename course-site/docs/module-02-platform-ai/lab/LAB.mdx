@@ -3,14 +3,14 @@ id: module-02-lab
 title: "Lab: Exploring AWS Platform AI Features"
 sidebar_label: "Lab"
 sidebar_position: 1
-description: "Hands-on exploration of AWS AI features on free tier — what your cloud already offers"
+description: "Hands-on exploration of AWS AI features on free tier — set up, generate data, observe, then tear down"
 ---
 
 # Lab: Exploring AWS Platform AI Features
 
-**Duration:** 60 minutes
+**Duration:** 75 minutes (60 min lab + ~15 min setup/teardown)
 **Deliverable:** A completed Platform AI Assessment for your environment (`starter/platform-ai-assessment.md`)
-**Prerequisites:** AWS account with free tier (OR use the mock data fallback — all core exercises have offline options), AWS CLI installed
+**Prerequisites:** AWS account with free tier active (OR use the mock data fallback — every section has an offline option), AWS CLI installed and configured (`aws configure`)
 
 ---
 
@@ -18,10 +18,14 @@ description: "Hands-on exploration of AWS AI features on free tier — what your
 
 Before building custom agents, understand what the platform already gives you. AWS has embedded AI features across its console. This lab explores four of them — and maps exactly where they stop so you know where custom agents begin.
 
+The earlier version of this lab only *read* alarms and cost data. This version walks you through **setting things up from a blank AWS account** so the observations are real. If you don't have an account, the mock-data fallback still works end-to-end.
+
 **Free tier vs demo split (Decision D-27):**
+
 | Service | Lab Type | Why |
 |---------|----------|-----|
 | CloudWatch basic metrics | LAB (do it) | Always free |
+| CloudWatch alarm (threshold) | LAB (do it) | First 10 alarms free |
 | CloudWatch Anomaly Detection | DEMO (observe) | $0.30/alarm/month beyond free tier |
 | Cost Explorer web UI | LAB (do it) | Free |
 | Q Developer | LAB (do it) | Free via Builder ID |
@@ -29,23 +33,124 @@ Before building custom agents, understand what the platform already gives you. A
 
 ---
 
+## Section 0: One-Time Setup (10 min)
+
+Do these **once**, before Section 1. If you already have these enabled, skim and skip.
+
+### 0.1 — Enable Cost Explorer
+
+Cost Explorer is free but **must be enabled manually**, and the first data load can take up to 24 hours.
+
+1. AWS Console → **Billing and Cost Management** → **Cost Explorer**
+2. Click **Launch Cost Explorer**
+3. Accept the one-time enablement prompt
+
+> **Tip:** Do this *before* you start the lab so the data is ready when you reach Section 2. If the dashboard is empty by the time you get there, use the mock-data fallback for Section 2 and return to the real console tomorrow.
+
+### 0.2 — Create an AWS Builder ID (for Q Developer)
+
+Q Developer's free tier uses a **Builder ID**, not an AWS account. No billing, no credit card.
+
+1. Go to https://profile.aws.amazon.com
+2. Click **Create AWS Builder ID** and follow the email verification flow
+3. Keep the credentials handy for Section 3
+
+### 0.3 — Launch a free-tier t2.micro EC2 instance (for real CloudWatch data)
+
+You need something emitting metrics for Section 1 to feel real. A t2.micro running Amazon Linux 2023 is free tier eligible (750 hrs/month for 12 months on new accounts).
+
+**Using the Console (easiest):**
+
+1. EC2 → **Launch instance**
+2. Name: `platform-ai-lab`
+3. AMI: **Amazon Linux 2023** (free tier eligible)
+4. Instance type: **t2.micro** (free tier eligible)
+5. Key pair: create a new one or select an existing one (you'll need this if you want to SSH)
+6. Network: default VPC, **Auto-assign public IP = Enable**
+7. Storage: keep default 8 GiB gp3
+8. **Launch instance**
+
+**Using the CLI (copy-paste):**
+
+```bash
+# Find the latest Amazon Linux 2023 AMI for us-east-1
+AMI_ID=$(aws ssm get-parameters \
+  --names /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 \
+  --region us-east-1 \
+  --query 'Parameters[0].Value' --output text)
+
+aws ec2 run-instances \
+  --image-id "$AMI_ID" \
+  --instance-type t2.micro \
+  --region us-east-1 \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=platform-ai-lab}]'
+```
+
+Save the returned `InstanceId` — you'll use it in Section 1.
+
+> **Cost warning:** t2.micro is free tier ONLY if your account is within its first 12 months AND you stay under 750 hours/month. **Section 6 shows you how to terminate it at the end** — don't skip that step.
+
+### 0.4 — Generate some CPU load (so metrics have something to show)
+
+Fresh EC2 instances show near-zero CPU. Push it briefly so your charts aren't flat lines.
+
+**Option A — SSH in and run a stress loop:**
+
+```bash
+ssh -i your-key.pem ec2-user@<public-ip>
+# On the instance:
+yes > /dev/null &
+yes > /dev/null &
+# Let it run for 5 minutes, then:
+killall yes
+```
+
+**Option B — No SSH, push synthetic metrics from your laptop:**
+
+```bash
+# Push a fake "RequestCount" metric for 10 data points
+for i in {1..10}; do
+  aws cloudwatch put-metric-data \
+    --namespace "PlatformAILab" \
+    --metric-name "RequestCount" \
+    --value $((RANDOM % 100 + 20)) \
+    --region us-east-1
+  sleep 6
+done
+```
+
+**Expected result:** Either you see real CPU climb on your EC2 instance, or you have a custom `PlatformAILab/RequestCount` metric you can query in Section 1. Either works for the rest of the lab.
+
+---
+
 ## Section 1: CloudWatch Metrics Exploration (15 min)
 
 ### Step 1.1 — List available metrics
 
-**If you have an AWS account:**
+**If you completed Section 0 (real AWS path):**
 
 ```bash
+# List EC2 metrics for your instance
 aws cloudwatch list-metrics \
   --namespace AWS/EC2 \
+  --region us-east-1
+
+# Pull the last hour of CPUUtilization for your instance
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/EC2 \
+  --metric-name CPUUtilization \
+  --dimensions Name=InstanceId,Value=<your-instance-id> \
+  --start-time $(date -u -v-1H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '1 hour ago' '+%Y-%m-%dT%H:%M:%SZ') \
+  --end-time $(date -u '+%Y-%m-%dT%H:%M:%SZ') \
+  --period 60 \
+  --statistics Average Maximum \
   --region us-east-1
 ```
 
 **If you don't have an AWS account (mock data fallback):**
 
 ```bash
-# Clone the course repo if you haven't already
-# Then examine the mock alarm data
+# Clone the course repo if you haven't already, then:
 cat infrastructure/mock-data/cloudwatch/describe-alarms-clean.json
 cat infrastructure/mock-data/cloudwatch/describe-alarms-anomaly.json
 ```
@@ -54,9 +159,31 @@ cat infrastructure/mock-data/cloudwatch/describe-alarms-anomaly.json
 
 ---
 
-### Step 1.2 — Identify patterns manually
+### Step 1.2 — Create a real CloudWatch alarm (first 10 free)
 
-Open `describe-alarms-anomaly.json` and answer these questions:
+Threshold alarms are free up to 10 per account. Create one so Section 1.3 has a real alarm to describe.
+
+```bash
+aws cloudwatch put-metric-alarm \
+  --alarm-name "platform-ai-lab-cpu-high" \
+  --alarm-description "Fires when CPU > 50% for 1 minute" \
+  --metric-name CPUUtilization \
+  --namespace AWS/EC2 \
+  --statistic Average \
+  --period 60 \
+  --threshold 50 \
+  --comparison-operator GreaterThanThreshold \
+  --dimensions Name=InstanceId,Value=<your-instance-id> \
+  --evaluation-periods 1 \
+  --region us-east-1
+
+# Now read it back
+aws cloudwatch describe-alarms \
+  --alarm-names "platform-ai-lab-cpu-high" \
+  --region us-east-1
+```
+
+Then open `describe-alarms-anomaly.json` from the mock data (or your real `describe-alarms` output) and answer:
 
 1. Which alarms are currently in `ALARM` state?
 2. What metric triggered them — CPU? Memory? Request count?
@@ -74,7 +201,7 @@ CloudWatch Anomaly Detection learns metric baselines over 2 weeks and alerts on 
 
 **Why this is a demo:** It costs $0.30/alarm/month beyond the free tier limit of 10 anomaly detection alarms. We'll show it without creating it.
 
-In the AWS Console: Alarms > Create Alarm > Select metric > Additional configuration > "Anomaly detection band."
+In the AWS Console: Alarms → Create Alarm → Select metric → Additional configuration → "Anomaly detection band."
 
 **Key observation:** The system learns what "normal" looks like and alerts when it deviates. What it CANNOT do:
 - Cross-reference with your deployment pipeline
@@ -90,14 +217,16 @@ In the AWS Console: Alarms > Create Alarm > Select metric > Additional configura
 
 ### Step 2.1 — View cost trends
 
-**If you have an AWS account (free web UI):**
+> **Reminder:** You enabled Cost Explorer in Section 0.1. If data hasn't populated yet (first load can take up to 24h), use the mock fallback and revisit the console later.
 
-1. Navigate to AWS Console > Cost Explorer
-2. Set date range: "Last 6 months"
-3. Group by: "Service"
+**Real AWS path:**
+
+1. AWS Console → **Cost Explorer**
+2. Set date range: "Last 6 months" (or whatever data you have)
+3. Group by: **Service**
 4. Look for services with increasing month-over-month cost
 
-**If you don't have an AWS account (mock data fallback):**
+**Mock data fallback:**
 
 ```bash
 cat infrastructure/mock-data/cost-explorer/normal-spend.json
@@ -111,6 +240,7 @@ cat infrastructure/mock-data/cost-explorer/anomaly-spike.json
 ### Step 2.2 — Identify the top 3 cost drivers
 
 Using either the console or the mock data, identify:
+
 1. Top 3 services by total spend
 2. Which service has the steepest month-over-month increase
 3. What would you need to know to explain that increase?
@@ -123,9 +253,9 @@ Using either the console or the mock data, identify:
 
 Connect this to Module 1. To give an AI agent useful cost analysis capability, you'd need to provide:
 
-- Historical baseline: "Our normal EC2 spend is $X/month"
-- Architecture context: "We have 3 environments (prod/staging/dev) — prod runs 24/7, staging spins up during business hours"
-- Change context: "Deployments happen Tuesday/Thursday — cost spikes on those days are expected"
+- **Historical baseline:** "Our normal EC2 spend is $X/month"
+- **Architecture context:** "We have 3 environments (prod/staging/dev) — prod runs 24/7, staging spins up during business hours"
+- **Change context:** "Deployments happen Tuesday/Thursday — cost spikes on those days are expected"
 
 This is context engineering applied to cost data. Without this context, an AI can only tell you what's already obvious in the graph.
 
@@ -135,13 +265,13 @@ This is context engineering applied to cost data. Without this context, an AI ca
 
 ## Section 3: Q Developer (15 min)
 
-### Step 3.1 — Install Amazon Q
+### Step 3.1 — Connect Amazon Q in your IDE
 
-> **Important:** Q Developer's free tier uses your **AWS Builder ID** — not an AWS account. An AWS Builder ID is free to create at https://profile.aws.amazon.com and requires no billing setup, no credit card, and no existing AWS account.
+You already created your Builder ID in Section 0.2.
 
-1. Open VS Code (or JetBrains IDE)
-2. Install the "AWS Toolkit" extension (includes Amazon Q)
-3. Click "Connect to AWS" > Choose "Use a personal email" > Sign in with AWS Builder ID
+1. Open VS Code (or a JetBrains IDE)
+2. Install the **AWS Toolkit** extension (includes Amazon Q)
+3. Click **Connect to AWS** → **Use a personal email** → sign in with the Builder ID from Section 0.2
 
 **Expected result:** The Q Developer chat panel opens in your IDE and shows your free tier quota (50 agentic requests/month).
 
@@ -203,6 +333,36 @@ DevOps Guru analyzes CloudWatch, CloudTrail, and Config data to detect operation
 Open `starter/platform-ai-assessment.md` and fill it in based on what you observed in Sections 1-4.
 
 **Expected result:** A completed assessment showing which services are available in your account, whether the free tier applies, what capability you gained, and — critically — what that service CANNOT do. This gap analysis is the foundation for understanding where custom agents add value.
+
+---
+
+## Section 6: Teardown (5 min) — Don't skip this
+
+If you launched real AWS resources in Section 0, clean them up now so you don't accidentally exit the free tier later.
+
+```bash
+# 1. Delete the CloudWatch alarm (alarms are free up to 10, but tidy is tidy)
+aws cloudwatch delete-alarms \
+  --alarm-names "platform-ai-lab-cpu-high" \
+  --region us-east-1
+
+# 2. Terminate the EC2 instance
+aws ec2 terminate-instances \
+  --instance-ids <your-instance-id> \
+  --region us-east-1
+
+# 3. (Optional) Verify it's gone
+aws ec2 describe-instances \
+  --instance-ids <your-instance-id> \
+  --region us-east-1 \
+  --query 'Reservations[0].Instances[0].State.Name'
+# Should return "shutting-down" then "terminated"
+```
+
+**What you do NOT need to tear down:**
+- Cost Explorer (free, keep it enabled)
+- AWS Builder ID (free, keep it for Module 7)
+- Custom `PlatformAILab/*` metrics (they age out automatically, no storage cost)
 
 ---
 
