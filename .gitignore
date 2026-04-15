@@ -48,3 +48,6 @@ __pycache__/
 
 # Playwright
 **/.playwright-mcp/
+
+# Course explainers (generated screenshots and sequences)
+**/explainer*

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-15
+
+### Added
+
+- **Module 11**: Telegram conversational chat integration with hermes gateway setup
+- **Module 11**: Slack integration (optional) to Track C triggers lab
+- **Module 11**: Multi-bot setup guidance and /sethome + delivery features
+- **Explainer Framework**: Automated gitignore for generated explainer screenshots and sequences
+
+### Fixed
+
+- **Module 11**: Gateway start and tail -f log instructions in prerequisites
+- **Module 11**: Telegram profile vs default agent configuration
+- **Module 11**: AlertManager pod naming and configuration references
+- **Module 11**: AlertManager webhook output visibility
+- **Module 11**: Hermes cron command signature and global skills API key handling
+- **Lab Infrastructure**: Kubernetes validation commands and gateway state management
+
 ## [0.1.1] - 2026-04-09
 
 ### Fixed
