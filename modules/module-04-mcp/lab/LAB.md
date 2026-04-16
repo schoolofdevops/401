@@ -1,4 +1,4 @@
-# Module 04: Cross-Platform Intelligence with MCP — Hands-On Lab
+# Module 04: Cross-Platform Intelligence with MCP and CLI Tools — Hands-On Lab
 
 **Duration:** 50 minutes
 **Difficulty:** Beginner (first time wiring MCP servers)
@@ -72,7 +72,7 @@ If any of these fail, return to Module 01 and complete the setup first.
 
 ---
 
-## Part 1: Understanding Your Current MCP Configuration (8 minutes)
+## Part 1: Understanding Your Current MCP/CLI  Configuration (8 minutes)
 
 ### Step 1.1: Check What MCP Servers Are Already Configured
 
@@ -100,7 +100,7 @@ crush --version
 
 ### Step 1.2: Understand the .mcp.json Structure
 
-If your `.mcp.json` exists, it looks like this:
+If your `.mcp.json` exists, it may look like this:
 
 ```json
 {
@@ -132,10 +132,10 @@ If your `.mcp.json` exists, it looks like this:
 Open Claude Code and run this prompt:
 
 ```
-I need to list all pods in my Kubernetes cluster. Use the kubectl tool to get pod names, namespaces, and their current status.
+I need to list all pods in my Kubernetes cluster. Use the kubectl cli tool to get pod names, namespaces, and their current status.
 ```
 
-You should see Claude Code call a tool like `kubectl_get_pods` and return a JSON list of pods.
+You should see Claude Code call a CLI tool like `kubectl get pods` and return a JSON list of pods.
 
 **If you're using Crush:**
 
