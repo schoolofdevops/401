@@ -26,12 +26,6 @@ nodes:
       - containerPort: 30093
         hostPort: 30093
         protocol: TCP
-      # Hermes webhook gateway — REQUIRED on Linux Docker (not Docker Desktop);
-      # macOS Docker Desktop resolves host.docker.internal from KIND pods without this mapping.
-      # Leaving it always on is harmless on macOS and unblocks Linux participants.
-      - containerPort: 8644
-        hostPort: 8644
-        protocol: TCP
       # Reserved for future services (Hermes UI, ArgoCD, etc.)
       - containerPort: 30400
         hostPort: 30400
